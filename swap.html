@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VanSwap - Decentralized Exchange on Vana Chain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --primary-darker: #0f593c;
+            --secondary: #7b61ff;
+            --text: #ffffff;
+            --text-secondary: #b8b8b8;
+            --background: #0a291e;
+            --card-bg: #113728;
+            --card-border: #1a7f5e;
+            --success: #31d0aa;
+            --warning: #ed4b9e;
+            --error: #ed4b9e;
+            --green: #31d0aa;
+            --yellow: #ffc245;
+            --red: #ed4b9e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(26, 127, 94, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(123, 97, 255, 0.1) 0%, transparent 50%);
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary-darker) 0%, var(--primary-dark) 100%);
+            padding: 16px 0;
+            border-bottom: 2px solid var(--primary);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--secondary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 20px;
+        }
+
+        .nav-item {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 16px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary);
+            color: var(--text);
+        }
+
+        .wallet-container {
+            position: relative;
+        }
+
+        .connect-wallet {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .connect-wallet:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(123, 97, 255, 0.3);
+        }
+
+        .wallet-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            min-width: 200px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .wallet-dropdown button {
+            width: 100%;
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Kanit', sans-serif;
+            margin-top: 8px;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* Swap Container */
+        .swap-container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 968px) {
+            .swap-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Swap Card */
+        .swap-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px;
+            flex: 1;
+            max-width: 480px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .settings-container {
+            position: relative;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .settings-modal {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 280px;
+            z-index: 1000;
+            margin-top: 8px;
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+        }
+
+        .settings-label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .settings-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text);
+            font-family: 'Kanit', sans-serif;
+        }
+
+        /* Token Input */
+        .token-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+
+        .token-input:focus-within {
+            border-color: var(--primary);
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .input-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .balance {
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .balance:hover {
+            color: var(--text);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .token-select-container {
+            position: relative;
+        }
+
+        .token-select {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-dark);
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+
+        .token-select:hover {
+            background: var(--primary);
+        }
+
+        .token-select.open {
+            background: var(--primary);
+        }
+
+        .token-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .token-logo-sm {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .token-symbol {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .amount-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 24px;
+            font-weight: 600;
+            text-align: right;
+            outline: none;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .amount-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Token Dropdown */
+        .token-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 12px;
+            min-width: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1001;
+            margin-top: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .token-search {
+            margin-bottom: 12px;
+        }
+
+        .token-search input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text);
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .token-list-header {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+
+        .token-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .token-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .token-option.active {
+            background: rgba(26, 127, 94, 0.2);
+        }
+
+        .token-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .token-name {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .token-balance {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .no-tokens {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        /* Swap Controls */
+        .swap-controls {
+            text-align: center;
+            margin: 16px 0;
+            position: relative;
+        }
+
+        .flip-btn {
+            background: var(--primary-dark);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .flip-btn:hover {
+            background: var(--primary);
+            transform: rotate(180deg);
+        }
+
+        /* Price Info */
+        .price-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .green { color: var(--green); }
+        .yellow { color: var(--yellow); }
+        .red { color: var(--red); }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .unwrap-btn {
+            width: 100%;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .unwrap-btn:hover:not(:disabled) {
+            background: #6a50e0;
+            transform: translateY(-2px);
+        }
+
+        /* Info Panel */
+        .info-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        /* Status */
+        .status-bar {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .status {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .tx-hash {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--success);
+            color: var(--text);
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.4s;
+            font-weight: 500;
+        }
+
+        .toast.error {
+            border-color: var(--error);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 60px;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .social-link:hover {
+            color: var(--text);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--card-bg);
+                border: 2px solid var(--card-border);
+                border-radius: 16px;
+                padding: 16px;
+                margin: 8px 20px;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .nav-menu.active {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .swap-card {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">V</div>
+                VanSwap
+            </a>
+
+            <button class="mobile-menu-btn">☰</button>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">Swap</a>
+                <a href="#" class="nav-item">Liquidity</a>
+                <a href="#" class="nav-item">Farms</a>
+                <a href="#" class="nav-item">Pools</a>
+                <a href="#" class="nav-item">Bridge</a>
+                <a href="#" class="nav-item">Buy Crypto</a>
+            </nav>
+
+            <div class="wallet-container">
+                <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
+                <div id="walletDropdown" class="wallet-dropdown">
+                    <div class="info-item">
+                        <span class="info-label">Connected</span>
+                        <span id="walletAddress" class="info-value"></span>
+                    </div>
+                    <button onclick="disconnectWallet()">Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="swap-container">
+            <!-- Swap Card -->
+            <div class="swap-card">
+                <div class="card-header">
+                    <h2 class="card-title">Swap</h2>
+                    <div class="settings-container">
+                        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+                        <div id="settingsModal" class="settings-modal">
+                            <div class="settings-group">
+                                <label class="settings-label">Slippage Tolerance (%)</label>
+                                <input type="number" id="slippage" class="settings-input" value="0.5" step="0.1" min="0.1" max="50">
+                            </div>
+                            <div class="settings-group">
+                                <label class="settings-label">Transaction Deadline (minutes)</label>
+                                <input type="number" id="deadline" class="settings-input" value="10" min="1" max="60">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- From Token -->
+                <div class="token-input">
+                    <div class="input-header">
+                        <span class="input-label">From</span>
+                        <span class="balance" id="fromBalance">—</span>
+                    </div>
+                    <div class="input-row">
+                        <div class="token-select-container">
+                            <div class="token-select" onclick="toggleDropdown('from')">
+                                <img id="selectedFromLogo" src="" alt="" class="token-logo">
+                                <span id="selectedFromSymbol" class="token-symbol">Select</span>
+                                <span>▼</span>
+                            </div>
+                            <div id="fromDropdown" class="token-dropdown"></div>
+                        </div>
+                        <input type="text" id="fromAmount" class="amount-input" placeholder="0.0">
+                    </div>
+                </div>
+
+                <!-- Swap Controls -->
+                <div class="swap-controls">
+                    <button id="flip" class="flip-btn">↓</button>
+                </div>
+
+                <!-- To Token -->
+                <div class="token-input">
+                    <div class="input-header">
+                        <span class="input-label">To</span>
+                        <span class="balance" id="toBalance">—</span>
+                    </div>
+                    <div class="input-row">
+                        <div class="token-select-container">
+                            <div class="token-select" onclick="toggleDropdown('to')">
+                                <img id="selectedToLogo" src="" alt="" class="token-logo">
+                                <span id="selectedToSymbol" class="token-symbol">Select</span>
+                                <span>▼</span>
+                            </div>
+                            <div id="toDropdown" class="token-dropdown"></div>
+                        </div>
+                        <div id="toReadable" class="amount-input" style="text-align: right; font-size: 24px; font-weight: 600; color: var(--text-secondary);">—</div>
+                    </div>
+                </div>
+
+                <!-- Price Info -->
+                <div class="price-info">
+                    <div class="info-item">
+                        <span class="info-label">Price</span>
+                        <span class="info-value">1 VANS = 0.025 USDC</span>
+                    </div>
+                    <div class="info-item">
+                        <span id="priceImpact" class="info-label">Price impact: —</span>
+                    </div>
+                    <div class="info-item">
+                        <span id="liquidityInfo" class="info-label">Pool: —</span>
+                    </div>
+                </div>
+
+                <button id="approveOrSwap" class="btn">Connect Wallet</button>
+
+                <!-- Status -->
+                <div class="status-bar">
+                    <div id="status" class="status">Ready to connect</div>
+                    <div id="txHash" class="tx-hash"></div>
+                </div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="info-panel">
+                <div class="panel-section">
+                    <h3 class="panel-title">Trade Information</h3>
+                    <div class="info-item">
+                        <span class="info-label">Minimum received</span>
+                        <span class="info-value">0.0 USDC</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Price Impact</span>
+                        <span class="info-value">< 0.01%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Liquidity Provider Fee</span>
+                        <span class="info-value">0.0025 VANS</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Route</span>
+                        <span class="info-value">VANS → USDC</span>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3 class="panel-title">VanSwap Info</h3>
+                    <div class="info-item">
+                        <span class="info-label">Total Liquidity</span>
+                        <span class="info-value">$12.5M</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">VANS Price</span>
+                        <span class="info-value">$0.025</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">24h Volume</span>
+                        <span class="info-value">$2.1M</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total TXs</span>
+                        <span class="info-value">45,892</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3 class="panel-title">Quick Actions</h3>
+                    <button class="btn" style="margin-top: 0; margin-bottom: 12px;" onclick="window.location.href='/liquidity'">
+                        💧 Add Liquidity
+                    </button>
+                    <button class="btn" style="margin-top: 0; background: var(--secondary);" onclick="window.location.href='/staking'">
+                        🏆 Start Staking
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="social-links">
+            <a href="#" class="social-link">Twitter</a>
+            <a href="#" class="social-link">Telegram</a>
+            <a href="#" class="social-link">Discord</a>
+            <a href="#" class="social-link">Docs</a>
+            <a href="#" class="social-link">Github</a>
+        </div>
+        <p>© 2024 VanSwap. All rights reserved. Built on Vana Chain</p>
+    </footer>
+
+    <script>
+        // ==================== KONFIGURASI VANA CHAIN ====================
+        const ROUTER = '0x5994334DC71C8BD6959C617637132Ab2aE4f7199';
+        const WXPL = '0x00eddd9621fb08436d0331c149d1690909a5906d'; // WVANA
+        const FACTORY = '0xDa70b3F5427dFFb363Fe43e24e452b18C819a651';
+        const VANS = '0x82741ff5937933244eb562A4b396f8079F1de914';
+        const USDC = '0xF1815bd50389c46847f0Bda824eC8da914045D14';
+
+        const RPC = 'https://rpc.vana.org';
+        const CHAIN_ID = 1480;
+        const CHAIN_ID_HEX = '0x5C8';
+
+        // ==================== FUNGSI GLOBAL ====================
+        let account = null;
+
+        // Fungsi global untuk toggle dropdown
+        function toggleDropdown(type) {
+            const dropdown = document.getElementById(`${type}Dropdown`);
+            const container = dropdown.closest('.token-select-container');
+            const allDropdowns = document.querySelectorAll('.token-dropdown');
+
+            allDropdowns.forEach(dd => {
+                if (dd.id !== `${type}Dropdown`) {
+                    dd.style.display = 'none';
+                    dd.closest('.token-select-container')?.classList.remove('open');
+                }
+            });
+
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+                container.classList.remove('open');
+            } else {
+                dropdown.style.display = 'block';
+                container.classList.add('open');
+            }
+        }
+
+        // Fungsi untuk toggle wallet dropdown
+        function toggleWalletDropdown() {
+            const dropdown = document.getElementById('walletDropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+                if (account) {
+                    document.getElementById('walletAddress').textContent = 
+                        account.substring(0, 6) + '...' + account.substring(38);
+                }
+            }
+        }
+
+        // Fungsi untuk toggle settings modal
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Tutup dropdown saat klik di luar
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.token-select-container')) {
+                document.querySelectorAll('.token-dropdown').forEach(dd => {
+                    dd.style.display = 'none';
+                    dd.closest('.token-select-container')?.classList.remove('open');
+                });
+            }
+            if (!e.target.closest('.settings-container')) {
+                document.getElementById('settingsModal').style.display = 'none';
+            }
+            if (!e.target.closest('#connectBtn') && !e.target.closest('#walletDropdown')) {
+                document.getElementById('walletDropdown').style.display = 'none';
+            }
+        });
+
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
+            document.querySelector('.nav-menu').classList.toggle('active');
+        });
+
+        // Fungsi global untuk copy address
+        function copyAddress(addr) {
+            if (!addr) return showToast("⚠️ Address not found", true);
+            navigator.clipboard.writeText(addr)
+                .then(() => showToast("✅ Address copied to clipboard"))
+                .catch(() => showToast("❌ Failed to copy address", true));
+        }
+
+        // Fungsi global untuk show toast
+        function showToast(message, isError = false) {
+            const toast = document.createElement("div");
+            toast.textContent = message;
+            toast.className = isError ? "toast error" : "toast";
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.style.opacity = "1", 10);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 400);
+            }, 2500);
+        }
+
+        // Fungsi disconnect wallet
+        function disconnectWallet() {
+            account = null;
+            window.account = null;
+            document.getElementById('connectBtn').innerText = 'Connect Wallet';
+            document.getElementById('connectBtn').onclick = connectWallet;
+            document.getElementById('walletDropdown').style.display = 'none';
+            document.getElementById('status').innerText = 'Disconnected';
+            document.getElementById('fromBalance').innerText = '—';
+            document.getElementById('toBalance').innerText = '—';
+            showToast("Wallet disconnected");
+
+            // Reset UI state
+            if (window.provider) {
+                window.provider = null;
+                window.signer = null;
+            }
+        }
+
+        // Fungsi filter tokens
+        window.filterTokens = function(type, searchTerm) {
+            const dropdown = document.getElementById(`${type}Dropdown`);
+            const options = dropdown.querySelectorAll('.token-option[data-address]');
+            let hasVisible = false;
+
+            options.forEach(option => {
+                const symbol = option.querySelector('.token-symbol')?.textContent.toLowerCase() || '';
+                const name = option.querySelector('.token-name')?.textContent.toLowerCase() || '';
+
+                const matches = symbol.includes(searchTerm.toLowerCase()) || 
+                               name.includes(searchTerm.toLowerCase());
+
+                option.style.display = matches ? 'flex' : 'none';
+                if (matches) hasVisible = true;
+            });
+
+            // Show/hide no tokens message
+            const noTokens = dropdown.querySelector('.no-tokens');
+            if (noTokens) {
+                noTokens.style.display = hasVisible ? 'none' : 'block';
+            }
+        }
+
+        // ==================== INISIALISASI TOKEN DEFAULT ====================
+        const DEFAULT_TOKENS = [
+            {
+                symbol: 'VANA',
+                address: 'VANA_NATIVE',
+                logoURI: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzFhN2Y1ZSIvPjwvc3ZnPg=='
+            },
+            {
+                symbol: 'VANS',
+                address: VANS,
+                logoURI: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzdiNjFmZiIvPjwvc3ZnPg=='
+            },
+            {
+                symbol: 'WVANA',
+                address: WXPL,
+                logoURI: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzAwZGRkZCIvPjwvc3ZnPg=='
+            },
+            {
+                symbol: 'USDC',
+                address: USDC,
+                logoURI: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzI3NzVjZiIvPjwvc3ZnPg=='
+            }
+        ];
+
+        // Inisialisasi token list
+        const TOKENS_KEY = 'vanswap_tokens_v1';
+        function loadTokens() {
+            try {
+                const raw = localStorage.getItem(TOKENS_KEY);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {}
+            return DEFAULT_TOKENS.slice();
+        }
+
+        function saveTokens(list) {
+            localStorage.setItem(TOKENS_KEY, JSON.stringify(list));
+        }
+
+        let tokens = loadTokens();
+        let selectedFromToken = tokens[0]; // VANA sebagai default
+        let selectedToToken = tokens[1];   // VANS sebagai default
+
+        // Helper function untuk default logo
+        function getDefaultLogo(symbol) {
+            const defaultLogos = {
+                'VANA': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzFhN2Y1ZSIvPjwvc3ZnPg==',
+                'VANS': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzdiNjFmZiIvPjwvc3ZnPg==',
+                'WVANA': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzdiNjFmZiIvPjwvc3ZnPg==',
+                 'USDC': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzI3NzVjZiIvPjwvc3ZnPg=='
+            };
+            return defaultLogos[symbol] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIxMCIgZmlsbD0iIzlmOWY5ZiIvPjwvc3ZnPg==';
+        }
+
+        // ✅ FUNGSI: Refresh selectors dengan balance display
+        function refreshSelectors() {
+            const fromDropdown = document.getElementById('fromDropdown');
+            const toDropdown = document.getElementById('toDropdown');
+
+            // Clear existing options
+            fromDropdown.innerHTML = '';
+            toDropdown.innerHTML = '';
+
+            // Add search bar to both dropdowns
+            const searchHTML = `
+                <div class="token-search">
+                    <input type="text" placeholder="Search token..." 
+                         oninput="filterTokens('${'from'}', this.value)">
+                </div>
+                <div class="token-list-header">Select Token (${tokens.length})</div>
+            `;
+
+            fromDropdown.innerHTML = searchHTML;
+            toDropdown.innerHTML = searchHTML.replace("filterTokens('from',", "filterTokens('to',");
+
+            // Create token options untuk kedua dropdown dengan balance
+            tokens.forEach(token => {
+                const displayAddress = token.address === 'VANA_NATIVE' ? 'Native Token' : 
+                                    `${token.address.substring(0, 6)}...${token.address.substring(38)}`;
+
+                const tokenHTML = `
+                    <div class="token-option" data-address="${token.address}">
+                        <img src="${token.logoURI || getDefaultLogo(token.symbol)}" 
+                             alt="${token.symbol}" 
+                             class="token-logo-sm"
+                             onerror="this.src='${getDefaultLogo(token.symbol)}'">
+                        <div class="token-info">
+                            <span class="token-symbol">${token.symbol}</span>
+                            <span class="token-name">${displayAddress}</span>
+                        </div>
+                        <div class="token-balance" id="dropdownBalance-${token.symbol}-${token.address.substring(0, 6)}">—</div>
+                        <button class="copy-btn" title="Copy address" 
+                                onclick="event.stopPropagation(); copyAddress('${token.address}')">📋</button>
+                    </div>
+                `;
+
+                fromDropdown.innerHTML += tokenHTML;
+                toDropdown.innerHTML += tokenHTML;
+            });
+
+            // Add no tokens message
+            fromDropdown.innerHTML += '<div class="no-tokens" style="display: none;">No tokens found</div>';
+            toDropdown.innerHTML += '<div class="no-tokens" style="display: none;">No tokens found</div>';
+
+            // Re-attach event listeners
+            reattachTokenEventListeners();
+
+            // Set default tokens
+            selectToken('from', selectedFromToken);
+            selectToken('to', selectedToToken);
+
+            // Update dropdown balances
+            updateDropdownBalances();
+        }
+
+        // ✅ FUNGSI: Update balances di dropdown
+        async function updateDropdownBalances() {
+            if (!account || !window.provider) return;
+
+            try {
+                for (const token of tokens) {
+                    let balance = '—';
+
+                    if (token.address === 'VANA_NATIVE') {
+                        const bal = await window.provider.getBalance(account);
+                        balance = parseFloat(window.ethers.utils.formatUnits(bal, 18)).toFixed(4);
+                    } else {
+                        try {
+                            const c = new window.ethers.Contract(token.address, [
+                                'function decimals() view returns (uint8)',
+                                'function balanceOf(address) view returns (uint256)'
+                            ], window.provider);
+                            const dec = await c.decimals();
+                            const bal = await c.balanceOf(account);
+                            balance = parseFloat(window.ethers.utils.formatUnits(bal, dec)).toFixed(4);
+                        } catch (e) {
+                            balance = '0';
+                        }
+                    }
+
+                    // Update balance di kedua dropdown
+                    const balanceEls = document.querySelectorAll(`#dropdownBalance-${token.symbol}-${token.address.substring(0, 6)}`);
+                    balanceEls.forEach(el => {
+                        el.textContent = balance;
+                    });
+                }
+            } catch (e) {
+                console.warn('Dropdown balance error:', e);
+            }
+        }
+
+        // ✅ FUNGSI: Reattach event listeners
+        function reattachTokenEventListeners() {
+            const fromDropdown = document.getElementById('fromDropdown');
+            const toDropdown = document.getElementById('toDropdown');
+
+            // Untuk FROM dropdown
+            fromDropdown.querySelectorAll('.token-option[data-address]').forEach(option => {
+                const address = option.getAttribute('data-address');
+                option.onclick = (e) => {
+                    if (!e.target.classList.contains("copy-btn")) {
+                        const token = tokens.find(t => t.address === address);
+                        if (token) selectToken('from', token);
+                    }
+                };
+            });
+
+            // Untuk TO dropdown  
+            toDropdown.querySelectorAll('.token-option[data-address]').forEach(option => {
+                const address = option.getAttribute('data-address');
+                option.onclick = (e) => {
+                    if (!e.target.classList.contains("copy-btn")) {
+                        const token = tokens.find(t => t.address === address);
+                        if (token) selectToken('to', token);
+                    }
+                };
+            });
+        }
+
+        // ✅ FUNGSI: Select token
+        function selectToken(type, token) {
+            const logoEl = document.getElementById(`selected${type.charAt(0).toUpperCase() + type.slice(1)}Logo`);
+            const symbolEl = document.getElementById(`selected${type.charAt(0).toUpperCase() + type.slice(1)}Symbol`);
+            const dropdownEl = document.getElementById(`${type}Dropdown`);
+            const container = dropdownEl.closest('.token-select-container');
+
+            // Update selected token display
+            logoEl.src = token.logoURI || getDefaultLogo(token.symbol);
+            logoEl.onerror = function() {
+                this.src = getDefaultLogo(token.symbol);
+            };
+            symbolEl.textContent = token.symbol;
+
+            // Close dropdown
+            dropdownEl.style.display = 'none';
+            container.classList.remove('open');
+
+            // Clear search input
+            const searchInput = dropdownEl.querySelector('.token-search input');
+            if (searchInput) searchInput.value = '';
+
+            // Reset filter
+            window.filterTokens(type, '');
+
+            // Update active states
+            dropdownEl.querySelectorAll('.token-option').forEach(option => {
+                option.classList.remove('active');
+                const address = option.getAttribute('data-address');
+                if (address === token.address) {
+                    option.classList.add('active');
+                }
+            });
+
+            // Store selected tokens
+            if (type === 'from') {
+                selectedFromToken = token;
+            } else {
+                selectedToToken = token;
+            }
+
+            // Update button Swap/Unwrap
+            updateSwapButton();
+
+            // Update balances dan compute output
+            updateBalances();
+            computeOutput();
+        }
+
+        // ✅ FUNGSI: Auto ganti button Swap ↔ Unwrap
+        function updateSwapButton() {
+            const from = selectedFromToken.address;
+            const to = selectedToToken.address;
+            const isVanAPair = 
+                (from === 'VANA_NATIVE' && to === WXPL) ||
+                (from === WXPL && to === 'VANA_NATIVE');
+
+            const swapBtn = document.getElementById('approveOrSwap');
+
+            if (isVanAPair) {
+                swapBtn.textContent = from === 'VANA_NATIVE' ? 'Wrap' : 'Unwrap';
+                swapBtn.className = 'unwrap-btn';
+                swapBtn.onclick = executeUnwrap;
+            } else {
+                swapBtn.textContent = 'Swap';
+                swapBtn.className = 'btn';
+                swapBtn.onclick = executeSwap;
+            }
+        }
+
+        // ✅ FUNGSI: Connect Wallet
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('MetaMask not detected. Please install MetaMask to connect your wallet.');
+                return;
+            }
+
+            try {
+                // Switch to Vana Chain
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: CHAIN_ID_HEX }]
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: CHAIN_ID_HEX,
+                                chainName: 'Vana Chain',
+                                rpcUrls: [RPC],
+                                nativeCurrency: {
+                                    name: 'VANA',
+                                    symbol: 'VANA',
+                                    decimals: 18
+                                },
+                                blockExplorerUrls: ['https://vanascan.to/']
+                            }]
+                        });
+                    }
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (accounts && accounts.length > 0) {
+                    account = accounts[0];
+                    window.account = account;
+                    
+                    // Initialize provider and contracts
+                    window.provider = new window.ethers.providers.Web3Provider(window.ethereum);
+                    window.signer = window.provider.getSigner();
+                    
+                    // Update UI untuk connected state
+                    document.getElementById('connectBtn').innerText = account.substring(0, 6) + '...' + account.substring(38);
+                    document.getElementById('connectBtn').onclick = toggleWalletDropdown;
+                    document.getElementById('status').innerText = 'Connected';
+
+                    await updateBalances();
+                    await updateDropdownBalances();
+                    await computeOutput();
+
+                    showToast("Wallet connected successfully!");
+                }
+            } catch (error) {
+                console.error('Connection failed:', error);
+                if (error.code === 4001) {
+                    document.getElementById('status').innerText = 'Connection rejected';
+                    alert('Please connect your wallet to use VanSwap.');
+                } else {
+                    document.getElementById('status').innerText = 'Connection failed';
+                    alert('Connection failed: ' + (error.message || error));
+                }
+            }
+        }
+
+        // ✅ FUNGSI: Update Balances
+        async function updateBalances() {
+            try {
+                if (!window.provider) return;
+                if (!account) {
+                    if (window.provider.listAccounts) {
+                        const accts = await window.provider.listAccounts();
+                        account = accts && accts[0];
+                        window.account = account;
+                    }
+                }
+
+                if (!account) {
+                    document.getElementById('fromBalance').innerText = '-';
+                    document.getElementById('toBalance').innerText = '-';
+                    return;
+                }
+
+                // From balance
+                const f = selectedFromToken.address;
+                if (f === 'VANA_NATIVE') {
+                    const bal = await window.provider.getBalance(account);
+                    document.getElementById('fromBalance').innerText = parseFloat(window.ethers.utils.formatUnits(bal, 18)).toFixed(4);
+                } else {
+                    const c = new window.ethers.Contract(f, [
+                        'function decimals() view returns (uint8)',
+                        'function balanceOf(address) view returns (uint256)'
+                    ], window.provider);
+                    const dec = await c.decimals();
+                    const bal = await c.balanceOf(account);
+                    document.getElementById('fromBalance').innerText = parseFloat(window.ethers.utils.formatUnits(bal, dec)).toFixed(4);
+                }
+
+                // To balance
+                const t = selectedToToken.address;
+                if (t === 'VANA_NATIVE') {
+                    const bal = await window.provider.getBalance(account);
+                    document.getElementById('toBalance').innerText = parseFloat(window.ethers.utils.formatUnits(bal, 18)).toFixed(4);
+                } else {
+                    const c2 = new window.ethers.Contract(t, [
+                        'function decimals() view returns (uint8)',
+                        'function balanceOf(address) view returns (uint256)'
+                    ], window.provider);
+                    const dec2 = await c2.decimals();
+                    const bal2 = await c2.balanceOf(account);
+                    document.getElementById('toBalance').innerText = parseFloat(window.ethers.utils.formatUnits(bal2, dec2)).toFixed(4);
+                }
+            } catch (e) {
+                console.warn('Balance error', e);
+                document.getElementById('fromBalance').innerText = '-';
+                document.getElementById('toBalance').innerText = '-';
+            }
+        }
+
+        // ✅ FUNGSI: Compute Output (Simple version)
+        async function computeOutput() {
+            try {
+                const amtStr = (document.getElementById('fromAmount').value || '').trim();
+                if (!amtStr) {
+                    document.getElementById('toReadable').innerText = '—';
+                    document.getElementById('priceImpact').innerText = 'Price impact: —';
+                    return;
+                }
+
+                // Simple calculation for demo - in real implementation, you'd use router.getAmountsOut
+                const from = selectedFromToken.symbol;
+                const to = selectedToToken.symbol;
+                
+                // Mock conversion rates for demo
+                const rates = {
+                    'VANA': { 'VANS': 40, 'USDC': 0.025 },
+                    'VANS': { 'VANA': 0.025, 'USDC': 0.000625 },
+                    'USDC': { 'VANA': 40, 'VANS': 1600 }
+                };
+
+                let output = '—';
+                if (rates[from] && rates[from][to]) {
+                    const input = parseFloat(amtStr);
+                    output = (input * rates[from][to]).toFixed(6);
+                }
+
+                document.getElementById('toReadable').innerText = output;
+                document.getElementById('priceImpact').innerHTML = `Price impact: <span class="green">< 0.01%</span>`;
+                
+            } catch (e) {
+                console.error('computeOutput', e);
+                document.getElementById('toReadable').innerText = '—';
+                document.getElementById('priceImpact').innerText = 'Price impact: —';
+            }
+        }
+
+        // ✅ FUNGSI: Execute Swap (Demo version)
+        async function executeSwap() {
+            if (!account) {
+                await connectWallet();
+                return;
+            }
+
+            try {
+                const fromAmount = document.getElementById('fromAmount').value;
+                if (!fromAmount) {
+                    alert('Please enter amount');
+                    return;
+                }
+
+                document.getElementById('status').innerText = 'Swapping...';
+                
+                // Simulate swap delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                document.getElementById('status').innerText = 'Swap completed!';
+                showToast('Swap executed successfully!');
+                
+                // Update balances after swap
+                await updateBalances();
+                await updateDropdownBalances();
+                
+            } catch (e) {
+                console.error('Swap error', e);
+                document.getElementById('status').innerText = 'Swap failed';
+                showToast('Swap failed: ' + (e.message || e), true);
+            }
+        }
+
+        // ✅ FUNGSI: Execute Unwrap (Demo version)
+        async function executeUnwrap() {
+            if (!account) {
+                await connectWallet();
+                return;
+            }
+
+            try {
+                const fromAmount = document.getElementById('fromAmount').value;
+                if (!fromAmount) {
+                    alert('Please enter amount');
+                    return;
+                }
+
+                document.getElementById('status').innerText = 'Wrapping/Unwrapping...';
+                
+                // Simulate wrap/unwrap delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                document.getElementById('status').innerText = 'Completed!';
+                showToast('Operation executed successfully!');
+                
+                // Update balances after operation
+                await updateBalances();
+                await updateDropdownBalances();
+                
+            } catch (e) {
+                console.error('Unwrap error', e);
+                document.getElementById('status').innerText = 'Operation failed';
+                showToast('Operation failed: ' + (e.message || e), true);
+            }
+        }
+
+        // ✅ FUNGSI: Max Button
+        document.getElementById('fromBalance').addEventListener('click', async function() {
+            if (!account) {
+                await connectWallet();
+                return;
+            }
+
+            try {
+                const f = selectedFromToken.address;
+                if (f === 'VANA_NATIVE') {
+                    const bal = await window.provider.getBalance(account);
+                    document.getElementById('fromAmount').value = parseFloat(window.ethers.utils.formatUnits(bal, 18)).toFixed(4);
+                } else {
+                    const c = new window.ethers.Contract(f, [
+                        'function decimals() view returns (uint8)',
+                        'function balanceOf(address) view returns (uint256)'
+                    ], window.provider);
+                    const dec = await c.decimals();
+                    const bal = await c.balanceOf(account);
+                    document.getElementById('fromAmount').value = parseFloat(window.ethers.utils.formatUnits(bal, dec)).toFixed(4);
+                }
+                computeOutput();
+            } catch (e) {
+                console.error('Max button error', e);
+            }
+        });
+
+        // ✅ FUNGSI: Flip tokens
+        document.getElementById('flip').addEventListener('click', function() {
+            const temp = selectedFromToken;
+            selectedFromToken = selectedToToken;
+            selectedToToken = temp;
+            selectToken('from', selectedFromToken);
+            selectToken('to', selectedToToken);
+            
+            // Also flip the amount values
+            const fromAmount = document.getElementById('fromAmount').value;
+            const toAmount = document.getElementById('toReadable').textContent;
+            
+            if (toAmount !== '—') {
+                document.getElementById('fromAmount').value = toAmount;
+                document.getElementById('toReadable').textContent = fromAmount;
+            }
+        });
+
+        // ✅ FUNGSI: Add custom token
+        function addCustomToken() {
+            const addr = prompt('Paste custom token address'); 
+            if (!addr) return; 
+            if (!window.ethers.utils.isAddress(addr)) return alert('Invalid address');
+
+            const symbol = prompt('Enter token symbol') || 'TOKEN';
+            
+            if (!confirm(`Add custom token ${symbol}\nAddress: ${addr}\nWarning: adding custom tokens can be risky. Proceed?`)) return;
+
+            tokens.push({
+                symbol: symbol, 
+                address: addr, 
+                logoURI: ''
+            }); 
+            saveTokens(tokens); 
+            refreshSelectors(); 
+            alert('Token added: ' + symbol);
+        }
+
+        // ✅ INITIALIZATION
+        async function initializeApp() {
+            // Load ethers.js if not already loaded
+            if (!window.ethers) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js';
+                script.onload = initAfterEthers;
+                document.head.appendChild(script);
+            } else {
+                initAfterEthers();
+            }
+        }
+
+        async function initAfterEthers() {
+            // Initialize provider for read-only mode
+            try {
+                window.provider = new window.ethers.providers.JsonRpcProvider(RPC);
+                document.getElementById('status').innerText = 'Read-only mode - Connect wallet to swap';
+            } catch (e) {
+                console.warn('Provider init failed:', e);
+                document.getElementById('status').innerText = 'Connect wallet to start';
+            }
+
+            // Initialize UI
+            refreshSelectors();
+            await updateBalances();
+            computeOutput();
+
+            // Set up event listeners
+            document.getElementById('fromAmount').addEventListener('input', debounce(computeOutput, 400));
+            document.getElementById('connectBtn').onclick = connectWallet;
+
+            // Add token button (you can add this to your UI)
+            const addTokenBtn = document.createElement('button');
+            addTokenBtn.textContent = 'Add Token';
+            addTokenBtn.className = 'btn';
+            addTokenBtn.style.background = 'var(--secondary)';
+            addTokenBtn.style.marginTop = '10px';
+            addTokenBtn.onclick = addCustomToken;
+            document.querySelector('.swap-card').appendChild(addTokenBtn);
+        }
+
+        function debounce(fn, ms) {
+            let t;
+            return (...a) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...a), ms);
+            };
+        }
+
+        // Start the application
+        initializeApp();
+
+    </script>
+</body>
+</html>
