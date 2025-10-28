@@ -1578,13 +1578,15 @@ async function addLiquidity() {
   }
 }
 
-    // INPUT HANDLING
+        // INPUT HANDLING
     $('fromAmount').addEventListener('input', debounce(() => {
       updateLiquidityInfo();
+      updateActionBtn(); // Tambahkan ini
     }, 400));
-    
+
     $('toAmount').addEventListener('input', debounce(() => {
       updateLiquidityInfo();
+      updateActionBtn(); // Tambahkan ini
     }, 400));
 
     // INIT
