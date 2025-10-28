@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap - Decentralized Exchange on Vana Chain</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.7);
+      --background: #04140d;
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #04140d 0%, #07261b 50%, #0a2e21 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+    
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(49, 208, 170, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(49, 208, 170, 0.6); }
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* Header */
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 0;
+      z-index: 1000;
+      background: rgba(4, 20, 13, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(26, 127, 94, 0.1);
+    }
+    
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      animation: fadeInUp 1s ease;
+    }
+    
+    .logo img {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      object-fit: cover;
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    .logo span {
+      font-weight: 800;
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 30px;
+    }
+    
+    .nav-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .nav-link:hover {
+      color: var(--accent);
+    }
+    
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .launch-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      animation: glow 3s ease-in-out infinite;
+    }
+    
+    .launch-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(49, 208, 170, 0.4);
+    }
+    
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      padding: 120px 20px 80px;
+    }
+    
+    .hero-content {
+      max-width: 800px;
+      z-index: 2;
+      animation: fadeInUp 1s ease 0.2s both;
+    }
+    
+    .hero h1 {
+      font-size: 4rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+    
+    .tagline {
+      font-size: 1.5rem;
+      color: var(--muted);
+      margin-bottom: 40px;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+    
+    .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    
+    .cta-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 1.1rem;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: #052017;
+      animation: glow 3s ease-in-out infinite;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 30px rgba(49, 208, 170, 0.4);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 2px solid var(--primary);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--primary);
+      transform: translateY(-3px);
+    }
+    
+    /* Features Section */
+    .features {
+      padding: 100px 20px;
+      background: rgba(4, 20, 13, 0.7);
+    }
+    
+    .features-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+    
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px 30px;
+      text-align: center;
+      transition: all 0.3s ease;
+      animation: fadeInUp 1s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-10px);
+      border-color: var(--accent);
+    }
+    
+    .feature-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: rgba(49, 208, 170, 0.1);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    
+    .feature-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: var(--accent);
+    }
+    
+    .feature-card p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    
+    /* Stats Section */
+    .stats {
+      padding: 80px 20px;
+      text-align: center;
+    }
+    
+    .stats-grid {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 40px;
+    }
+    
+    .stat-item {
+      animation: fadeInUp 1s ease;
+    }
+    
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    
+    .stat-label {
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+    
+    /* Footer */
+    .footer {
+      background: rgba(4, 20, 13, 0.9);
+      padding: 60px 20px 30px;
+      border-top: 1px solid rgba(26, 127, 94, 0.1);
+    }
+    
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    
+    .social-links {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .social-link {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 1.2rem;
+    }
+    
+    .social-link:hover {
+      background: var(--accent);
+      color: #052017;
+      transform: translateY(-3px);
+    }
+    
+    .footer-text {
+      text-align: center;
+      color: var(--muted);
+    }
+    
+    .footer-text p {
+      margin-bottom: 10px;
+    }
+    
+    /* Background Elements */
+    .bg-elements {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+    
+    .bg-element {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(49, 208, 170, 0.1);
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    .bg-1 {
+      width: 300px;
+      height: 300px;
+      top: 10%;
+      left: 5%;
+      animation-delay: 0s;
+    }
+    
+    .bg-2 {
+      width: 200px;
+      height: 200px;
+      top: 60%;
+      right: 10%;
+      animation-delay: 2s;
+    }
+    
+    .bg-3 {
+      width: 150px;
+      height: 150px;
+      bottom: 20%;
+      left: 20%;
+      animation-delay: 4s;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+      
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+      
+      .tagline {
+        font-size: 1.2rem;
+      }
+      
+      .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+      
+      .tagline {
+        font-size: 1rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stat-number {
+        font-size: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="nav-container">
+      <a href="#" class="logo">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VANSWAP</span>
+      </a>
+      
+      <nav class="nav-links">
+        <a href="swap.html" class="nav-link">Swap</a>
+        <a href="liquidity.html" class="nav-link">Liquidity</a>
+        <a href="#" class="nav-link">Farming</a>
+        <a href="#" class="nav-link">Docs</a>
+      </nav>
+      
+      <a href="swap.html" class="launch-btn">Launch App</a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="bg-elements">
+      <div class="bg-element bg-1"></div>
+      <div class="bg-element bg-2"></div>
+      <div class="bg-element bg-3"></div>
+    </div>
+    
+    <div class="hero-content">
+      <h1>Trade, Earn, and Grow on Vana Chain</h1>
+      <p class="tagline">
+        Experience <span class="highlight">lightning-fast swaps</span>, 
+        <span class="highlight">yield farming</span>, and 
+        <span class="highlight">seamless liquidity provision</span> 
+        on Vana Chain's premier decentralized exchange
+      </p>
+      
+      <div class="cta-buttons">
+        <a href="swap.html" class="btn btn-primary">Launch App</a>
+        <a href="#" class="btn btn-secondary">Learn More</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features">
+    <div class="features-grid">
+      <div class="feature-card" style="animation-delay: 0.2s">
+        <div class="feature-icon">⚡</div>
+        <h3>Lightning Fast</h3>
+        <p>Experience sub-second transaction times with minimal fees on Vana Chain's optimized network</p>
+      </div>
+      
+      <div class="feature-card" style="animation-delay: 0.4s">
+        <div class="feature-icon">🔒</div>
+        <h3>Secure & Safe</h3>
+        <p>Your funds are protected by battle-tested smart contracts and decentralized security measures</p>
+      </div>
+      
+      <div class="feature-card" style="animation-delay: 0.6s">
+        <div class="feature-icon">🌱</div>
+        <h3>Earn Yield</h3>
+        <p>Provide liquidity and farm rewards with competitive APY rates on popular trading pairs</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="stats">
+    <div class="stats-grid">
+      <div class="stat-item" style="animation-delay: 0.2s">
+        <div class="stat-number" id="tvl">$12.5M</div>
+        <div class="stat-label">Total Value Locked</div>
+      </div>
+      
+      <div class="stat-item" style="animation-delay: 0.4s">
+        <div class="stat-number" id="pairs">50+</div>
+        <div class="stat-label">Trading Pairs</div>
+      </div>
+      
+      <div class="stat-item" style="animation-delay: 0.6s">
+        <div class="stat-number" id="users">15K+</div>
+        <div class="stat-label">Active Users</div>
+      </div>
+      
+      <div class="stat-item" style="animation-delay: 0.8s">
+        <div class="stat-number" id="fees">0.25%</div>
+        <div class="stat-label">Trading Fees</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="social-links">
+        <a href="https://x.com/vanswap_xyz" class="social-link" target="_blank">𝕏</a>
+        <a href="https://t.me/vanswap_xyz" class="social-link" target="_blank">📢</a>
+        <a href="https://github.com/vanswap_xyz" class="social-link" target="_blank">💻</a>
+      </div>
+      
+      <div class="footer-text">
+        <p>© 2024 VanSwap. Built on Vana Chain</p>
+        <p>Decentralized Exchange Revolutionizing DeFi</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Simple counter animation for stats
+    function animateCounter(element, target, duration = 2000) {
+      let start = 0;
+      const increment = target / (duration / 16);
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= target) {
+          element.textContent = target;
+          clearInterval(timer);
+        } else {
+          element.textContent = Math.floor(start);
+        }
+      }, 16);
+    }
+    
+    // Animate stats when they come into view
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const statNumber = entry.target.querySelector('.stat-number');
+          const value = statNumber.textContent;
+          
+          if (value.includes('$')) {
+            const num = parseInt(value.replace('$', '').replace('M', '')) * 1000000;
+            statNumber.textContent = '$0';
+            setTimeout(() => animateCounter(statNumber, num, 2000), 500);
+          } else if (value.includes('+')) {
+            const num = parseInt(value.replace('+', ''));
+            statNumber.textContent = '0';
+            setTimeout(() => {
+              animateCounter(statNumber, num, 1500);
+              setTimeout(() => statNumber.textContent = num + '+', 1600);
+            }, 500);
+          } else if (value.includes('%')) {
+            // For percentage, just animate the opacity
+            statNumber.style.animation = 'pulse 2s ease-in-out';
+          }
+        }
+      });
+    }, { threshold: 0.5 });
+    
+    // Observe all stat items
+    document.querySelectorAll('.stat-item').forEach(item => {
+      observer.observe(item);
+    });
+    
+    // Add floating animation to feature cards on scroll
+    const featureObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    document.querySelectorAll('.feature-card').forEach(card => {
+      card.style.animationPlayState = 'paused';
+      featureObserver.observe(card);
+    });
+  </script>
+</body>
+</html>
