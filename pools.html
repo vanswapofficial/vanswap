@@ -1395,7 +1395,7 @@ async function addLiquidity() {
         amountAMin,
         account,
         deadline,
-        { value: amountADesired, gasLimit: 800000 }
+        { value: amountADesired, gasLimit: 3000000 }
       );
     } else if (selectedTo.address === 'VANA_NATIVE') {
       // Adding liquidity with ETH (reverse)
@@ -1406,7 +1406,7 @@ async function addLiquidity() {
         amountBMin,
         account,
         deadline,
-        { value: amountBDesired, gasLimit: 500000 }
+        { value: amountBDesired, gasLimit: 3000000 }
       );
     } else {
       // Adding liquidity with two tokens
@@ -1419,7 +1419,7 @@ async function addLiquidity() {
         amountBMin,
         account,
         deadline,
-        { gasLimit: 800000 }
+        { gasLimit: 3000000 }
       );
     }
 
