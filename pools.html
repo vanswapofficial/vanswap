@@ -737,7 +737,7 @@
             return true;
           }catch(switchErr){
             if(switchErr.code === 4902){
-              await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_ID_HEX, chainName: 'Vana Chain', rpcUrls:[RPC], nativeCurrency:{name:'VANA',symbol:'VANA',decimals:18}, blockExplorerUrls:['https://vanascan.to/'] }] });
+              await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_ID_HEX, chainName: 'Vana Chain', rpcUrls:[RPC], nativeCurrency:{name:'VANA',symbol:'VANA',decimals:18}, blockExplorerUrls:['https://vanascan.io/'] }] });
               return true;
             }
             return false;
