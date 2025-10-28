@@ -1011,7 +1011,7 @@
             amountAMin,
             account,
             deadline,
-            { value: amountADesired, gasLimit: 500000 }
+            { value: amountADesired, gasLimit: 800000 }
           );
         } else if (selectedTo.address === 'VANA_NATIVE') {
           // Adding liquidity with ETH (reverse)
@@ -1022,7 +1022,7 @@
             amountBMin,
             account,
             deadline,
-            { value: amountBDesired, gasLimit: 500000 }
+            { value: amountBDesired, gasLimit: 800000 }
           );
         } else {
           // Adding liquidity with two tokens
@@ -1035,11 +1035,11 @@
             amountBMin,
             account,
             deadline,
-            { gasLimit: 30000000 }
+            { gasLimit: 800000000 }
           );
         }
         
-        $('txLink').innerHTML = `<a href="https://vanascan.to/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         setStatus('Submitted — waiting confirmation...');
         await tx.wait();
         
@@ -1257,7 +1257,7 @@
           { gasLimit: 30000000 }
         );
         
-        $('txLink').innerHTML = `<a href="https://vanascan.to/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         setStatus('Submitted — waiting confirmation...');
         await tx.wait();
         
@@ -1524,7 +1524,7 @@ async function addLiquidity() {
         amountAMin,
         account,
         deadline,
-        { value: amountADesired, gasLimit: 500000 }
+        { value: amountADesired, gasLimit: 800000 }
       );
     } else if (selectedTo.address === 'VANA_NATIVE') {
       // Adding liquidity with ETH (reverse)
@@ -1548,11 +1548,11 @@ async function addLiquidity() {
         amountBMin,
         account,
         deadline,
-        { gasLimit: 500000 }
+        { gasLimit: 800000 }
       );
     }
 
-    $('txLink').innerHTML = `<a href="https://vanascan.to/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+    $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
     setStatus('Submitted — waiting confirmation...');
     await tx.wait();
 
