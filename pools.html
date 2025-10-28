@@ -359,7 +359,7 @@
     </div>
   </div>
 
-  <footer>© 2024 VanSwap. Built on Vana Chain</footer>
+  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
@@ -1343,17 +1343,240 @@
       }
     }
 
-    // UPDATE ACTION BUTTON
-    function updateActionBtn() {
-      const btn = $('actionBtn');
-      if (!account) {
-        btn.textContent = 'Connect Wallet';
-        btn.onclick = connectWallet;
-      } else {
-        btn.textContent = 'Add Liquidity';
-        btn.onclick = addLiquidity;
-      }
+    // UPDATE ACTION BUTTON dengan sistem approval
+async function updateActionBtn() {
+  const btn = $('actionBtn');
+  if (!account) {
+    btn.textContent = 'Connect Wallet';
+    btn.onclick = connectWallet;
+    return;
+  }
+
+  const amountA = $('fromAmount').value;
+  const amountB = $('toAmount').value;
+  
+  if (!amountA || !amountB || isNaN(Number(amountA)) || isNaN(Number(amountB)) || Number(amountA) <= 0 || Number(amountB) <= 0) {
+    btn.textContent = 'Enter Amounts';
+    btn.disabled = true;
+    btn.onclick = null;
+    return;
+  }
+
+  try {
+    // Check allowances for both tokens
+    let needsApprovalA = false;
+    let needsApprovalB = false;
+
+    const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+    const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+    const decA = selectedFrom.decimals;
+    const decB = selectedTo.decimals;
+
+    const amountADesired = ethers.utils.parseUnits(amountA, decA);
+    const amountBDesired = ethers.utils.parseUnits(amountB, decB);
+
+    // Check token A allowance (if not native)
+    if (selectedFrom.address !== 'VANA_NATIVE') {
+      const tokenAContract = new ethers.Contract(tokenA, ERC20_ABI, provider);
+      const allowanceA = await tokenAContract.allowance(account, ROUTER);
+      needsApprovalA = allowanceA.lt(amountADesired);
     }
+
+    // Check token B allowance (if not native)
+    if (selectedTo.address !== 'VANA_NATIVE') {
+      const tokenBContract = new ethers.Contract(tokenB, ERC20_ABI, provider);
+      const allowanceB = await tokenBContract.allowance(account, ROUTER);
+      needsApprovalB = allowanceB.lt(amountBDesired);
+    }
+
+    // Determine button text and action
+    if (needsApprovalA && needsApprovalB) {
+      btn.textContent = `Approve ${selectedFrom.symbol} & ${selectedTo.symbol}`;
+      btn.onclick = () => approveAndAddLiquidity(true, true);
+    } else if (needsApprovalA) {
+      btn.textContent = `Approve ${selectedFrom.symbol}`;
+      btn.onclick = () => approveAndAddLiquidity(true, false);
+    } else if (needsApprovalB) {
+      btn.textContent = `Approve ${selectedTo.symbol}`;
+      btn.onclick = () => approveAndAddLiquidity(false, true);
+    } else {
+      btn.textContent = 'Add Liquidity';
+      btn.onclick = addLiquidity;
+    }
+
+    btn.disabled = false;
+
+  } catch (error) {
+    console.error('Error checking allowances:', error);
+    btn.textContent = 'Add Liquidity';
+    btn.onclick = addLiquidity;
+    btn.disabled = false;
+  }
+}
+
+// FUNCTION APPROVE & ADD LIQUIDITY
+async function approveAndAddLiquidity(approveA, approveB) {
+  if (!account || !signer) {
+    await connectWallet();
+    return;
+  }
+
+  try {
+    setStatus('Approving tokens...');
+    const btn = $('actionBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Approving...';
+
+    const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+    const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+    const decA = selectedFrom.decimals;
+    const decB = selectedTo.decimals;
+
+    const amountA = $('fromAmount').value;
+    const amountB = $('toAmount').value;
+    const amountADesired = ethers.utils.parseUnits(amountA, decA);
+    const amountBDesired = ethers.utils.parseUnits(amountB, decB);
+
+    // Approve token A if needed
+    if (approveA && selectedFrom.address !== 'VANA_NATIVE') {
+      const tokenAContract = new ethers.Contract(tokenA, ERC20_ABI, signer);
+      setStatus(`Approving ${selectedFrom.symbol}...`);
+      const txA = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
+      await txA.wait();
+      showToast(`${selectedFrom.symbol} approved`);
+    }
+
+    // Approve token B if needed
+    if (approveB && selectedTo.address !== 'VANA_NATIVE') {
+      const tokenBContract = new ethers.Contract(tokenB, ERC20_ABI, signer);
+      setStatus(`Approving ${selectedTo.symbol}...`);
+      const txB = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
+      await txB.wait();
+      showToast(`${selectedTo.symbol} approved`);
+    }
+
+    setStatus('Approval complete, adding liquidity...');
+    
+    // Now proceed with adding liquidity
+    await addLiquidity();
+
+  } catch (error) {
+    console.error('Error in approveAndAddLiquidity:', error);
+    showToast('Approval failed: ' + (error.message || error));
+    setStatus('Approval failed');
+  } finally {
+    updateActionBtn();
+  }
+}
+
+// MODIFIED ADD LIQUIDITY FUNCTION (remove approval logic)
+async function addLiquidity() {
+  if (!account || !signer) {
+    await connectWallet();
+    return;
+  }
+
+  const amountA = $('fromAmount').value;
+  const amountB = $('toAmount').value;
+
+  if (!amountA || !amountB || isNaN(Number(amountA)) || isNaN(Number(amountB)) || Number(amountA) <= 0 || Number(amountB) <= 0) {
+    showToast('Enter amounts for both tokens');
+    return;
+  }
+
+  try {
+    setStatus('Adding liquidity...');
+    const btn = $('actionBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Adding Liquidity...';
+
+    const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+    const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+    const decA = selectedFrom.decimals;
+    const decB = selectedTo.decimals;
+
+    const amountADesired = ethers.utils.parseUnits(amountA, decA);
+    const amountBDesired = ethers.utils.parseUnits(amountB, decB);
+
+    // Calculate minimum amounts with slippage
+    const s = parseFloat(localStorage.getItem('vanswap_slippage') || slippageInput.value || 0.5);
+    const sBps = Math.round(s * 100);
+    const amountAMin = amountADesired.mul(10000 - sBps).div(10000);
+    const amountBMin = amountBDesired.mul(10000 - sBps).div(10000);
+
+    const deadlineMin = parseInt(localStorage.getItem('vanswap_deadline') || deadlineInput.value || 10);
+    const deadline = Math.floor(Date.now() / 1000) + 60 * deadlineMin;
+
+    // Check if we need to create a new pair
+    currentPair = await factory.getPair(tokenA, tokenB);
+    const isNewPair = !currentPair || currentPair === '0x0000000000000000000000000000000000000000';
+
+    let tx;
+    if (selectedFrom.address === 'VANA_NATIVE') {
+      // Adding liquidity with ETH
+      tx = await router.addLiquidityETH(
+        tokenB,
+        amountBDesired,
+        amountBMin,
+        amountAMin,
+        account,
+        deadline,
+        { value: amountADesired, gasLimit: 500000 }
+      );
+    } else if (selectedTo.address === 'VANA_NATIVE') {
+      // Adding liquidity with ETH (reverse)
+      tx = await router.addLiquidityETH(
+        tokenA,
+        amountADesired,
+        amountAMin,
+        amountBMin,
+        account,
+        deadline,
+        { value: amountBDesired, gasLimit: 500000 }
+      );
+    } else {
+      // Adding liquidity with two tokens
+      tx = await router.addLiquidity(
+        tokenA,
+        tokenB,
+        amountADesired,
+        amountBDesired,
+        amountAMin,
+        amountBMin,
+        account,
+        deadline,
+        { gasLimit: 500000 }
+      );
+    }
+
+    $('txLink').innerHTML = `<a href="https://vanascan.to/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+    setStatus('Submitted — waiting confirmation...');
+    await tx.wait();
+
+    if (isNewPair) {
+      showToast('New pool created and liquidity added!');
+    } else {
+      showToast('Liquidity added successfully!');
+    }
+
+    setStatus('Liquidity added');
+    await updateBalances();
+    await updateDropdownBalances();
+    updateLiquidityInfo();
+    loadUserPools();
+    updateTVLStats();
+
+  } catch (error) {
+    console.error('Error adding liquidity:', error);
+    showToast('Failed to add liquidity: ' + (error.message || error));
+    setStatus('Add liquidity failed');
+  } finally {
+    updateActionBtn();
+  }
+}
 
     // INPUT HANDLING
     $('fromAmount').addEventListener('input', debounce(() => {
