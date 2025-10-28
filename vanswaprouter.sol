@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 contract VanSwapRouter {
-    address public factory = 0xDa70b3F5427dFFb363Fe43e24e452b18C819a651;
+    address public factory = 0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D;
     address public WETH = 0x00EDdD9621Fb08436d0331c149D1690909a5906d;
 
     modifier ensure(uint256 deadline) {
