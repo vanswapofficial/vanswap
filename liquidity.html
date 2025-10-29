@@ -1370,10 +1370,15 @@ async function addLiquidity() {
 
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-    // CREATE PAIR IF NOT EXISTS - PERBAIKAN UTAMA
+        // CREATE PAIR IF NOT EXISTS - PERBAIKAN UTAMA
     if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
       setStatus('Creating new pool...');
-      const createPairTx = await factory.createPair(tokenA, tokenB, { gasLimit: 3000000 });
+      
+      // GUNAKAN WVANA UNTUK VANA_NATIVE - PERBAIKAN PENTING
+      const tokenAForFactory = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenBForFactory = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+      
+      const createPairTx = await factory.createPair(tokenAForFactory, tokenBForFactory, { gasLimit: 3000000 });
       await createPairTx.wait();
       setStatus('Pool created, adding liquidity...');
     }
