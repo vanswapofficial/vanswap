@@ -1934,6 +1934,211 @@ async function addLiquidity() {
     window.filterTokens = filterTokens;
     window.addLiquidity = addLiquidity;
     window.setMax = setMax;
-  </script>
+  
+// --- START OVERRIDE: Improved addLiquidity, two-way sync, and action button ---
+(async function(){
+  // Define improved functions that override previous ones
+  window.addLiquidity = async function() {
+    if (!account) { await connectWallet(); return; }
+    const fromAmtStr = $('fromAmount').value;
+    const toAmtStr = $('toAmount').value;
+    if ((!fromAmtStr || parseFloat(fromAmtStr) <= 0) && (!toAmtStr || parseFloat(toAmtStr) <= 0)) {
+      showToast('Enter an amount for at least one token');
+      return;
+    }
+    try {
+      setStatus('Preparing liquidity...');
+      const btn = $('actionBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+      let amountADesired = fromAmtStr && parseFloat(fromAmtStr) > 0 ? ethers.utils.parseUnits(fromAmtStr, selectedFrom.decimals) : null;
+      let amountBDesired = toAmtStr && parseFloat(toAmtStr) > 0 ? ethers.utils.parseUnits(toAmtStr, selectedTo.decimals) : null;
+
+      const tokenAAddr = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenBAddr = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      let pairAddress = await factory.getPair(tokenAAddr, tokenBAddr);
+      if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+        setStatus('Creating new pair...');
+        const txCreate = await factory.connect(signer).createPair(tokenAAddr, tokenBAddr, { gasLimit: 3000000 });
+        await txCreate.wait();
+        pairAddress = await factory.getPair(tokenAAddr, tokenBAddr);
+        setStatus('Pair created');
+      }
+
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const token0 = await pairContract.token0();
+      let reserveA = token0.toLowerCase() === tokenAAddr.toLowerCase() ? reserve0 : reserve1;
+      let reserveB = token0.toLowerCase() === tokenAAddr.toLowerCase() ? reserve1 : reserve0;
+
+      if (amountADesired === null && amountBDesired !== null) {
+        amountADesired = amountBDesired.mul(reserveA).div(reserveB);
+        $('fromAmount').value = parseFloat(ethers.utils.formatUnits(amountADesired, selectedFrom.decimals)).toFixed(6);
+      } else if (amountBDesired === null && amountADesired !== null) {
+        amountBDesired = amountADesired.mul(reserveB).div(reserveA);
+        $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBDesired, selectedTo.decimals)).toFixed(6);
+      }
+
+      const amountAMin = amountADesired;
+      const amountBMin = amountBDesired;
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+      async function ensureApprovalFor(tokenAddr, amountNeeded) {
+        if (tokenAddr === WVANA) return;
+        const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+        const allowance = await tokenContract.allowance(account, ROUTER);
+        if (allowance.lt(amountNeeded)) {
+          const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+          await tx.wait();
+        }
+      }
+
+      if (selectedFrom.address === 'VANA_NATIVE' && selectedTo.address !== 'VANA_NATIVE') {
+        await ensureApprovalFor(selectedTo.address, amountBDesired);
+        setStatus('Adding VANA + token liquidity...');
+        const tx = await router.addLiquidityETH(
+          selectedTo.address,
+          amountBDesired,
+          amountBMin,
+          amountAMin,
+          account,
+          deadline,
+          { value: amountADesired, gasLimit: 3000000 }
+        );
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        await tx.wait();
+      } else if (selectedTo.address === 'VANA_NATIVE' && selectedFrom.address !== 'VANA_NATIVE') {
+        await ensureApprovalFor(selectedFrom.address, amountADesired);
+        setStatus('Adding token + VANA liquidity...');
+        const tx = await router.addLiquidityETH(
+          selectedFrom.address,
+          amountADesired,
+          amountAMin,
+          amountBMin,
+          account,
+          deadline,
+          { value: amountBDesired, gasLimit: 3000000 }
+        );
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        await tx.wait();
+      } else {
+        await ensureApprovalFor(selectedFrom.address, amountADesired);
+        await ensureApprovalFor(selectedTo.address, amountBDesired);
+        setStatus('Adding token-token liquidity...');
+        const tx = await router.addLiquidity(
+          tokenAAddr,
+          tokenBAddr,
+          amountADesired,
+          amountBDesired,
+          amountAMin,
+          amountBMin,
+          account,
+          deadline,
+          { gasLimit: 3000000 }
+        );
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        await tx.wait();
+      }
+
+      showToast('Liquidity added');
+      setStatus('Success');
+      btn.disabled = false;
+      btn.textContent = 'Add Liquidity';
+      await updateBalances();
+      await updateLiquidityInfo();
+      loadUserPools();
+    } catch (err) {
+      console.error('addLiquidity error', err);
+      showToast('Add liquidity failed: ' + (err.message || err));
+      setStatus('Transaction failed');
+      const btn = $('actionBtn');
+      btn.disabled = false;
+      btn.textContent = 'Add Liquidity';
+    }
+  };
+
+  window.calculateOptimalAmountA = async function() {
+    if (!provider) return;
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) return;
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+      if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') return;
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const token0 = await pairContract.token0();
+      let reserveA = token0.toLowerCase() === tokenA.toLowerCase() ? reserve0 : reserve1;
+      let reserveB = token0.toLowerCase() === tokenA.toLowerCase() ? reserve1 : reserve0;
+      const amountB = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+      const amountA = amountB.mul(reserveA).div(reserveB);
+      $('fromAmount').value = parseFloat(ethers.utils.formatUnits(amountA, selectedFrom.decimals)).toFixed(6);
+    } catch (e) { console.error('calcA', e); }
+  };
+
+  // Attach listeners for two-way sync (6 decimals)
+  try {
+    const fromInput = $('fromAmount');
+    const toInput = $('toAmount');
+    if (fromInput && toInput) {
+      fromInput.removeEventListener && fromInput.removeEventListener('input', calculateOptimalAmountB);
+      toInput.removeEventListener && toInput.removeEventListener('input', calculateOptimalAmountA);
+      fromInput.addEventListener('input', async () => {
+        // only auto-calc if pair exists
+        const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+        const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+        const pairAddress = await factory.getPair(tokenA, tokenB);
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+          await calculateOptimalAmountB();
+        }
+        updateActionBtn();
+      });
+      toInput.addEventListener('input', async () => {
+        const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+        const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+        const pairAddress = await factory.getPair(tokenA, tokenB);
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+          await calculateOptimalAmountA();
+        }
+        updateActionBtn();
+      });
+    }
+  } catch (e) { console.error('attach listeners', e); }
+
+  window.updateActionBtn = function() {
+    const btn = $('actionBtn');
+    if (!account) {
+      btn.textContent = 'Connect Wallet';
+      btn.disabled = false;
+      return;
+    }
+    const fromAmt = $('fromAmount').value;
+    const toAmt = $('toAmount').value;
+    if ((fromAmt && parseFloat(fromAmt) > 0) || (toAmt && parseFloat(toAmt) > 0)) {
+      btn.textContent = 'Add Liquidity';
+      btn.disabled = false;
+    } else {
+      btn.textContent = 'Enter Amount';
+      btn.disabled = true;
+    }
+  };
+
+  // Ensure the action button calls new functions
+  const actionBtn = $('actionBtn');
+  if (actionBtn) {
+    actionBtn.onclick = async () => {
+      if (!account) await connectWallet();
+      else await addLiquidity();
+    };
+  }
+
+  // Call updateActionBtn periodically and on load to sync UI
+  try { updateActionBtn(); } catch(e){}
+})();
+// --- END OVERRIDE ---
+</script>
 </body>
 </html>
