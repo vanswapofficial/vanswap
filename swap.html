@@ -1018,26 +1018,131 @@
         const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
         $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
         
+        // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
+function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut, fromDecimals, toDecimals) {
+    if (!reserveIn || !reserveOut || reserveIn.eq(0) || reserveOut.eq(0)) {
+        return 100; // Pool kosong atau tidak ada liquidity
+    }
+
+    // Convert reserves to proper decimals
+    const reserveInFormatted = parseFloat(ethers.utils.formatUnits(reserveIn, fromDecimals));
+    const reserveOutFormatted = parseFloat(ethers.utils.formatUnits(reserveOut, toDecimals));
+    const amountInFormatted = parseFloat(ethers.utils.formatUnits(amountIn, fromDecimals));
+
+    // Harga sebelum trade (spot price)
+    const priceBefore = reserveOutFormatted / reserveInFormatted;
+
+    // Constant Product Formula dengan fee 0.3%
+    const amountInWithFee = amountIn.mul(997); // 0.3% fee
+    const numerator = amountInWithFee.mul(reserveOut);
+    const denominator = reserveIn.mul(1000).add(amountInWithFee);
+    const amountOut = numerator.div(denominator);
+
+    // Reserves setelah trade
+    const newReserveIn = reserveIn.add(amountIn);
+    const newReserveOut = reserveOut.sub(amountOut);
+
+    // Harga setelah trade (new spot price)
+    const newReserveInFormatted = parseFloat(ethers.utils.formatUnits(newReserveIn, fromDecimals));
+    const newReserveOutFormatted = parseFloat(ethers.utils.formatUnits(newReserveOut, toDecimals));
+    const priceAfter = newReserveOutFormatted / newReserveInFormatted;
+
+    // Price Impact = (Price Before - Price After) / Price Before * 100%
+    const priceImpact = ((priceBefore - priceAfter) / priceBefore) * 100;
+
+    console.log('Price Impact Calculation:', {
+        reserveIn: reserveInFormatted,
+        reserveOut: reserveOutFormatted,
+        amountIn: amountInFormatted,
+        priceBefore,
+        priceAfter,
+        priceImpact
+    });
+
+    return Math.max(0, priceImpact); // Tidak boleh negatif
+}
+
+// PERBAIKAN di updatePriceInfo():
+async function updatePriceInfo() {
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
+        $('toAmount').value = '';
+        $('priceInfo').textContent = '—';
+        $('minReceived').textContent = '—';
+        $('priceImpact').textContent = '—';
+        $('routeInfo').textContent = '—';
+        return;
+    }
+
+    try {
+        const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        
+        // Build path
+        let path = [];
+        if (selectedFrom.address === 'VANA_NATIVE') {
+            path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
+        } else if (selectedTo.address === 'VANA_NATIVE') {
+            path = [selectedFrom.address, WVANA];
+        } else {
+            path = [selectedFrom.address, selectedTo.address];
+        }
+
+        // Get quote dari router
+        const amounts = await router.getAmountsOut(amountIn, path);
+        const amountOut = amounts[amounts.length - 1];
+        
+        const fromAmtFormatted = parseFloat(fromAmt);
+        const toAmtFormatted = parseFloat(ethers.utils.formatUnits(amountOut, selectedTo.decimals));
+        
+        // Update output amount
+        $('toAmount').value = toAmtFormatted.toFixed(6);
+        
+        // Calculate price
+        const price = toAmtFormatted / fromAmtFormatted;
+        $('priceInfo').textContent = `1 ${selectedFrom.symbol} = ${price.toFixed(6)} ${selectedTo.symbol}`;
+        
+        // Calculate minimum received with slippage
+        const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
+        $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
+        
         // HITUNG PRICE IMPACT YANG AKURAT
         const priceImpactElement = $('priceImpact');
         let priceImpact = 0;
 
         if (currentReserves.reserveA && currentReserves.reserveB) {
-          // Tentukan reserve in dan out berdasarkan token
-          let reserveIn, reserveOut;
-          if (selectedFrom.address === 'VANA_NATIVE') {
-            // Untuk native token, gunakan WVANA sebagai reserve
-            reserveIn = currentReserves.reserveA;
-            reserveOut = currentReserves.reserveB;
-          } else {
-            reserveIn = currentReserves.reserveA;
-            reserveOut = currentReserves.reserveB;
-          }
+            // Tentukan reserve in dan out berdasarkan token yang dipilih
+            let reserveIn, reserveOut;
+            
+            // Untuk kasus VANA -> USDC: reserveIn = VANA, reserveOut = USDC
+            if (selectedFrom.address === 'VANA_NATIVE') {
+                // Jika from adalah VANA native, gunakan WVANA sebagai reserveIn
+                reserveIn = currentReserves.reserveA; // Asumsi reserveA adalah WVANA
+                reserveOut = currentReserves.reserveB; // Asumsi reserveB adalah USDC
+            } else if (selectedTo.address === 'VANA_NATIVE') {
+                // Jika to adalah VANA native, reserveIn adalah token, reserveOut adalah WVANA
+                reserveIn = currentReserves.reserveA;
+                reserveOut = currentReserves.reserveB;
+            } else {
+                // Untuk token -> token, gunakan reserves sesuai urutan
+                reserveIn = currentReserves.reserveA;
+                reserveOut = currentReserves.reserveB;
+            }
 
-          priceImpact = calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut);
+            // Pastikan reserves valid
+            if (reserveIn && reserveOut && !reserveIn.eq(0) && !reserveOut.eq(0)) {
+                priceImpact = calculateAccuratePriceImpact(
+                    amountIn, 
+                    reserveIn, 
+                    reserveOut,
+                    selectedFrom.decimals,
+                    selectedTo.decimals
+                );
+            } else {
+                priceImpact = 0.1; // Fallback
+            }
         } else {
-          // Fallback jika tidak ada data pool
-          priceImpact = 0.1; // Default kecil
+            // Fallback jika tidak ada data pool
+            priceImpact = 0.1;
         }
 
         priceImpactElement.textContent = priceImpact.toFixed(2) + '%';
@@ -1045,11 +1150,11 @@
         // Apply color based on price impact
         priceImpactElement.className = '';
         if (priceImpact < 1) {
-          priceImpactElement.classList.add('price-impact-low');
+            priceImpactElement.classList.add('price-impact-low');
         } else if (priceImpact < 5) {
-          priceImpactElement.classList.add('price-impact-medium');
+            priceImpactElement.classList.add('price-impact-medium');
         } else {
-          priceImpactElement.classList.add('price-impact-high');
+            priceImpactElement.classList.add('price-impact-high');
         }
         
         // Route info
@@ -1059,7 +1164,7 @@
         await checkApproval();
         updateSwapBtn();
 
-      } catch (error) {
+    } catch (error) {
         console.error('Price calculation error:', error);
         $('toAmount').value = '';
         $('priceInfo').textContent = '—';
@@ -1068,8 +1173,73 @@
         $('routeInfo').textContent = 'Insufficient liquidity';
         needsApproval = false;
         updateSwapBtn();
-      }
     }
+}
+
+// PERBAIKAN di getPoolReserves() untuk handle token order dengan benar:
+async function getPoolReserves(tokenA, tokenB) {
+    if (!provider) return null;
+
+    try {
+        // Untuk native token (VANA), gunakan WVANA sebagai representasi
+        const addressA = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
+        const addressB = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
+
+        // Dapatkan alamat pair dari factory
+        const pairAddress = await factory.getPair(addressA, addressB);
+        
+        if (pairAddress === '0x0000000000000000000000000000000000000000') {
+            $('poolLiquidity').textContent = 'No liquidity';
+            return null; // Pair tidak ada
+        }
+
+        // Dapatkan reserves dari pair contract
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [token0, reserves] = await Promise.all([
+            pairContract.token0(),
+            pairContract.getReserves()
+        ]);
+
+        const [reserve0, reserve1] = reserves;
+
+        // Tentukan reserve untuk token A dan B berdasarkan urutan di pool
+        let reserveA, reserveB;
+        if (token0.toLowerCase() === addressA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+        } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+        }
+
+        // Simpan current pair contract untuk update real-time
+        currentPairContract = pairContract;
+        currentReserves = { reserveA, reserveB };
+
+        // Update display liquidity dengan format yang benar
+        const liquidityA = ethers.utils.formatUnits(reserveA, 
+            token0.toLowerCase() === addressA.toLowerCase() ? tokenA.decimals : tokenB.decimals);
+        const liquidityB = ethers.utils.formatUnits(reserveB, 
+            token0.toLowerCase() === addressA.toLowerCase() ? tokenB.decimals : tokenA.decimals);
+        
+        $('poolLiquidity').textContent = `${parseFloat(liquidityA).toLocaleString()} ${tokenA.symbol} / ${parseFloat(liquidityB).toLocaleString()} ${tokenB.symbol}`;
+
+        console.log('Pool Reserves:', {
+            tokenA: tokenA.symbol,
+            tokenB: tokenB.symbol,
+            reserveA: parseFloat(liquidityA),
+            reserveB: parseFloat(liquidityB),
+            pairAddress
+        });
+
+        return { reserveA, reserveB, pairAddress };
+
+    } catch (error) {
+        console.error('Error getting pool reserves:', error);
+        $('poolLiquidity').textContent = 'Error loading';
+        return null;
+    }
+}
 
     // UPDATE SWAP BUTTON WITH APPROVAL LOGIC
     async function updateSwapBtn() {
