@@ -6,6 +6,7 @@
   <title>VanSwap —Pools (Vana Chain)</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* CSS tetap sama seperti sebelumnya */
     :root{
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
@@ -438,7 +439,9 @@
       'function token1() view returns (address)',
       'function totalSupply() view returns (uint256)',
       'function balanceOf(address) view returns (uint256)',
-      'function symbol() view returns (string)'
+      'function symbol() view returns (string)',
+      'function approve(address spender, uint256 amount) external returns (bool)',
+      'function allowance(address owner, address spender) external view returns (uint256)'
     ];
 
     const ERC20_ABI = [
@@ -1499,7 +1502,38 @@
       }
     }
 
-    // REMOVE LIQUIDITY MODAL FUNCTIONS
+    // PERBAIKAN: Fungsi untuk check allowance LP tokens
+    async function checkLPAllowance(pairAddress) {
+      if (!account || !signer) return false;
+      
+      try {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
+        const userBalance = await pairContract.balanceOf(account);
+        const allowance = await pairContract.allowance(account, ROUTER);
+        
+        return allowance.gte(userBalance);
+      } catch (error) {
+        console.error('Error checking LP allowance:', error);
+        return false;
+      }
+    }
+
+    // PERBAIKAN: Fungsi untuk approve LP tokens
+    async function approveLPTokens(pairAddress) {
+      if (!account || !signer) return false;
+      
+      try {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
+        const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await txApprove.wait();
+        return true;
+      } catch (error) {
+        console.error('Error approving LP tokens:', error);
+        return false;
+      }
+    }
+
+    // REMOVE LIQUIDITY MODAL FUNCTIONS - DIPERBAIKI
     async function showRemoveModal(poolAddress) {
       currentRemovePool = poolAddress;
       currentRemovePercentage = 0;
@@ -1523,6 +1557,9 @@
           token1Contract.decimals()
         ]);
 
+        // PERBAIKAN: Check allowance status
+        const hasAllowance = await checkLPAllowance(poolAddress);
+
         // Update modal info
         $('removePoolInfo').innerHTML = `
           <div style="text-align:center;margin-bottom:16px">
@@ -1534,6 +1571,7 @@
               <span style="font-weight:600">${symbol1}</span>
             </div>
             <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(4)}</div>
+            ${!hasAllowance ? '<div style="color:var(--warning);font-size:12px;margin-top:8px">⚠️ Approval required</div>' : ''}
           </div>
         `;
 
@@ -1551,7 +1589,8 @@
           decimals1: decimals1,
           userBalance: userBalance,
           totalSupply: totalSupply,
-          reserves: [reserve0, reserve1]
+          reserves: [reserve0, reserve1],
+          hasAllowance: hasAllowance
         };
 
         // Reset percentage buttons
@@ -1600,6 +1639,7 @@
       currentRemovePercentage = 0;
     }
 
+    // PERBAIKAN: Fungsi confirmRemoveLiquidity yang sudah diperbaiki
     async function confirmRemoveLiquidity() {
       if (!currentRemovePool || currentRemovePercentage === 0) {
         showToast('Please select a percentage to remove');
@@ -1614,20 +1654,27 @@
 
         const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
 
+        // PERBAIKAN: Check and handle allowance
+        if (!currentRemovePool.hasAllowance) {
+          setStatus('Approving LP tokens...');
+          btn.innerHTML = '<span class="spinner"></span>Approving...';
+          
+          const approved = await approveLPTokens(currentRemovePool.address);
+          if (!approved) {
+            throw new Error('Failed to approve LP tokens');
+          }
+          
+          // Update allowance status
+          currentRemovePool.hasAllowance = true;
+          setStatus('Approval successful, removing liquidity...');
+          btn.innerHTML = '<span class="spinner"></span>Removing...';
+        }
+
         // Calculate minimum amounts with 5% slippage
         const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
         const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
 
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
-        // Approve router to spend LP tokens if needed
-        const pairContract = new ethers.Contract(currentRemovePool.address, PAIR_ABI, signer);
-        const allowance = await pairContract.allowance(account, ROUTER);
-        if (allowance.lt(liquidityAmount)) {
-          setStatus('Approving LP tokens...');
-          const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
-          await txApprove.wait();
-        }
 
         setStatus('Removing liquidity...');
         const tx = await router.removeLiquidity(
