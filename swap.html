@@ -293,7 +293,7 @@
   <script>
     // CONFIG
     const ROUTER = '0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C';
-    const FACTORY = '0x4CB6d4d0e1dC7a9c4E5a6a4d5C6e5a8c4B3a2b1c'; // Ganti dengan alamat Factory VanSwap yang benar
+    const FACTORY = '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D';
     const WVANA = '0x00eddd9621fb08436d0331c149d1690909a5906d';
     const VANS = '0x82741ff5937933244eb562A4b396f8079F1de914';
     const USDC = '0xF1815bd50389c46847f0Bda824eC8da914045D14';
@@ -345,7 +345,7 @@
     let deadline = 20;
     let needsApproval = false;
     let currentPairContract = null;
-    let currentReserves = { reserve0: 0, reserve1: 0 };
+    let currentReserves = { reserveA: 0, reserveB: 0 };
 
     const DEFAULT_TOKENS = [
       { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true},
@@ -373,84 +373,114 @@
 
     function setStatus(s){ $('status').textContent = s }
 
-    // FUNGSI BARU: Dapatkan data pool dari blockchain
-    async function getPoolReserves(tokenA, tokenB) {
-      if (!provider) return null;
-
-      try {
-        // Untuk native token (VANA), gunakan WVANA sebagai representasi
-        const addressA = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
-        const addressB = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
-
-        // Dapatkan alamat pair dari factory
-        const pairAddress = await factory.getPair(addressA, addressB);
-        
-        if (pairAddress === '0x0000000000000000000000000000000000000000') {
-          return null; // Pair tidak ada
+    // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
+    function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut, fromDecimals, toDecimals) {
+        if (!reserveIn || !reserveOut || reserveIn.eq(0) || reserveOut.eq(0)) {
+            return 100; // Pool kosong atau tidak ada liquidity
         }
 
-        // Dapatkan reserves dari pair contract
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [token0, reserves] = await Promise.all([
-          pairContract.token0(),
-          pairContract.getReserves()
-        ]);
+        // Convert reserves to proper decimals
+        const reserveInFormatted = parseFloat(ethers.utils.formatUnits(reserveIn, fromDecimals));
+        const reserveOutFormatted = parseFloat(ethers.utils.formatUnits(reserveOut, toDecimals));
+        const amountInFormatted = parseFloat(ethers.utils.formatUnits(amountIn, fromDecimals));
 
-        const [reserve0, reserve1] = reserves;
+        // Harga sebelum trade (spot price)
+        const priceBefore = reserveOutFormatted / reserveInFormatted;
 
-        // Tentukan reserve untuk token A dan B
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === addressA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
+        // Constant Product Formula dengan fee 0.3%
+        const amountInWithFee = amountIn.mul(997); // 0.3% fee
+        const numerator = amountInWithFee.mul(reserveOut);
+        const denominator = reserveIn.mul(1000).add(amountInWithFee);
+        const amountOut = numerator.div(denominator);
 
-        // Simpan current pair contract untuk update real-time
-        currentPairContract = pairContract;
-        currentReserves = { reserveA, reserveB };
+        // Reserves setelah trade
+        const newReserveIn = reserveIn.add(amountIn);
+        const newReserveOut = reserveOut.sub(amountOut);
 
-        // Update display liquidity
-        const liquidityA = ethers.utils.formatUnits(reserveA, tokenA.decimals);
-        const liquidityB = ethers.utils.formatUnits(reserveB, tokenB.decimals);
-        $('poolLiquidity').textContent = `${parseFloat(liquidityA).toLocaleString()} ${tokenA.symbol} / ${parseFloat(liquidityB).toLocaleString()} ${tokenB.symbol}`;
+        // Harga setelah trade (new spot price)
+        const newReserveInFormatted = parseFloat(ethers.utils.formatUnits(newReserveIn, fromDecimals));
+        const newReserveOutFormatted = parseFloat(ethers.utils.formatUnits(newReserveOut, toDecimals));
+        const priceAfter = newReserveOutFormatted / newReserveInFormatted;
 
-        return { reserveA, reserveB, pairAddress };
+        // Price Impact = (Price Before - Price After) / Price Before * 100%
+        const priceImpact = ((priceBefore - priceAfter) / priceBefore) * 100;
 
-      } catch (error) {
-        console.error('Error getting pool reserves:', error);
-        return null;
-      }
+        console.log('Price Impact Calculation:', {
+            reserveIn: reserveInFormatted,
+            reserveOut: reserveOutFormatted,
+            amountIn: amountInFormatted,
+            priceBefore,
+            priceAfter,
+            priceImpact
+        });
+
+        return Math.max(0, priceImpact); // Tidak boleh negatif
     }
 
-    // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
-    function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut) {
-      if (!reserveIn || !reserveOut || reserveIn.eq(0) || reserveOut.eq(0)) {
-        return 100; // Pool kosong atau tidak ada liquidity
-      }
+    // FUNGSI BARU: Dapatkan data pool dari blockchain
+    async function getPoolReserves(tokenA, tokenB) {
+        if (!provider) return null;
 
-      // Constant Product Formula: k = reserveIn * reserveOut
-      const amountInWithFee = amountIn.mul(997); // 0.3% fee
-      const numerator = amountInWithFee.mul(reserveOut);
-      const denominator = reserveIn.mul(1000).add(amountInWithFee);
-      const amountOut = numerator.div(denominator);
+        try {
+            // Untuk native token (VANA), gunakan WVANA sebagai representasi
+            const addressA = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
+            const addressB = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
 
-      // Harga sebelum trade
-      const priceBefore = parseFloat(ethers.utils.formatUnits(reserveOut, selectedTo.decimals)) / 
-                         parseFloat(ethers.utils.formatUnits(reserveIn, selectedFrom.decimals));
+            // Dapatkan alamat pair dari factory
+            const pairAddress = await factory.getPair(addressA, addressB);
+            
+            if (pairAddress === '0x0000000000000000000000000000000000000000') {
+                $('poolLiquidity').textContent = 'No liquidity';
+                return null; // Pair tidak ada
+            }
 
-      // Harga setelah trade
-      const newReserveIn = reserveIn.add(amountIn);
-      const newReserveOut = reserveOut.sub(amountOut);
-      const priceAfter = parseFloat(ethers.utils.formatUnits(newReserveOut, selectedTo.decimals)) / 
-                        parseFloat(ethers.utils.formatUnits(newReserveIn, selectedFrom.decimals));
+            // Dapatkan reserves dari pair contract
+            const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+            const [token0, reserves] = await Promise.all([
+                pairContract.token0(),
+                pairContract.getReserves()
+            ]);
 
-      // Price Impact
-      const priceImpact = ((priceBefore - priceAfter) / priceBefore) * 100;
+            const [reserve0, reserve1] = reserves;
 
-      return Math.max(0, priceImpact); // Tidak boleh negatif
+            // Tentukan reserve untuk token A dan B berdasarkan urutan di pool
+            let reserveA, reserveB;
+            if (token0.toLowerCase() === addressA.toLowerCase()) {
+                reserveA = reserve0;
+                reserveB = reserve1;
+            } else {
+                reserveA = reserve1;
+                reserveB = reserve0;
+            }
+
+            // Simpan current pair contract untuk update real-time
+            currentPairContract = pairContract;
+            currentReserves = { reserveA, reserveB };
+
+            // Update display liquidity dengan format yang benar
+            const tokenADecimals = token0.toLowerCase() === addressA.toLowerCase() ? tokenA.decimals : tokenB.decimals;
+            const tokenBDecimals = token0.toLowerCase() === addressA.toLowerCase() ? tokenB.decimals : tokenA.decimals;
+            
+            const liquidityA = ethers.utils.formatUnits(reserveA, tokenADecimals);
+            const liquidityB = ethers.utils.formatUnits(reserveB, tokenBDecimals);
+            
+            $('poolLiquidity').textContent = `${parseFloat(liquidityA).toLocaleString()} ${tokenA.symbol} / ${parseFloat(liquidityB).toLocaleString()} ${tokenB.symbol}`;
+
+            console.log('Pool Reserves:', {
+                tokenA: tokenA.symbol,
+                tokenB: tokenB.symbol,
+                reserveA: parseFloat(liquidityA),
+                reserveB: parseFloat(liquidityB),
+                pairAddress
+            });
+
+            return { reserveA, reserveB, pairAddress };
+
+        } catch (error) {
+            console.error('Error getting pool reserves:', error);
+            $('poolLiquidity').textContent = 'Error loading';
+            return null;
+        }
     }
 
     // MENU
@@ -458,12 +488,12 @@
     const menuDropdown = $('menuDropdown');
     menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menuDropdown.classList.toggle('show'); });
     menuDropdown.querySelectorAll('.menu-item').forEach(it=>{ 
-      it.addEventListener('click', ()=> { 
-        const href = it.getAttribute('data-href');
-        if (href) {
-          window.location.href = href;
-        }
-      }); 
+        it.addEventListener('click', ()=> { 
+            const href = it.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
+        }); 
     });
     document.addEventListener('click', ()=> menuDropdown.classList.remove('show'));
 
@@ -471,213 +501,213 @@
     $('settingsBtn').addEventListener('click', ()=> $('settingsModal').style.display = 'flex');
     function closeSettingsModal(){ $('settingsModal').style.display = 'none'; }
     function updateSlippage(){ 
-      slippage = parseFloat($('slippageInput').value) || 0.5; 
-      $('slippageDisplay').textContent = slippage + '%';
-      updatePriceInfo();
+        slippage = parseFloat($('slippageInput').value) || 0.5; 
+        $('slippageDisplay').textContent = slippage + '%';
+        updatePriceInfo();
     }
     function updateDeadline(){ deadline = parseInt($('deadlineInput').value) || 20; }
     function toggleExpertMode(){ 
-      if($('expertMode').checked) {
-        showToast('Expert mode enabled - use with caution!', 3000);
-      }
+        if($('expertMode').checked) {
+            showToast('Expert mode enabled - use with caution!', 3000);
+        }
     }
 
     // DROPDOWNS
     function buildTokenListHtml(type){
-      const listEl = (type==='from') ? $('fromList') : $('toList');
-      listEl.innerHTML = '';
-      const search = document.createElement('div'); search.className = 'token-search';
-      search.innerHTML = `<input placeholder="Search token..." oninput="filterTokens('${type}', this.value)" />`;
-      listEl.appendChild(search);
-      const header = document.createElement('div'); header.style.color = 'var(--muted)'; header.style.fontSize='13px'; header.style.marginBottom = '8px'; header.textContent = `Select Token (${tokens.length})`;
-      listEl.appendChild(header);
-      for(const t of tokens){
-        const opt = document.createElement('div'); opt.className = 'token-option'; opt.setAttribute('data-addr', t.address);
-        let statusBadge = '';
-        if (t.verified) {
-          statusBadge = '<span class="token-verified">✓ Verified</span>';
-        } else if (t.custom) {
-          statusBadge = '<span class="token-imported">Imported</span>';
-        } else if (t.warning) {
-          statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
+        const listEl = (type==='from') ? $('fromList') : $('toList');
+        listEl.innerHTML = '';
+        const search = document.createElement('div'); search.className = 'token-search';
+        search.innerHTML = `<input placeholder="Search token..." oninput="filterTokens('${type}', this.value)" />`;
+        listEl.appendChild(search);
+        const header = document.createElement('div'); header.style.color = 'var(--muted)'; header.style.fontSize='13px'; header.style.marginBottom = '8px'; header.textContent = `Select Token (${tokens.length})`;
+        listEl.appendChild(header);
+        for(const t of tokens){
+            const opt = document.createElement('div'); opt.className = 'token-option'; opt.setAttribute('data-addr', t.address);
+            let statusBadge = '';
+            if (t.verified) {
+                statusBadge = '<span class="token-verified">✓ Verified</span>';
+            } else if (t.custom) {
+                statusBadge = '<span class="token-imported">Imported</span>';
+            } else if (t.warning) {
+                statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
+            }
+
+            opt.innerHTML = `<img src="${t.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700">${t.symbol} ${statusBadge}</div>
+                                <div class="token-addr">${t.address === 'VANA_NATIVE' ? 'Native Token' : (t.address.substring(0,6)+'...'+t.address.substring(38))}</div>
+                            </div>
+                            <div id="bal-${t.symbol}" style="color:var(--muted);font-size:13px">—</div>`;
+            opt.addEventListener('click', (e)=>{ e.stopPropagation(); selectToken(type, t); });
+            listEl.appendChild(opt);
         }
 
-        opt.innerHTML = `<img src="${t.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
-                         <div style="flex:1;min-width:0">
-                           <div style="font-weight:700">${t.symbol} ${statusBadge}</div>
-                           <div class="token-addr">${t.address === 'VANA_NATIVE' ? 'Native Token' : (t.address.substring(0,6)+'...'+t.address.substring(38))}</div>
-                         </div>
-                         <div id="bal-${t.symbol}" style="color:var(--muted);font-size:13px">—</div>`;
-        opt.addEventListener('click', (e)=>{ e.stopPropagation(); selectToken(type, t); });
-        listEl.appendChild(opt);
-      }
+        // Add "Add Custom Token" button at the bottom
+        const addTokenBtn = document.createElement('div');
+        addTokenBtn.className = 'add-token-btn';
+        addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
+        addTokenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showAddTokenForm(type);
+        });
+        listEl.appendChild(addTokenBtn);
 
-      // Add "Add Custom Token" button at the bottom
-      const addTokenBtn = document.createElement('div');
-      addTokenBtn.className = 'add-token-btn';
-      addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
-      addTokenBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showAddTokenForm(type);
-      });
-      listEl.appendChild(addTokenBtn);
-
-      if(tokens.length===0){ const no = document.createElement('div'); no.className='token-addr'; no.style.padding='12px'; no.textContent='No tokens'; listEl.appendChild(no); }
-      listEl.style.display = 'block'; listEl.style.pointerEvents = 'auto';
+        if(tokens.length===0){ const no = document.createElement('div'); no.className='token-addr'; no.style.padding='12px'; no.textContent='No tokens'; listEl.appendChild(no); }
+        listEl.style.display = 'block'; listEl.style.pointerEvents = 'auto';
     }
 
     // Function to show add token form
     function showAddTokenForm(type) {
-      const listEl = (type==='from') ? $('fromList') : $('toList');
+        const listEl = (type==='from') ? $('fromList') : $('toList');
 
-      // Check if form already exists
-      if (listEl.querySelector('.add-token-form')) {
-        return;
-      }
-
-      const form = document.createElement('div');
-      form.className = 'add-token-form';
-      form.innerHTML = `
-        <div class="form-group">
-          <label class="form-label">Token Contract Address</label>
-          <input type="text" class="form-input" id="tokenAddressInput" placeholder="0x..." />
-        </div>
-        <div class="warning-box">
-          <div class="warning-header">
-            <span>⚠️</span>
-            <span>Security Warning</span>
-          </div>
-          <div class="warning-text">
-            Anyone can create ERC-20 tokens. Verify the token contract address before adding it. 
-            Fake tokens may look similar to legitimate ones. Always double-check the contract address from official sources.
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" id="cancelAddToken">Cancel</button>
-          <button class="btn btn-primary" id="importToken">Import Token</button>
-        </div>
-      `;
-
-      listEl.appendChild(form);
-
-      // Focus on input
-      setTimeout(() => {
-        const input = form.querySelector('#tokenAddressInput');
-        if (input) input.focus();
-      }, 100);
-
-      // Add event listeners
-      form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
-        e.stopPropagation();
-        form.remove();
-      });
-
-      form.querySelector('#importToken').addEventListener('click', (e) => {
-        e.stopPropagation();
-        importCustomToken(type, form.querySelector('#tokenAddressInput').value);
-      });
-
-      // Allow Enter key to import
-      form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.stopPropagation();
-          importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+        // Check if form already exists
+        if (listEl.querySelector('.add-token-form')) {
+            return;
         }
-      });
+
+        const form = document.createElement('div');
+        form.className = 'add-token-form';
+        form.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Token Contract Address</label>
+                <input type="text" class="form-input" id="tokenAddressInput" placeholder="0x..." />
+            </div>
+            <div class="warning-box">
+                <div class="warning-header">
+                    <span>⚠️</span>
+                    <span>Security Warning</span>
+                </div>
+                <div class="warning-text">
+                    Anyone can create ERC-20 tokens. Verify the token contract address before adding it. 
+                    Fake tokens may look similar to legitimate ones. Always double-check the contract address from official sources.
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancelAddToken">Cancel</button>
+                <button class="btn btn-primary" id="importToken">Import Token</button>
+            </div>
+        `;
+
+        listEl.appendChild(form);
+
+        // Focus on input
+        setTimeout(() => {
+            const input = form.querySelector('#tokenAddressInput');
+            if (input) input.focus();
+        }, 100);
+
+        // Add event listeners
+        form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
+            e.stopPropagation();
+            form.remove();
+        });
+
+        form.querySelector('#importToken').addEventListener('click', (e) => {
+            e.stopPropagation();
+            importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+        });
+
+        // Allow Enter key to import
+        form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.stopPropagation();
+                importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+            }
+        });
     }
 
     // Function to import custom token
     async function importCustomToken(type, address) {
-      if (!address || address.trim() === '') {
-        showToast('Please enter a token address');
-        return;
-      }
-
-      // Basic validation
-      if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
-        showToast('Invalid token address format');
-        return;
-      }
-
-      // Check if token already exists
-      const existingToken = tokens.find(t => 
-        t.address.toLowerCase() === address.trim().toLowerCase()
-      );
-
-      if (existingToken) {
-        showToast('Token already in list');
-        selectToken(type, existingToken);
-        return;
-      }
-
-      try {
-        setStatus('Importing token...');
-
-        if (!provider) {
-          provider = new ethers.providers.JsonRpcProvider(RPC);
+        if (!address || address.trim() === '') {
+            showToast('Please enter a token address');
+            return;
         }
 
-        const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+        // Basic validation
+        if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
+            showToast('Invalid token address format');
+            return;
+        }
 
-        // Get token details
-        const [symbol, decimals] = await Promise.all([
-          tokenContract.symbol(),
-          tokenContract.decimals()
-        ]);
+        // Check if token already exists
+        const existingToken = tokens.find(t => 
+            t.address.toLowerCase() === address.trim().toLowerCase()
+        );
 
-        // Create token object
-        const newToken = {
-          symbol: symbol,
-          address: address,
-          decimals: decimals,
-          logo: 'https://vanswap.xyz/assets/unknown.png',
-          custom: true,
-          verified: false
-        };
+        if (existingToken) {
+            showToast('Token already in list');
+            selectToken(type, existingToken);
+            return;
+        }
 
-        // Add to tokens list
-        tokens.push(newToken);
+        try {
+            setStatus('Importing token...');
 
-        // Save to localStorage
-        saveCustomTokens();
+            if (!provider) {
+                provider = new ethers.providers.JsonRpcProvider(RPC);
+            }
 
-        // Select the token
-        selectToken(type, newToken);
+            const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
 
-        // Rebuild token list to show new token
-        buildTokenListHtml(type);
+            // Get token details
+            const [symbol, decimals] = await Promise.all([
+                tokenContract.symbol(),
+                tokenContract.decimals()
+            ]);
 
-        showToast(`Token ${symbol} imported successfully`);
-        setStatus('Token imported');
+            // Create token object
+            const newToken = {
+                symbol: symbol,
+                address: address,
+                decimals: decimals,
+                logo: 'https://vanswap.xyz/assets/unknown.png',
+                custom: true,
+                verified: false
+            };
 
-      } catch (error) {
-        console.error('Error importing token:', error);
-        showToast('Failed to import token. Check the address and try again.');
-        setStatus('Import failed');
-      }
+            // Add to tokens list
+            tokens.push(newToken);
+
+            // Save to localStorage
+            saveCustomTokens();
+
+            // Select the token
+            selectToken(type, newToken);
+
+            // Rebuild token list to show new token
+            buildTokenListHtml(type);
+
+            showToast(`Token ${symbol} imported successfully`);
+            setStatus('Token imported');
+
+        } catch (error) {
+            console.error('Error importing token:', error);
+            showToast('Failed to import token. Check the address and try again.');
+            setStatus('Import failed');
+        }
     }
 
     // Save custom tokens to localStorage
     function saveCustomTokens() {
-      const customTokens = tokens.filter(t => t.custom);
-      localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
+        const customTokens = tokens.filter(t => t.custom);
+        localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
     }
 
     // Load custom tokens from localStorage
     function loadCustomTokens() {
-      try {
-        const stored = localStorage.getItem('vanswap_custom_tokens');
-        if (stored) {
-          const customTokens = JSON.parse(stored);
-          customTokens.forEach(ct => {
-            if (!tokens.some(t => t.address.toLowerCase() === ct.address.toLowerCase())) {
-              tokens.push(ct);
+        try {
+            const stored = localStorage.getItem('vanswap_custom_tokens');
+            if (stored) {
+                const customTokens = JSON.parse(stored);
+                customTokens.forEach(ct => {
+                    if (!tokens.some(t => t.address.toLowerCase() === ct.address.toLowerCase())) {
+                        tokens.push(ct);
+                    }
+                });
             }
-          });
+        } catch (error) {
+            console.error('Error loading custom tokens:', error);
         }
-      } catch (error) {
-        console.error('Error loading custom tokens:', error);
-      }
     }
 
     window.filterTokens = function(type, term){ const listEl = (type==='from') ? $('fromList') : $('toList'); const opts = listEl.querySelectorAll('.token-option'); opts.forEach(o=>{ const text = o.textContent.toLowerCase(); const ok = text.includes((term||'').toLowerCase()); o.style.display = ok ? 'flex' : 'none'; }); };
@@ -687,718 +717,566 @@
     document.addEventListener('click', (e)=>{ if(!e.target.closest('.select-wrap')){ $('fromList').style.display = 'none'; $('toList').style.display = 'none'; } });
 
     async function selectToken(type, token){
-      if(type==='from'){ selectedFrom = token; $('fromLogo').src = token.logo; $('fromSymbol').textContent = token.symbol; $('fromList').style.display = 'none'; }
-      else{ selectedTo = token; $('toLogo').src = token.logo; $('toSymbol').textContent = token.symbol; $('toList').style.display = 'none'; }
-      
-      // Dapatkan data pool ketika token berubah
-      await getPoolReserves(selectedFrom, selectedTo);
-      
-      updateBalances(); 
-      updatePriceInfo();
-      updateSwapBtn(); 
+        if(type==='from'){ selectedFrom = token; $('fromLogo').src = token.logo; $('fromSymbol').textContent = token.symbol; $('fromList').style.display = 'none'; }
+        else{ selectedTo = token; $('toLogo').src = token.logo; $('toSymbol').textContent = token.symbol; $('toList').style.display = 'none'; }
+        
+        // Dapatkan data pool ketika token berubah
+        await getPoolReserves(selectedFrom, selectedTo);
+        
+        updateBalances(); 
+        updatePriceInfo();
+        updateSwapBtn(); 
     }
 
     // FLIP TOKENS
     $('flipBtn').addEventListener('click', async ()=>{
-      const temp = selectedFrom;
-      selectedFrom = selectedTo;
-      selectedTo = temp;
-      
-      $('fromLogo').src = selectedFrom.logo;
-      $('fromSymbol').textContent = selectedFrom.symbol;
-      $('toLogo').src = selectedTo.logo;
-      $('toSymbol').textContent = selectedTo.symbol;
-      
-      // Also flip amounts
-      const fromAmt = $('fromAmount').value;
-      const toAmt = $('toAmount').value;
-      $('fromAmount').value = toAmt;
-      $('toAmount').value = fromAmt;
-      
-      // Dapatkan data pool baru
-      await getPoolReserves(selectedFrom, selectedTo);
-      
-      updateBalances();
-      updatePriceInfo();
-      updateSwapBtn();
+        const temp = selectedFrom;
+        selectedFrom = selectedTo;
+        selectedTo = temp;
+        
+        $('fromLogo').src = selectedFrom.logo;
+        $('fromSymbol').textContent = selectedFrom.symbol;
+        $('toLogo').src = selectedTo.logo;
+        $('toSymbol').textContent = selectedTo.symbol;
+        
+        // Also flip amounts
+        const fromAmt = $('fromAmount').value;
+        const toAmt = $('toAmount').value;
+        $('fromAmount').value = toAmt;
+        $('toAmount').value = fromAmt;
+        
+        // Dapatkan data pool baru
+        await getPoolReserves(selectedFrom, selectedTo);
+        
+        updateBalances();
+        updatePriceInfo();
+        updateSwapBtn();
     });
 
     // WRAP/UNWRAP FUNCTIONS
     async function wrapVANA() {
-      if (!account) {
-        await connectWallet();
-        return;
-      }
+        if (!account) {
+            await connectWallet();
+            return;
+        }
 
-      const fromAmt = $('fromAmount').value;
-      if (!fromAmt || parseFloat(fromAmt) <= 0) {
-        showToast('Enter VANA amount to wrap');
-        return;
-      }
+        const fromAmt = $('fromAmount').value;
+        if (!fromAmt || parseFloat(fromAmt) <= 0) {
+            showToast('Enter VANA amount to wrap');
+            return;
+        }
 
-      try {
-        setStatus('Wrapping VANA...');
-        const amountIn = ethers.utils.parseEther(fromAmt);
-        
-        const tx = await wvanaContract.deposit({
-          value: amountIn,
-          gasLimit: 300000
-        });
+        try {
+            setStatus('Wrapping VANA...');
+            const amountIn = ethers.utils.parseEther(fromAmt);
+            
+            const tx = await wvanaContract.deposit({
+                value: amountIn,
+                gasLimit: 300000
+            });
 
-        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-        setStatus('Wrapping VANA...');
-        await tx.wait();
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Wrapping VANA...');
+            await tx.wait();
 
-        showToast('VANA wrapped successfully!');
-        setStatus('Wrap completed');
-        await updateBalances();
-        await updateDropdownBalances();
+            showToast('VANA wrapped successfully!');
+            setStatus('Wrap completed');
+            await updateBalances();
+            await updateDropdownBalances();
 
-      } catch (error) {
-        console.error('Wrap error:', error);
-        showToast('Wrap failed: ' + (error.message || error));
-        setStatus('Wrap failed');
-      }
+        } catch (error) {
+            console.error('Wrap error:', error);
+            showToast('Wrap failed: ' + (error.message || error));
+            setStatus('Wrap failed');
+        }
     }
 
     async function unwrapVANA() {
-      if (!account) {
-        await connectWallet();
-        return;
-      }
-
-      const fromAmt = $('fromAmount').value;
-      if (!fromAmt || parseFloat(fromAmt) <= 0) {
-        showToast('Enter WVANA amount to unwrap');
-        return;
-      }
-
-      try {
-        setStatus('Unwrapping WVANA...');
-        const amountIn = ethers.utils.parseEther(fromAmt);
-        
-        // Check allowance first
-        const allowance = await wvanaContract.allowance(account, WVANA);
-        if (allowance.lt(amountIn)) {
-          setStatus('Approving WVANA...');
-          const approveTx = await wvanaContract.approve(WVANA, ethers.constants.MaxUint256);
-          await approveTx.wait();
+        if (!account) {
+            await connectWallet();
+            return;
         }
 
-        setStatus('Unwrapping WVANA...');
-        const tx = await wvanaContract.withdraw(amountIn, { gasLimit: 300000 });
-        
-        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-        setStatus('Unwrapping WVANA...');
-        await tx.wait();
+        const fromAmt = $('fromAmount').value;
+        if (!fromAmt || parseFloat(fromAmt) <= 0) {
+            showToast('Enter WVANA amount to unwrap');
+            return;
+        }
 
-        showToast('WVANA unwrapped successfully!');
-        setStatus('Unwrap completed');
-        await updateBalances();
-        await updateDropdownBalances();
+        try {
+            setStatus('Unwrapping WVANA...');
+            const amountIn = ethers.utils.parseEther(fromAmt);
+            
+            // Check allowance first
+            const allowance = await wvanaContract.allowance(account, WVANA);
+            if (allowance.lt(amountIn)) {
+                setStatus('Approving WVANA...');
+                const approveTx = await wvanaContract.approve(WVANA, ethers.constants.MaxUint256);
+                await approveTx.wait();
+            }
 
-      } catch (error) {
-        console.error('Unwrap error:', error);
-        showToast('Unwrap failed: ' + (error.message || error));
-        setStatus('Unwrap failed');
-      }
+            setStatus('Unwrapping WVANA...');
+            const tx = await wvanaContract.withdraw(amountIn, { gasLimit: 300000 });
+            
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Unwrapping WVANA...');
+            await tx.wait();
+
+            showToast('WVANA unwrapped successfully!');
+            setStatus('Unwrap completed');
+            await updateBalances();
+            await updateDropdownBalances();
+
+        } catch (error) {
+            console.error('Unwrap error:', error);
+            showToast('Unwrap failed: ' + (error.message || error));
+            setStatus('Unwrap failed');
+        }
     }
 
     // WALLET & CHAIN HANDLING
     const connectBtn = $('connectBtn');
     connectBtn.addEventListener('click', connectWallet);
     async function ensureVanaChain(){
-      if(!window.ethereum) return false;
-      try{
-        const net = await window.ethereum.request({ method: 'eth_chainId' });
-        if(net !== CHAIN_ID_HEX){
-          try{
-            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
-            return true;
-          }catch(switchErr){
-            if(switchErr.code === 4902){
-              await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_ID_HEX, chainName: 'Vana Chain', rpcUrls:[RPC], nativeCurrency:{name:'VANA',symbol:'VANA',decimals:18}, blockExplorerUrls:['https://vanascan.io/'] }] });
-              return true;
+        if(!window.ethereum) return false;
+        try{
+            const net = await window.ethereum.request({ method: 'eth_chainId' });
+            if(net !== CHAIN_ID_HEX){
+                try{
+                    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
+                    return true;
+                }catch(switchErr){
+                    if(switchErr.code === 4902){
+                        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_ID_HEX, chainName: 'Vana Chain', rpcUrls:[RPC], nativeCurrency:{name:'VANA',symbol:'VANA',decimals:18}, blockExplorerUrls:['https://vanascan.io/'] }] });
+                        return true;
+                    }
+                    return false;
+                }
             }
+            return true;
+        }catch(e){
+            console.error('ensureVanaChain', e);
             return false;
-          }
         }
-        return true;
-      }catch(e){
-        console.error('ensureVanaChain', e);
-        return false;
-      }
     }
 
     async function connectWallet(){
-      if(!window.ethereum){ alert('Please install MetaMask'); return; }
-      try{
-        await ensureVanaChain();
-        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-        account = accounts[0];
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-        router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-        wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
-        connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
-        setStatus('Connected');
-        
-        // Dapatkan data pool setelah connect
-        await getPoolReserves(selectedFrom, selectedTo);
-        
-        await updateBalances(); 
-        await updateDropdownBalances(); 
-        updateSwapBtn(); 
-        updatePriceInfo();
-      }catch(e){
-        console.error('connectWallet', e);
-        showToast('Connection failed: ' + (e.message || e));
-      }
+        if(!window.ethereum){ alert('Please install MetaMask'); return; }
+        try{
+            await ensureVanaChain();
+            const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+            account = accounts[0];
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+            factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+            wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
+            connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
+            setStatus('Connected');
+            
+            // Dapatkan data pool setelah connect
+            await getPoolReserves(selectedFrom, selectedTo);
+            
+            await updateBalances(); 
+            await updateDropdownBalances(); 
+            updateSwapBtn(); 
+            updatePriceInfo();
+        }catch(e){
+            console.error('connectWallet', e);
+            showToast('Connection failed: ' + (e.message || e));
+        }
     }
 
     // listen for chain change and auto-handle
     if(window.ethereum){
-      window.ethereum.on('chainChanged', async (chainId) => {
-        console.log('chainChanged', chainId);
-        if(chainId !== CHAIN_ID_HEX){
-          setStatus('Wrong chain — switching...');
-          try{ await ensureVanaChain(); setStatus('Switched to Vana'); location.reload(); } catch(e){ setStatus('Please switch to Vana chain in wallet'); }
-        } else { setStatus('Connected to Vana'); location.reload(); }
-      });
-      window.ethereum.on('accountsChanged', async (accs)=>{ 
-        if(accs && accs.length>0){ 
-          account = accs[0]; 
-          connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); 
-          await getPoolReserves(selectedFrom, selectedTo);
-          updateBalances(); 
-          updateDropdownBalances(); 
-          updatePriceInfo(); 
-        } else { 
-          account = null; 
-          connectBtn.textContent = 'Connect Wallet'; 
-        } 
-      });
+        window.ethereum.on('chainChanged', async (chainId) => {
+            console.log('chainChanged', chainId);
+            if(chainId !== CHAIN_ID_HEX){
+                setStatus('Wrong chain — switching...');
+                try{ await ensureVanaChain(); setStatus('Switched to Vana'); location.reload(); } catch(e){ setStatus('Please switch to Vana chain in wallet'); }
+            } else { setStatus('Connected to Vana'); location.reload(); }
+        });
+        window.ethereum.on('accountsChanged', async (accs)=>{ 
+            if(accs && accs.length>0){ 
+                account = accs[0]; 
+                connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); 
+                await getPoolReserves(selectedFrom, selectedTo);
+                updateBalances(); 
+                updateDropdownBalances(); 
+                updatePriceInfo(); 
+            } else { 
+                account = null; 
+                connectBtn.textContent = 'Connect Wallet'; 
+            } 
+        });
     }
 
     // BALANCES & MAX
     async function updateBalances(){
-      if(!provider || !account) return;
-      try{
-        if(selectedFrom.address === 'VANA_NATIVE'){
-          const b = await provider.getBalance(account);
-          $('fromBalance').textContent = parseFloat(ethers.utils.formatEther(b)).toFixed(4);
-          $('btnMax').disabled = false;
-        }else{
-          const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
-          const b = await c.balanceOf(account);
-          const d = await c.decimals();
-          $('fromBalance').textContent = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4);
-          $('btnMax').disabled = false;
-        }
-        if(selectedTo.address === 'VANA_NATIVE'){
-          const b2 = await provider.getBalance(account);
-          $('toBalance').textContent = parseFloat(ethers.utils.formatEther(b2)).toFixed(4);
-        }else{
-          const c2 = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
-          const b2 = await c2.balanceOf(account);
-          const d2 = await c2.decimals();
-          $('toBalance').textContent = parseFloat(ethers.utils.formatUnits(b2,d2)).toFixed(4);
-        }
-      }catch(e){ console.error('updateBalances', e); }
+        if(!provider || !account) return;
+        try{
+            if(selectedFrom.address === 'VANA_NATIVE'){
+                const b = await provider.getBalance(account);
+                $('fromBalance').textContent = parseFloat(ethers.utils.formatEther(b)).toFixed(4);
+                $('btnMax').disabled = false;
+            }else{
+                const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+                const b = await c.balanceOf(account);
+                const d = await c.decimals();
+                $('fromBalance').textContent = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4);
+                $('btnMax').disabled = false;
+            }
+            if(selectedTo.address === 'VANA_NATIVE'){
+                const b2 = await provider.getBalance(account);
+                $('toBalance').textContent = parseFloat(ethers.utils.formatEther(b2)).toFixed(4);
+            }else{
+                const c2 = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
+                const b2 = await c2.balanceOf(account);
+                const d2 = await c2.decimals();
+                $('toBalance').textContent = parseFloat(ethers.utils.formatUnits(b2,d2)).toFixed(4);
+            }
+        }catch(e){ console.error('updateBalances', e); }
     }
 
     async function updateDropdownBalances(){ 
-      if(!provider || !account) return; 
-      for(const t of tokens){ 
-        try{ 
-          let bal='0'; 
-          if(t.address === 'VANA_NATIVE'){ 
-            const b = await provider.getBalance(account); 
-            bal = parseFloat(ethers.utils.formatEther(b)).toFixed(4); 
-          } else { 
-            const c = new ethers.Contract(t.address, ERC20_ABI, provider); 
-            const b = await c.balanceOf(account); 
-            const d = await c.decimals(); 
-            bal = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4); 
-          } 
-          const el = document.querySelector(`#bal-${t.symbol}`); 
-          if(el) el.textContent = bal; 
-        }catch(e){ 
-          const el = document.querySelector(`#bal-${t.symbol}`); 
-          if(el) el.textContent = '0'; 
+        if(!provider || !account) return; 
+        for(const t of tokens){ 
+            try{ 
+                let bal='0'; 
+                if(t.address === 'VANA_NATIVE'){ 
+                    const b = await provider.getBalance(account); 
+                    bal = parseFloat(ethers.utils.formatEther(b)).toFixed(4); 
+                } else { 
+                    const c = new ethers.Contract(t.address, ERC20_ABI, provider); 
+                    const b = await c.balanceOf(account); 
+                    const d = await c.decimals(); 
+                    bal = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4); 
+                } 
+                const el = document.querySelector(`#bal-${t.symbol}`); 
+                if(el) el.textContent = bal; 
+            }catch(e){ 
+                const el = document.querySelector(`#bal-${t.symbol}`); 
+                if(el) el.textContent = '0'; 
+            } 
         } 
-      } 
     }
 
     async function setMax(){ 
-      if(!account || !provider){ await connectWallet(); return; } 
-      try{ 
-        if(selectedFrom.address === 'VANA_NATIVE'){ 
-          const b = await provider.getBalance(account); 
-          const usable = b.mul(95).div(100); 
-          $('fromAmount').value = ethers.utils.formatEther(usable); 
-        } else { 
-          const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider); 
-          const b = await c.balanceOf(account); 
-          const d = selectedFrom.decimals || await c.decimals(); 
-          $('fromAmount').value = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(d > 6 ? 6 : d); 
-        } 
-        updatePriceInfo();
-      }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
+        if(!account || !provider){ await connectWallet(); return; } 
+        try{ 
+            if(selectedFrom.address === 'VANA_NATIVE'){ 
+                const b = await provider.getBalance(account); 
+                const usable = b.mul(95).div(100); 
+                $('fromAmount').value = ethers.utils.formatEther(usable); 
+            } else { 
+                const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider); 
+                const b = await c.balanceOf(account); 
+                const d = selectedFrom.decimals || await c.decimals(); 
+                $('fromAmount').value = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(d > 6 ? 6 : d); 
+            } 
+            updatePriceInfo();
+        }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
     }
     $('btnMax').addEventListener('click', setMax);
     $('fromBalance').addEventListener('click', setMax);
 
     // CHECK APPROVAL
     async function checkApproval() {
-      if (!account || !provider || selectedFrom.address === 'VANA_NATIVE') {
-        needsApproval = false;
-        return;
-      }
-
-      try {
-        const fromAmt = $('fromAmount').value;
-        if (!fromAmt || parseFloat(fromAmt) <= 0) {
-          needsApproval = false;
-          return;
+        if (!account || !provider || selectedFrom.address === 'VANA_NATIVE') {
+            needsApproval = false;
+            return;
         }
 
-        const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const tokenContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
-        const allowance = await tokenContract.allowance(account, ROUTER);
-        
-        needsApproval = allowance.lt(amountIn);
-      } catch (error) {
-        console.error('Check approval error:', error);
-        needsApproval = false;
-      }
+        try {
+            const fromAmt = $('fromAmount').value;
+            if (!fromAmt || parseFloat(fromAmt) <= 0) {
+                needsApproval = false;
+                return;
+            }
+
+            const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+            const tokenContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+            const allowance = await tokenContract.allowance(account, ROUTER);
+            
+            needsApproval = allowance.lt(amountIn);
+        } catch (error) {
+            console.error('Check approval error:', error);
+            needsApproval = false;
+        }
     }
 
     // PRICE CALCULATION DENGAN PRICE IMPACT AKURAT
     async function updatePriceInfo() {
-      const fromAmt = $('fromAmount').value;
-      if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
-        $('toAmount').value = '';
-        $('priceInfo').textContent = '—';
-        $('minReceived').textContent = '—';
-        $('priceImpact').textContent = '—';
-        $('routeInfo').textContent = '—';
-        return;
-      }
-
-      try {
-        const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        
-        // Build path
-        let path = [];
-        if (selectedFrom.address === 'VANA_NATIVE') {
-          path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
-        } else if (selectedTo.address === 'VANA_NATIVE') {
-          path = [selectedFrom.address, WVANA];
-        } else {
-          path = [selectedFrom.address, selectedTo.address];
+        const fromAmt = $('fromAmount').value;
+        if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
+            $('toAmount').value = '';
+            $('priceInfo').textContent = '—';
+            $('minReceived').textContent = '—';
+            $('priceImpact').textContent = '—';
+            $('routeInfo').textContent = '—';
+            return;
         }
 
-        // Get quote dari router
-        const amounts = await router.getAmountsOut(amountIn, path);
-        const amountOut = amounts[amounts.length - 1];
-        
-        const fromAmtFormatted = parseFloat(fromAmt);
-        const toAmtFormatted = parseFloat(ethers.utils.formatUnits(amountOut, selectedTo.decimals));
-        
-        // Update output amount
-        $('toAmount').value = toAmtFormatted.toFixed(6);
-        
-        // Calculate price
-        const price = toAmtFormatted / fromAmtFormatted;
-        $('priceInfo').textContent = `1 ${selectedFrom.symbol} = ${price.toFixed(6)} ${selectedTo.symbol}`;
-        
-        // Calculate minimum received with slippage
-        const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
-        $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
-        
-        // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
-function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut, fromDecimals, toDecimals) {
-    if (!reserveIn || !reserveOut || reserveIn.eq(0) || reserveOut.eq(0)) {
-        return 100; // Pool kosong atau tidak ada liquidity
-    }
-
-    // Convert reserves to proper decimals
-    const reserveInFormatted = parseFloat(ethers.utils.formatUnits(reserveIn, fromDecimals));
-    const reserveOutFormatted = parseFloat(ethers.utils.formatUnits(reserveOut, toDecimals));
-    const amountInFormatted = parseFloat(ethers.utils.formatUnits(amountIn, fromDecimals));
-
-    // Harga sebelum trade (spot price)
-    const priceBefore = reserveOutFormatted / reserveInFormatted;
-
-    // Constant Product Formula dengan fee 0.3%
-    const amountInWithFee = amountIn.mul(997); // 0.3% fee
-    const numerator = amountInWithFee.mul(reserveOut);
-    const denominator = reserveIn.mul(1000).add(amountInWithFee);
-    const amountOut = numerator.div(denominator);
-
-    // Reserves setelah trade
-    const newReserveIn = reserveIn.add(amountIn);
-    const newReserveOut = reserveOut.sub(amountOut);
-
-    // Harga setelah trade (new spot price)
-    const newReserveInFormatted = parseFloat(ethers.utils.formatUnits(newReserveIn, fromDecimals));
-    const newReserveOutFormatted = parseFloat(ethers.utils.formatUnits(newReserveOut, toDecimals));
-    const priceAfter = newReserveOutFormatted / newReserveInFormatted;
-
-    // Price Impact = (Price Before - Price After) / Price Before * 100%
-    const priceImpact = ((priceBefore - priceAfter) / priceBefore) * 100;
-
-    console.log('Price Impact Calculation:', {
-        reserveIn: reserveInFormatted,
-        reserveOut: reserveOutFormatted,
-        amountIn: amountInFormatted,
-        priceBefore,
-        priceAfter,
-        priceImpact
-    });
-
-    return Math.max(0, priceImpact); // Tidak boleh negatif
-}
-
-// PERBAIKAN di updatePriceInfo():
-async function updatePriceInfo() {
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
-        $('toAmount').value = '';
-        $('priceInfo').textContent = '—';
-        $('minReceived').textContent = '—';
-        $('priceImpact').textContent = '—';
-        $('routeInfo').textContent = '—';
-        return;
-    }
-
-    try {
-        const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        
-        // Build path
-        let path = [];
-        if (selectedFrom.address === 'VANA_NATIVE') {
-            path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
-        } else if (selectedTo.address === 'VANA_NATIVE') {
-            path = [selectedFrom.address, WVANA];
-        } else {
-            path = [selectedFrom.address, selectedTo.address];
-        }
-
-        // Get quote dari router
-        const amounts = await router.getAmountsOut(amountIn, path);
-        const amountOut = amounts[amounts.length - 1];
-        
-        const fromAmtFormatted = parseFloat(fromAmt);
-        const toAmtFormatted = parseFloat(ethers.utils.formatUnits(amountOut, selectedTo.decimals));
-        
-        // Update output amount
-        $('toAmount').value = toAmtFormatted.toFixed(6);
-        
-        // Calculate price
-        const price = toAmtFormatted / fromAmtFormatted;
-        $('priceInfo').textContent = `1 ${selectedFrom.symbol} = ${price.toFixed(6)} ${selectedTo.symbol}`;
-        
-        // Calculate minimum received with slippage
-        const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
-        $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
-        
-        // HITUNG PRICE IMPACT YANG AKURAT
-        const priceImpactElement = $('priceImpact');
-        let priceImpact = 0;
-
-        if (currentReserves.reserveA && currentReserves.reserveB) {
-            // Tentukan reserve in dan out berdasarkan token yang dipilih
-            let reserveIn, reserveOut;
+        try {
+            const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
             
-            // Untuk kasus VANA -> USDC: reserveIn = VANA, reserveOut = USDC
+            // Build path
+            let path = [];
             if (selectedFrom.address === 'VANA_NATIVE') {
-                // Jika from adalah VANA native, gunakan WVANA sebagai reserveIn
-                reserveIn = currentReserves.reserveA; // Asumsi reserveA adalah WVANA
-                reserveOut = currentReserves.reserveB; // Asumsi reserveB adalah USDC
+                path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
             } else if (selectedTo.address === 'VANA_NATIVE') {
-                // Jika to adalah VANA native, reserveIn adalah token, reserveOut adalah WVANA
-                reserveIn = currentReserves.reserveA;
-                reserveOut = currentReserves.reserveB;
+                path = [selectedFrom.address, WVANA];
             } else {
-                // Untuk token -> token, gunakan reserves sesuai urutan
-                reserveIn = currentReserves.reserveA;
-                reserveOut = currentReserves.reserveB;
+                path = [selectedFrom.address, selectedTo.address];
             }
 
-            // Pastikan reserves valid
-            if (reserveIn && reserveOut && !reserveIn.eq(0) && !reserveOut.eq(0)) {
-                priceImpact = calculateAccuratePriceImpact(
-                    amountIn, 
-                    reserveIn, 
-                    reserveOut,
-                    selectedFrom.decimals,
-                    selectedTo.decimals
-                );
+            // Get quote dari router
+            const amounts = await router.getAmountsOut(amountIn, path);
+            const amountOut = amounts[amounts.length - 1];
+            
+            const fromAmtFormatted = parseFloat(fromAmt);
+            const toAmtFormatted = parseFloat(ethers.utils.formatUnits(amountOut, selectedTo.decimals));
+            
+            // Update output amount
+            $('toAmount').value = toAmtFormatted.toFixed(6);
+            
+            // Calculate price
+            const price = toAmtFormatted / fromAmtFormatted;
+            $('priceInfo').textContent = `1 ${selectedFrom.symbol} = ${price.toFixed(6)} ${selectedTo.symbol}`;
+            
+            // Calculate minimum received with slippage
+            const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
+            $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
+            
+            // HITUNG PRICE IMPACT YANG AKURAT
+            const priceImpactElement = $('priceImpact');
+            let priceImpact = 0;
+
+            if (currentReserves.reserveA && currentReserves.reserveB) {
+                // Tentukan reserve in dan out berdasarkan token yang dipilih
+                let reserveIn, reserveOut;
+                
+                // Untuk kasus VANA -> USDC: reserveIn = VANA, reserveOut = USDC
+                if (selectedFrom.address === 'VANA_NATIVE') {
+                    // Jika from adalah VANA native, gunakan WVANA sebagai reserveIn
+                    reserveIn = currentReserves.reserveA; // Asumsi reserveA adalah WVANA
+                    reserveOut = currentReserves.reserveB; // Asumsi reserveB adalah USDC
+                } else if (selectedTo.address === 'VANA_NATIVE') {
+                    // Jika to adalah VANA native, reserveIn adalah token, reserveOut adalah WVANA
+                    reserveIn = currentReserves.reserveA;
+                    reserveOut = currentReserves.reserveB;
+                } else {
+                    // Untuk token -> token, gunakan reserves sesuai urutan
+                    reserveIn = currentReserves.reserveA;
+                    reserveOut = currentReserves.reserveB;
+                }
+
+                // Pastikan reserves valid
+                if (reserveIn && reserveOut && !reserveIn.eq(0) && !reserveOut.eq(0)) {
+                    priceImpact = calculateAccuratePriceImpact(
+                        amountIn, 
+                        reserveIn, 
+                        reserveOut,
+                        selectedFrom.decimals,
+                        selectedTo.decimals
+                    );
+                } else {
+                    priceImpact = 0.1; // Fallback
+                }
             } else {
-                priceImpact = 0.1; // Fallback
+                // Fallback jika tidak ada data pool
+                priceImpact = 0.1;
             }
-        } else {
-            // Fallback jika tidak ada data pool
-            priceImpact = 0.1;
+
+            priceImpactElement.textContent = priceImpact.toFixed(2) + '%';
+            
+            // Apply color based on price impact
+            priceImpactElement.className = '';
+            if (priceImpact < 1) {
+                priceImpactElement.classList.add('price-impact-low');
+            } else if (priceImpact < 5) {
+                priceImpactElement.classList.add('price-impact-medium');
+            } else {
+                priceImpactElement.classList.add('price-impact-high');
+            }
+            
+            // Route info
+            $('routeInfo').textContent = `${selectedFrom.symbol} → ${selectedTo.symbol}`;
+
+            // Check approval
+            await checkApproval();
+            updateSwapBtn();
+
+        } catch (error) {
+            console.error('Price calculation error:', error);
+            $('toAmount').value = '';
+            $('priceInfo').textContent = '—';
+            $('minReceived').textContent = '—';
+            $('priceImpact').textContent = '—';
+            $('routeInfo').textContent = 'Insufficient liquidity';
+            needsApproval = false;
+            updateSwapBtn();
         }
-
-        priceImpactElement.textContent = priceImpact.toFixed(2) + '%';
-        
-        // Apply color based on price impact
-        priceImpactElement.className = '';
-        if (priceImpact < 1) {
-            priceImpactElement.classList.add('price-impact-low');
-        } else if (priceImpact < 5) {
-            priceImpactElement.classList.add('price-impact-medium');
-        } else {
-            priceImpactElement.classList.add('price-impact-high');
-        }
-        
-        // Route info
-        $('routeInfo').textContent = `${selectedFrom.symbol} → ${selectedTo.symbol}`;
-
-        // Check approval
-        await checkApproval();
-        updateSwapBtn();
-
-    } catch (error) {
-        console.error('Price calculation error:', error);
-        $('toAmount').value = '';
-        $('priceInfo').textContent = '—';
-        $('minReceived').textContent = '—';
-        $('priceImpact').textContent = '—';
-        $('routeInfo').textContent = 'Insufficient liquidity';
-        needsApproval = false;
-        updateSwapBtn();
     }
-}
-
-// PERBAIKAN di getPoolReserves() untuk handle token order dengan benar:
-async function getPoolReserves(tokenA, tokenB) {
-    if (!provider) return null;
-
-    try {
-        // Untuk native token (VANA), gunakan WVANA sebagai representasi
-        const addressA = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
-        const addressB = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
-
-        // Dapatkan alamat pair dari factory
-        const pairAddress = await factory.getPair(addressA, addressB);
-        
-        if (pairAddress === '0x0000000000000000000000000000000000000000') {
-            $('poolLiquidity').textContent = 'No liquidity';
-            return null; // Pair tidak ada
-        }
-
-        // Dapatkan reserves dari pair contract
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [token0, reserves] = await Promise.all([
-            pairContract.token0(),
-            pairContract.getReserves()
-        ]);
-
-        const [reserve0, reserve1] = reserves;
-
-        // Tentukan reserve untuk token A dan B berdasarkan urutan di pool
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === addressA.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-        } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-        }
-
-        // Simpan current pair contract untuk update real-time
-        currentPairContract = pairContract;
-        currentReserves = { reserveA, reserveB };
-
-        // Update display liquidity dengan format yang benar
-        const liquidityA = ethers.utils.formatUnits(reserveA, 
-            token0.toLowerCase() === addressA.toLowerCase() ? tokenA.decimals : tokenB.decimals);
-        const liquidityB = ethers.utils.formatUnits(reserveB, 
-            token0.toLowerCase() === addressA.toLowerCase() ? tokenB.decimals : tokenA.decimals);
-        
-        $('poolLiquidity').textContent = `${parseFloat(liquidityA).toLocaleString()} ${tokenA.symbol} / ${parseFloat(liquidityB).toLocaleString()} ${tokenB.symbol}`;
-
-        console.log('Pool Reserves:', {
-            tokenA: tokenA.symbol,
-            tokenB: tokenB.symbol,
-            reserveA: parseFloat(liquidityA),
-            reserveB: parseFloat(liquidityB),
-            pairAddress
-        });
-
-        return { reserveA, reserveB, pairAddress };
-
-    } catch (error) {
-        console.error('Error getting pool reserves:', error);
-        $('poolLiquidity').textContent = 'Error loading';
-        return null;
-    }
-}
 
     // UPDATE SWAP BUTTON WITH APPROVAL LOGIC
     async function updateSwapBtn() {
-      const btn = $('swapBtn');
-      if (!account) {
-        btn.textContent = 'Connect Wallet';
-        btn.disabled = false;
-        return;
-      }
+        const btn = $('swapBtn');
+        if (!account) {
+            btn.textContent = 'Connect Wallet';
+            btn.disabled = false;
+            return;
+        }
 
-      const fromAmt = parseFloat($('fromAmount').value);
-      if (!fromAmt || fromAmt <= 0) {
-        btn.textContent = 'Enter Amount';
-        btn.disabled = true;
-        return;
-      }
+        const fromAmt = parseFloat($('fromAmount').value);
+        if (!fromAmt || fromAmt <= 0) {
+            btn.textContent = 'Enter Amount';
+            btn.disabled = true;
+            return;
+        }
 
-      // Check if this is a wrap/unwrap operation
-      const isWrap = selectedFrom.symbol === 'VANA' && selectedTo.symbol === 'WVANA';
-      const isUnwrap = selectedFrom.symbol === 'WVANA' && selectedTo.symbol === 'VANA';
+        // Check if this is a wrap/unwrap operation
+        const isWrap = selectedFrom.symbol === 'VANA' && selectedTo.symbol === 'WVANA';
+        const isUnwrap = selectedFrom.symbol === 'WVANA' && selectedTo.symbol === 'VANA';
 
-      if (isWrap) {
-        btn.textContent = 'Wrap';
-        btn.disabled = false;
-      } else if (isUnwrap) {
-        btn.textContent = 'Unwrap';
-        btn.disabled = false;
-      } else if (needsApproval && selectedFrom.address !== 'VANA_NATIVE') {
-        btn.textContent = 'Approve ' + selectedFrom.symbol;
-        btn.disabled = false;
-      } else {
-        btn.textContent = 'Swap';
-        btn.disabled = false;
-      }
+        if (isWrap) {
+            btn.textContent = 'Wrap';
+            btn.disabled = false;
+        } else if (isUnwrap) {
+            btn.textContent = 'Unwrap';
+            btn.disabled = false;
+        } else if (needsApproval && selectedFrom.address !== 'VANA_NATIVE') {
+            btn.textContent = 'Approve ' + selectedFrom.symbol;
+            btn.disabled = false;
+        } else {
+            btn.textContent = 'Swap';
+            btn.disabled = false;
+        }
     }
 
     // SWAP FUNCTION
     async function executeSwap() {
-      if (!account) {
-        await connectWallet();
-        return;
-      }
-
-      const fromAmt = $('fromAmount').value;
-      if (!fromAmt || parseFloat(fromAmt) <= 0) {
-        showToast('Enter an amount');
-        return;
-      }
-
-      // Check if this is a wrap/unwrap operation
-      const isWrap = selectedFrom.symbol === 'VANA' && selectedTo.symbol === 'WVANA';
-      const isUnwrap = selectedFrom.symbol === 'WVANA' && selectedTo.symbol === 'VANA';
-
-      if (isWrap) {
-        await wrapVANA();
-        return;
-      } else if (isUnwrap) {
-        await unwrapVANA();
-        return;
-      }
-
-      try {
-        // Handle approval first if needed
-        if (needsApproval && selectedFrom.address !== 'VANA_NATIVE') {
-          setStatus('Approving token...');
-          const btn = $('swapBtn');
-          btn.disabled = true;
-          btn.innerHTML = '<span class="spinner"></span>Approving...';
-
-          const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-          const tokenContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
-          
-          const txApprove = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
-          await txApprove.wait();
-          
-          showToast('Token approved successfully');
-          needsApproval = false;
-          updateSwapBtn();
-          return; // User needs to click swap again
+        if (!account) {
+            await connectWallet();
+            return;
         }
 
-        setStatus('Preparing swap...');
-        const btn = $('swapBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>Swapping...';
-
-        const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        
-        // Build path
-        let path = [];
-        if (selectedFrom.address === 'VANA_NATIVE') {
-          path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
-        } else if (selectedTo.address === 'VANA_NATIVE') {
-          path = [selectedFrom.address, WVANA];
-        } else {
-          path = [selectedFrom.address, selectedTo.address];
+        const fromAmt = $('fromAmount').value;
+        if (!fromAmt || parseFloat(fromAmt) <= 0) {
+            showToast('Enter an amount');
+            return;
         }
 
-        // Get quote for minimum amount out
-        const amounts = await router.getAmountsOut(amountIn, path);
-        const amountOutMin = amounts[amounts.length - 1].mul(10000 - slippage * 100).div(10000);
+        // Check if this is a wrap/unwrap operation
+        const isWrap = selectedFrom.symbol === 'VANA' && selectedTo.symbol === 'WVANA';
+        const isUnwrap = selectedFrom.symbol === 'WVANA' && selectedTo.symbol === 'VANA';
 
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
-        // Execute swap based on token types
-        let tx;
-        if (selectedFrom.address === 'VANA_NATIVE') {
-          // ETH -> Token
-          tx = await router.swapExactETHForTokens(
-            amountOutMin,
-            path,
-            account,
-            deadline,
-            { value: amountIn, gasLimit: 3000000 }
-          );
-        } else if (selectedTo.address === 'VANA_NATIVE') {
-          // Token -> ETH
-          tx = await router.swapExactTokensForETH(
-            amountIn,
-            amountOutMin,
-            path,
-            account,
-            deadline,
-            { gasLimit: 3000000 }
-          );
-        } else {
-          // Token -> Token
-          tx = await router.swapExactTokensForTokens(
-            amountIn,
-            amountOutMin,
-            path,
-            account,
-            deadline,
-            { gasLimit: 3000000 }
-          );
+        if (isWrap) {
+            await wrapVANA();
+            return;
+        } else if (isUnwrap) {
+            await unwrapVANA();
+            return;
         }
 
-        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-        setStatus('Submitted — waiting confirmation...');
-        await tx.wait();
+        try {
+            // Handle approval first if needed
+            if (needsApproval && selectedFrom.address !== 'VANA_NATIVE') {
+                setStatus('Approving token...');
+                const btn = $('swapBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span>Approving...';
 
-        showToast('Swap completed successfully!');
-        setStatus('Swap completed');
+                const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+                const tokenContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
+                
+                const txApprove = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+                await txApprove.wait();
+                
+                showToast('Token approved successfully');
+                needsApproval = false;
+                updateSwapBtn();
+                return; // User needs to click swap again
+            }
 
-        // Reset form and update balances
-        $('fromAmount').value = '';
-        $('toAmount').value = '';
-        await updateBalances();
-        await updateDropdownBalances();
+            setStatus('Preparing swap...');
+            const btn = $('swapBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Swapping...';
 
-      } catch (error) {
-        console.error('Swap error:', error);
-        showToast('Swap failed: ' + (error.message || error));
-        setStatus('Swap failed');
-      } finally {
-        const btn = $('swapBtn');
-        btn.disabled = false;
-        updateSwapBtn();
-      }
+            const amountIn = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+            
+            // Build path
+            let path = [];
+            if (selectedFrom.address === 'VANA_NATIVE') {
+                path = [WVANA, selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address];
+            } else if (selectedTo.address === 'VANA_NATIVE') {
+                path = [selectedFrom.address, WVANA];
+            } else {
+                path = [selectedFrom.address, selectedTo.address];
+            }
+
+            // Get quote for minimum amount out
+            const amounts = await router.getAmountsOut(amountIn, path);
+            const amountOutMin = amounts[amounts.length - 1].mul(10000 - slippage * 100).div(10000);
+
+            const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+            // Execute swap based on token types
+            let tx;
+            if (selectedFrom.address === 'VANA_NATIVE') {
+                // ETH -> Token
+                tx = await router.swapExactETHForTokens(
+                    amountOutMin,
+                    path,
+                    account,
+                    deadline,
+                    { value: amountIn, gasLimit: 3000000 }
+                );
+            } else if (selectedTo.address === 'VANA_NATIVE') {
+                // Token -> ETH
+                tx = await router.swapExactTokensForETH(
+                    amountIn,
+                    amountOutMin,
+                    path,
+                    account,
+                    deadline,
+                    { gasLimit: 3000000 }
+                );
+            } else {
+                // Token -> Token
+                tx = await router.swapExactTokensForTokens(
+                    amountIn,
+                    amountOutMin,
+                    path,
+                    account,
+                    deadline,
+                    { gasLimit: 3000000 }
+                );
+            }
+
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Submitted — waiting confirmation...');
+            await tx.wait();
+
+            showToast('Swap completed successfully!');
+            setStatus('Swap completed');
+
+            // Reset form and update balances
+            $('fromAmount').value = '';
+            $('toAmount').value = '';
+            await updateBalances();
+            await updateDropdownBalances();
+
+        } catch (error) {
+            console.error('Swap error:', error);
+            showToast('Swap failed: ' + (error.message || error));
+            setStatus('Swap failed');
+        } finally {
+            const btn = $('swapBtn');
+            btn.disabled = false;
+            updateSwapBtn();
+        }
     }
 
     // EVENT LISTENERS
@@ -1408,42 +1286,42 @@ async function getPoolReserves(tokenA, tokenB) {
 
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
-      if (e.target === $('settingsModal')) {
-        closeSettingsModal();
-      }
+        if (e.target === $('settingsModal')) {
+            closeSettingsModal();
+        }
     });
 
     // INITIALIZATION
     document.addEventListener('DOMContentLoaded', async () => {
-      // Load custom tokens from localStorage
-      loadCustomTokens();
+        // Load custom tokens from localStorage
+        loadCustomTokens();
 
-      // Initialize provider for read-only operations
-      try {
-        provider = new ethers.providers.JsonRpcProvider(RPC);
-        router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
-        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-        wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, provider);
+        // Initialize provider for read-only operations
+        try {
+            provider = new ethers.providers.JsonRpcProvider(RPC);
+            router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
+            factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+            wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, provider);
 
-        // Check if wallet is already connected
-        if (window.ethereum && window.ethereum.selectedAddress) {
-          account = window.ethereum.selectedAddress;
-          connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-          wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
-          
-          // Dapatkan data pool
-          await getPoolReserves(selectedFrom, selectedTo);
-          
-          await updateBalances();
-          await updateDropdownBalances();
-          updateSwapBtn();
+            // Check if wallet is already connected
+            if (window.ethereum && window.ethereum.selectedAddress) {
+                account = window.ethereum.selectedAddress;
+                connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+                wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
+                
+                // Dapatkan data pool
+                await getPoolReserves(selectedFrom, selectedTo);
+                
+                await updateBalances();
+                await updateDropdownBalances();
+                updateSwapBtn();
+            }
+        } catch (error) {
+            console.error('Initialization error:', error);
         }
-      } catch (error) {
-        console.error('Initialization error:', error);
-      }
     });
 
     // Export functions to global scope
