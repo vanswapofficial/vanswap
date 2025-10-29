@@ -254,11 +254,10 @@
         <div class="panel-row"><div>Router</div><div style="font-size:12px">VanSwap Router</div></div>
         <div class="panel-row"><div>Slippage</div><div id="slippageDisplay">0.5%</div></div>
         
-        <!-- TOMBOL WRAP/UNWRAP DIHAPUS DARI SINI -->
-        
         <h4 style="margin-top:14px">Transaction Details</h4>
         <div class="panel-row"><div>Route</div><div id="routeInfo">—</div></div>
         <div class="panel-row"><div>Liquidity Provider Fee</div><div>0.25%</div></div>
+        <div class="panel-row"><div>Pool Liquidity</div><div id="poolLiquidity">—</div></div>
       </aside>
     </div>
   </main>
@@ -294,6 +293,7 @@
   <script>
     // CONFIG
     const ROUTER = '0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C';
+    const FACTORY = '0x4CB6d4d0e1dC7a9c4E5a6a4d5C6e5a8c4B3a2b1c'; // Ganti dengan alamat Factory VanSwap yang benar
     const WVANA = '0x00eddd9621fb08436d0331c149d1690909a5906d';
     const VANS = '0x82741ff5937933244eb562A4b396f8079F1de914';
     const USDC = '0xF1815bd50389c46847f0Bda824eC8da914045D14';
@@ -305,6 +305,17 @@
       'function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)',
       'function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts)',
       'function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)'
+    ];
+
+    const FACTORY_ABI = [
+      'function getPair(address tokenA, address tokenB) external view returns (address pair)'
+    ];
+
+    const PAIR_ABI = [
+      'function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+      'function token0() external view returns (address)',
+      'function token1() external view returns (address)',
+      'function totalSupply() external view returns (uint256)'
     ];
 
     const ERC20_ABI = [
@@ -328,10 +339,13 @@
     let signer = null;
     let account = null;
     let router = null;
+    let factory = null;
     let wvanaContract = null;
     let slippage = 0.5;
     let deadline = 20;
     let needsApproval = false;
+    let currentPairContract = null;
+    let currentReserves = { reserve0: 0, reserve1: 0 };
 
     const DEFAULT_TOKENS = [
       { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true},
@@ -358,6 +372,86 @@
     }
 
     function setStatus(s){ $('status').textContent = s }
+
+    // FUNGSI BARU: Dapatkan data pool dari blockchain
+    async function getPoolReserves(tokenA, tokenB) {
+      if (!provider) return null;
+
+      try {
+        // Untuk native token (VANA), gunakan WVANA sebagai representasi
+        const addressA = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
+        const addressB = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
+
+        // Dapatkan alamat pair dari factory
+        const pairAddress = await factory.getPair(addressA, addressB);
+        
+        if (pairAddress === '0x0000000000000000000000000000000000000000') {
+          return null; // Pair tidak ada
+        }
+
+        // Dapatkan reserves dari pair contract
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [token0, reserves] = await Promise.all([
+          pairContract.token0(),
+          pairContract.getReserves()
+        ]);
+
+        const [reserve0, reserve1] = reserves;
+
+        // Tentukan reserve untuk token A dan B
+        let reserveA, reserveB;
+        if (token0.toLowerCase() === addressA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        // Simpan current pair contract untuk update real-time
+        currentPairContract = pairContract;
+        currentReserves = { reserveA, reserveB };
+
+        // Update display liquidity
+        const liquidityA = ethers.utils.formatUnits(reserveA, tokenA.decimals);
+        const liquidityB = ethers.utils.formatUnits(reserveB, tokenB.decimals);
+        $('poolLiquidity').textContent = `${parseFloat(liquidityA).toLocaleString()} ${tokenA.symbol} / ${parseFloat(liquidityB).toLocaleString()} ${tokenB.symbol}`;
+
+        return { reserveA, reserveB, pairAddress };
+
+      } catch (error) {
+        console.error('Error getting pool reserves:', error);
+        return null;
+      }
+    }
+
+    // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
+    function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut) {
+      if (!reserveIn || !reserveOut || reserveIn.eq(0) || reserveOut.eq(0)) {
+        return 100; // Pool kosong atau tidak ada liquidity
+      }
+
+      // Constant Product Formula: k = reserveIn * reserveOut
+      const amountInWithFee = amountIn.mul(997); // 0.3% fee
+      const numerator = amountInWithFee.mul(reserveOut);
+      const denominator = reserveIn.mul(1000).add(amountInWithFee);
+      const amountOut = numerator.div(denominator);
+
+      // Harga sebelum trade
+      const priceBefore = parseFloat(ethers.utils.formatUnits(reserveOut, selectedTo.decimals)) / 
+                         parseFloat(ethers.utils.formatUnits(reserveIn, selectedFrom.decimals));
+
+      // Harga setelah trade
+      const newReserveIn = reserveIn.add(amountIn);
+      const newReserveOut = reserveOut.sub(amountOut);
+      const priceAfter = parseFloat(ethers.utils.formatUnits(newReserveOut, selectedTo.decimals)) / 
+                        parseFloat(ethers.utils.formatUnits(newReserveIn, selectedFrom.decimals));
+
+      // Price Impact
+      const priceImpact = ((priceBefore - priceAfter) / priceBefore) * 100;
+
+      return Math.max(0, priceImpact); // Tidak boleh negatif
+    }
 
     // MENU
     const menuBtn = $('menuBtn');
@@ -592,16 +686,20 @@
     $('toSelect').addEventListener('click', (e)=>{ e.stopPropagation(); const el = $('toList'); if(el.style.display === 'block'){ el.style.display = 'none'; } else { buildTokenListHtml('to'); el.style.display = 'block'; $('fromList').style.display = 'none'; } });
     document.addEventListener('click', (e)=>{ if(!e.target.closest('.select-wrap')){ $('fromList').style.display = 'none'; $('toList').style.display = 'none'; } });
 
-    function selectToken(type, token){
+    async function selectToken(type, token){
       if(type==='from'){ selectedFrom = token; $('fromLogo').src = token.logo; $('fromSymbol').textContent = token.symbol; $('fromList').style.display = 'none'; }
       else{ selectedTo = token; $('toLogo').src = token.logo; $('toSymbol').textContent = token.symbol; $('toList').style.display = 'none'; }
+      
+      // Dapatkan data pool ketika token berubah
+      await getPoolReserves(selectedFrom, selectedTo);
+      
       updateBalances(); 
       updatePriceInfo();
       updateSwapBtn(); 
     }
 
     // FLIP TOKENS
-    $('flipBtn').addEventListener('click', ()=>{
+    $('flipBtn').addEventListener('click', async ()=>{
       const temp = selectedFrom;
       selectedFrom = selectedTo;
       selectedTo = temp;
@@ -617,12 +715,15 @@
       $('fromAmount').value = toAmt;
       $('toAmount').value = fromAmt;
       
+      // Dapatkan data pool baru
+      await getPoolReserves(selectedFrom, selectedTo);
+      
       updateBalances();
       updatePriceInfo();
       updateSwapBtn();
     });
 
-    // WRAP/UNWRAP FUNCTIONS - DIPINDAHKAN KE SWAP OTOMATIS
+    // WRAP/UNWRAP FUNCTIONS
     async function wrapVANA() {
       if (!account) {
         await connectWallet();
@@ -738,9 +839,14 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
         router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
         wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
         connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
         setStatus('Connected');
+        
+        // Dapatkan data pool setelah connect
+        await getPoolReserves(selectedFrom, selectedTo);
+        
         await updateBalances(); 
         await updateDropdownBalances(); 
         updateSwapBtn(); 
@@ -760,7 +866,19 @@
           try{ await ensureVanaChain(); setStatus('Switched to Vana'); location.reload(); } catch(e){ setStatus('Please switch to Vana chain in wallet'); }
         } else { setStatus('Connected to Vana'); location.reload(); }
       });
-      window.ethereum.on('accountsChanged', (accs)=>{ if(accs && accs.length>0){ account = accs[0]; connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); updateBalances(); updateDropdownBalances(); updatePriceInfo(); } else { account = null; connectBtn.textContent = 'Connect Wallet'; } });
+      window.ethereum.on('accountsChanged', async (accs)=>{ 
+        if(accs && accs.length>0){ 
+          account = accs[0]; 
+          connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); 
+          await getPoolReserves(selectedFrom, selectedTo);
+          updateBalances(); 
+          updateDropdownBalances(); 
+          updatePriceInfo(); 
+        } else { 
+          account = null; 
+          connectBtn.textContent = 'Connect Wallet'; 
+        } 
+      });
     }
 
     // BALANCES & MAX
@@ -857,7 +975,7 @@
       }
     }
 
-    // PRICE CALCULATION WITH REALISTIC PRICE IMPACT
+    // PRICE CALCULATION DENGAN PRICE IMPACT AKURAT
     async function updatePriceInfo() {
       const fromAmt = $('fromAmount').value;
       if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
@@ -882,7 +1000,7 @@
           path = [selectedFrom.address, selectedTo.address];
         }
 
-        // Get quote
+        // Get quote dari router
         const amounts = await router.getAmountsOut(amountIn, path);
         const amountOut = amounts[amounts.length - 1];
         
@@ -900,16 +1018,35 @@
         const minAmountOut = amountOut.mul(10000 - slippage * 100).div(10000);
         $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
         
-        // Calculate realistic price impact
-        const priceImpact = calculateRealisticPriceImpact(fromAmtFormatted, selectedFrom.symbol, selectedTo.symbol);
+        // HITUNG PRICE IMPACT YANG AKURAT
         const priceImpactElement = $('priceImpact');
-        priceImpactElement.textContent = priceImpact + '%';
+        let priceImpact = 0;
+
+        if (currentReserves.reserveA && currentReserves.reserveB) {
+          // Tentukan reserve in dan out berdasarkan token
+          let reserveIn, reserveOut;
+          if (selectedFrom.address === 'VANA_NATIVE') {
+            // Untuk native token, gunakan WVANA sebagai reserve
+            reserveIn = currentReserves.reserveA;
+            reserveOut = currentReserves.reserveB;
+          } else {
+            reserveIn = currentReserves.reserveA;
+            reserveOut = currentReserves.reserveB;
+          }
+
+          priceImpact = calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut);
+        } else {
+          // Fallback jika tidak ada data pool
+          priceImpact = 0.1; // Default kecil
+        }
+
+        priceImpactElement.textContent = priceImpact.toFixed(2) + '%';
         
         // Apply color based on price impact
         priceImpactElement.className = '';
         if (priceImpact < 1) {
           priceImpactElement.classList.add('price-impact-low');
-        } else if (priceImpact < 3) {
+        } else if (priceImpact < 5) {
           priceImpactElement.classList.add('price-impact-medium');
         } else {
           priceImpactElement.classList.add('price-impact-high');
@@ -932,50 +1069,6 @@
         needsApproval = false;
         updateSwapBtn();
       }
-    }
-
-    // REALISTIC PRICE IMPACT CALCULATION
-    function calculateRealisticPriceImpact(amount, fromSymbol, toSymbol) {
-      // Base liquidity assumptions for different token pairs
-      const liquidityPools = {
-        'VANA-USDC': 500000, // High liquidity pool
-        'WVANA-USDC': 300000,
-        'VANA-WVANA': 1000000, // Very high liquidity for wrap/unwrap
-        'VANS-USDC': 100000,
-        'VANA-VANS': 200000,
-        'default': 50000 // Default for other pairs
-      };
-
-      // Get pool liquidity
-      const pairKey = `${fromSymbol}-${toSymbol}`;
-      const reversePairKey = `${toSymbol}-${fromSymbol}`;
-      let liquidity = liquidityPools[pairKey] || liquidityPools[reversePairKey] || liquidityPools['default'];
-
-      // Special case for wrap/unwrap - very low impact
-      if ((fromSymbol === 'VANA' && toSymbol === 'WVANA') || (fromSymbol === 'WVANA' && toSymbol === 'VANA')) {
-        liquidity = 1000000; // Very high liquidity for native wrap
-      }
-
-      // Calculate impact based on trade size relative to liquidity
-      const sizeRatio = amount / liquidity;
-      
-      // Realistic price impact formula
-      let impact = 0;
-      if (sizeRatio < 0.001) {
-        impact = 0.01 + (Math.random() * 0.04); // 0.01-0.05% for very small trades
-      } else if (sizeRatio < 0.01) {
-        impact = 0.05 + (sizeRatio * 10); // 0.05-0.15% for small trades
-      } else if (sizeRatio < 0.1) {
-        impact = 0.15 + (sizeRatio * 8); // 0.15-0.95% for medium trades
-      } else {
-        impact = 0.95 + (sizeRatio * 15); // 0.95%+ for large trades
-      }
-
-      // Add some randomness for realism
-      impact = impact * (0.9 + Math.random() * 0.2);
-
-      // Cap at reasonable maximum
-      return Math.min(impact, 10).toFixed(2);
     }
 
     // UPDATE SWAP BUTTON WITH APPROVAL LOGIC
@@ -1013,7 +1106,7 @@
       }
     }
 
-    // SWAP FUNCTION WITH AUTOMATIC WRAP/UNWRAP
+    // SWAP FUNCTION
     async function executeSwap() {
       if (!account) {
         await connectWallet();
@@ -1159,6 +1252,7 @@
       try {
         provider = new ethers.providers.JsonRpcProvider(RPC);
         router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
+        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
         wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, provider);
 
         // Check if wallet is already connected
@@ -1169,6 +1263,10 @@
           signer = provider.getSigner();
           router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
           wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
+          
+          // Dapatkan data pool
+          await getPoolReserves(selectedFrom, selectedTo);
+          
           await updateBalances();
           await updateDropdownBalances();
           updateSwapBtn();
