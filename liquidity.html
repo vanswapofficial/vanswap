@@ -1308,179 +1308,187 @@
     }
 
     // ADD LIQUIDITY FUNCTION - COMPLETE VERSION
-    async function addLiquidity() {
-      if (!account) {
-        await connectWallet();
-        return;
+async function addLiquidity() {
+  if (!account) {
+    await connectWallet();
+    return;
+  }
+
+  const fromAmt = $('fromAmount').value;
+  if (!fromAmt || parseFloat(fromAmt) <= 0) {
+    showToast('Enter an amount');
+    return;
+  }
+
+  try {
+    setStatus('Adding liquidity...');
+    const btn = $('actionBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Adding...';
+
+    const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+    let amountBDesired;
+
+    // Calculate optimal amount for token B based on pool reserves
+    const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+    const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+    const pairAddress = await factory.getPair(tokenA, tokenB);
+
+    if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+      // Pool exists - calculate amountB based on reserves
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const token0 = await pairContract.token0();
+
+      let reserveA, reserveB;
+      if (token0.toLowerCase() === tokenA.toLowerCase()) {
+        reserveA = reserve0;
+        reserveB = reserve1;
+      } else {
+        reserveA = reserve1;
+        reserveB = reserve0;
       }
 
-      const fromAmt = $('fromAmount').value;
-      if (!fromAmt || parseFloat(fromAmt) <= 0) {
-        showToast('Enter an amount');
-        return;
-      }
-
-      try {
-        setStatus('Adding liquidity...');
-        const btn = $('actionBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>Adding...';
-
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        let amountBDesired;
-
-        // Calculate optimal amount for token B based on pool reserves
-        const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-        const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-        const pairAddress = await factory.getPair(tokenA, tokenB);
-
-        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-          // Pool exists - calculate amountB based on reserves
-          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-          const [reserve0, reserve1] = await pairContract.getReserves();
-          const token0 = await pairContract.token0();
-
-          let reserveA, reserveB;
-          if (token0.toLowerCase() === tokenA.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-          } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-          }
-
-          const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-          amountBDesired = amountBOptimal;
-        } else {
-          // New pool - use the value from toAmount input
-          const toAmt = $('toAmount').value;
-          if (!toAmt || parseFloat(toAmt) <= 0) {
-            showToast('Enter amount for both tokens for new pool');
-            btn.disabled = false;
-            btn.textContent = 'Add Liquidity';
-            return;
-          }
-          amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-        }
-
-        // Set minimum amounts with 5% slippage
-        const amountAMin = amountADesired.mul(95).div(100);
-        const amountBMin = amountBDesired.mul(95).div(100);
-
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
-        // Handle approvals and liquidity addition
-        if (selectedFrom.address === 'VANA_NATIVE') {
-          // Native VANA case
-          setStatus('Approving tokens...');
-          const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
-          const allowanceB = await tokenBContract.allowance(account, ROUTER);
-          if (allowanceB.lt(amountBDesired)) {
-            const txApprove = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
-            await txApprove.wait();
-          }
-
-          setStatus('Adding liquidity...');
-          const tx = await router.addLiquidityETH(
-            selectedTo.address,
-            amountBDesired,
-            amountBMin,
-            amountAMin,
-            account,
-            deadline,
-            { value: amountADesired, gasLimit: 3000000 }
-          );
-
-          $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-          setStatus('Submitted — waiting confirmation...');
-          await tx.wait();
-
-        } else if (selectedTo.address === 'VANA_NATIVE') {
-          // Native VANA as token B
-          setStatus('Approving tokens...');
-          const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
-          const allowanceA = await tokenAContract.allowance(account, ROUTER);
-          if (allowanceA.lt(amountADesired)) {
-            const txApprove = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
-            await txApprove.wait();
-          }
-
-          setStatus('Adding liquidity...');
-          const tx = await router.addLiquidityETH(
-            selectedFrom.address,
-            amountADesired,
-            amountAMin,
-            amountBMin,
-            account,
-            deadline,
-            { value: amountBDesired, gasLimit: 3000000 }
-          );
-
-          $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-          setStatus('Submitted — waiting confirmation...');
-          await tx.wait();
-
-        } else {
-          // Both are ERC20 tokens
-          setStatus('Approving tokens...');
-          const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
-          const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
-
-          const [allowanceA, allowanceB] = await Promise.all([
-            tokenAContract.allowance(account, ROUTER),
-            tokenBContract.allowance(account, ROUTER)
-          ]);
-
-          if (allowanceA.lt(amountADesired)) {
-            const txApproveA = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
-            await txApproveA.wait();
-          }
-
-          if (allowanceB.lt(amountBDesired)) {
-            const txApproveB = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
-            await txApproveB.wait();
-          }
-
-          setStatus('Adding liquidity...');
-          const tx = await router.addLiquidity(
-            selectedFrom.address,
-            selectedTo.address,
-            amountADesired,
-            amountBDesired,
-            amountAMin,
-            amountBMin,
-            account,
-            deadline,
-            { gasLimit: 3000000 }
-          );
-
-          $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-          setStatus('Submitted — waiting confirmation...');
-          await tx.wait();
-        }
-
-        showToast('Liquidity added successfully!');
-        setStatus('Liquidity added');
-
-        // Reset form and update data
-        $('fromAmount').value = '';
-        $('toAmount').value = '';
-        await updateBalances();
-        await updateDropdownBalances();
-        loadUserPools();
-        updateTVLStats();
-
-      } catch (error) {
-        console.error('Error adding liquidity:', error);
-        showToast('Failed to add liquidity: ' + (error.message || error));
-        setStatus('Add liquidity failed');
-      } finally {
-        const btn = $('actionBtn');
+      const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+      amountBDesired = amountBOptimal;
+    } else {
+      // New pool - use the value from toAmount input
+      const toAmt = $('toAmount').value;
+      if (!toAmt || parseFloat(toAmt) <= 0) {
+        showToast('Enter amount for both tokens for new pool');
         btn.disabled = false;
         btn.textContent = 'Add Liquidity';
+        return;
       }
+      amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
     }
+
+    // Set minimum amounts with 5% slippage
+    const amountAMin = amountADesired.mul(95).div(100);
+    const amountBMin = amountBDesired.mul(95).div(100);
+
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+    // CREATE PAIR IF NOT EXISTS - PERBAIKAN UTAMA
+    if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+      setStatus('Creating new pool...');
+      const createPairTx = await factory.createPair(tokenA, tokenB, { gasLimit: 3000000 });
+      await createPairTx.wait();
+      setStatus('Pool created, adding liquidity...');
+    }
+
+    // Handle approvals and liquidity addition
+    if (selectedFrom.address === 'VANA_NATIVE') {
+      // Native VANA case
+      setStatus('Approving tokens...');
+      const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
+      const allowanceB = await tokenBContract.allowance(account, ROUTER);
+      if (allowanceB.lt(amountBDesired)) {
+        const txApprove = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await txApprove.wait();
+      }
+
+      setStatus('Adding liquidity...');
+      const tx = await router.addLiquidityETH(
+        selectedTo.address,
+        amountBDesired,
+        amountBMin,
+        amountAMin,
+        account,
+        deadline,
+        { value: amountADesired, gasLimit: 3000000 }
+      );
+
+      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+      setStatus('Submitted — waiting confirmation...');
+      await tx.wait();
+
+    } else if (selectedTo.address === 'VANA_NATIVE') {
+      // Native VANA as token B
+      setStatus('Approving tokens...');
+      const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
+      const allowanceA = await tokenAContract.allowance(account, ROUTER);
+      if (allowanceA.lt(amountADesired)) {
+        const txApprove = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await txApprove.wait();
+      }
+
+      setStatus('Adding liquidity...');
+      const tx = await router.addLiquidityETH(
+        selectedFrom.address,
+        amountADesired,
+        amountAMin,
+        amountBMin,
+        account,
+        deadline,
+        { value: amountBDesired, gasLimit: 3000000 }
+      );
+
+      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+      setStatus('Submitted — waiting confirmation...');
+      await tx.wait();
+
+    } else {
+      // Both are ERC20 tokens
+      setStatus('Approving tokens...');
+      const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
+      const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
+
+      const [allowanceA, allowanceB] = await Promise.all([
+        tokenAContract.allowance(account, ROUTER),
+        tokenBContract.allowance(account, ROUTER)
+      ]);
+
+      if (allowanceA.lt(amountADesired)) {
+        const txApproveA = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await txApproveA.wait();
+      }
+
+      if (allowanceB.lt(amountBDesired)) {
+        const txApproveB = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await txApproveB.wait();
+      }
+
+      setStatus('Adding liquidity...');
+      const tx = await router.addLiquidity(
+        selectedFrom.address,
+        selectedTo.address,
+        amountADesired,
+        amountBDesired,
+        amountAMin,
+        amountBMin,
+        account,
+        deadline,
+        { gasLimit: 3000000 }
+      );
+
+      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+      setStatus('Submitted — waiting confirmation...');
+      await tx.wait();
+    }
+
+    showToast('Liquidity added successfully!');
+    setStatus('Liquidity added');
+
+    // Reset form and update data
+    $('fromAmount').value = '';
+    $('toAmount').value = '';
+    await updateBalances();
+    await updateDropdownBalances();
+    loadUserPools();
+    updateTVLStats();
+
+  } catch (error) {
+    console.error('Error adding liquidity:', error);
+    showToast('Failed to add liquidity: ' + (error.message || error));
+    setStatus('Add liquidity failed');
+  } finally {
+    const btn = $('actionBtn');
+    btn.disabled = false;
+    btn.textContent = 'Add Liquidity';
+  }
+}
 
     // ADD MORE LIQUIDITY FUNCTION
     function addMoreLiquidity(tokenA, tokenB) {
