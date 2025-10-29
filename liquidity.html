@@ -1008,10 +1008,61 @@
         } 
         updateLiquidityInfo();
         updateUSDValues();
+        calculateOptimalAmountB(); // Calculate optimal amount B when setting max
       }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
     }
     $('btnMax').addEventListener('click', setMax);
     $('fromBalance').addEventListener('click', setMax);
+
+    // FUNGSI BARU: Calculate optimal amount for token B based on input A
+    async function calculateOptimalAmountB() {
+      if (!provider || !account) return;
+      
+      const fromAmt = $('fromAmount').value;
+      if (!fromAmt || parseFloat(fromAmt) <= 0) {
+        $('toAmount').value = '';
+        return;
+      }
+
+      try {
+        const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+        const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+        const pairAddress = await factory.getPair(tokenA, tokenB);
+
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+          // Pool exists - calculate amountB based on reserves
+          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
+
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === tokenA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+
+          const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+          const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+          
+          // Update toAmount field
+          $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
+        } else {
+          // New pool - keep toAmount empty or let user specify
+          // Don't auto-fill for new pools
+          $('toAmount').value = '';
+        }
+        
+        updateUSDValues();
+        updateActionBtn();
+      } catch (error) {
+        console.error('Error calculating optimal amount B:', error);
+        $('toAmount').value = '';
+      }
+    }
 
     // LIQUIDITY INFO WITH REAL PRICES
     async function updateLiquidityInfo() {
@@ -1253,78 +1304,6 @@
       }
     }
 
-    // EVENT LISTENERS
-    $('actionBtn').addEventListener('click', addLiquidity);
-    $('fromAmount').addEventListener('input', updateLiquidityInfo);
-    $('toAmount').addEventListener('input', updateLiquidityInfo);
-    $('fromAmount').addEventListener('input', updateUSDValues);
-    $('toAmount').addEventListener('input', updateUSDValues);
-
-    // Close modal when clicking outside
-    window.addEventListener('click', (e) => {
-      if (e.target === $('removeLiquidityModal')) {
-        closeRemoveModal();
-      }
-    });
-
-    // INITIALIZATION
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Load custom tokens from localStorage
-      loadCustomTokens();
-
-      // Initialize provider for read-only operations
-      try {
-        provider = new ethers.providers.JsonRpcProvider(RPC);
-        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-
-        // Update TVL stats
-        updateTVLStats();
-
-        // Check if wallet is already connected
-        if (window.ethereum && window.ethereum.selectedAddress) {
-          account = window.ethereum.selectedAddress;
-          connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-          await updateBalances();
-          await updateDropdownBalances();
-          updateActionBtn();
-          updateLiquidityInfo();
-          loadUserPools();
-        }
-      } catch (error) {
-        console.error('Initialization error:', error);
-      }
-
-      // Start with My Pools view
-      switchToMyPoolsView();
-
-      // Auto-refresh prices every 30 seconds
-      setInterval(async () => {
-        if (provider) {
-          await updateTVLStats();
-          await updateUSDValues();
-          if (account) {
-            await loadUserPools();
-          }
-        }
-      }, 30000);
-    });
-
-    // Export functions to global scope (keep existing exports)
-    window.switchToMyPoolsView = switchToMyPoolsView;
-    window.switchToAddView = switchToAddView;
-    window.switchToImportView = switchToImportView;
-    window.quickAddLiquidity = quickAddLiquidity;
-    window.addMoreLiquidity = addMoreLiquidity;
-    window.showRemoveModal = showRemoveModal;
-    window.setRemovePercentage = setRemovePercentage;
-    window.closeRemoveModal = closeRemoveModal;
-    window.confirmRemoveLiquidity = confirmRemoveLiquidity;
-    window.importPool = importPool;
-    window.filterTokens = filterTokens;
-
     // ADD LIQUIDITY FUNCTION - COMPLETE VERSION
     async function addLiquidity() {
       if (!account) {
@@ -1370,12 +1349,16 @@
 
           const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
           amountBDesired = amountBOptimal;
-
-          // Update toAmount field
-          $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
         } else {
-          // New pool - use 1:1 ratio or let user specify
-          amountBDesired = ethers.utils.parseUnits($('toAmount').value || fromAmt, selectedTo.decimals);
+          // New pool - use the value from toAmount input
+          const toAmt = $('toAmount').value;
+          if (!toAmt || parseFloat(toAmt) <= 0) {
+            showToast('Enter amount for both tokens for new pool');
+            btn.disabled = false;
+            btn.textContent = 'Add Liquidity';
+            return;
+          }
+          amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
         }
 
         // Set minimum amounts with 5% slippage
@@ -1821,6 +1804,9 @@
     $('toAmount').addEventListener('input', updateUSDValues);
     $('fromAmount').addEventListener('input', updateActionBtn);
     $('toAmount').addEventListener('input', updateActionBtn);
+    
+    // PERBAIKAN: Tambahkan event listener untuk menghitung amount B otomatis
+    $('fromAmount').addEventListener('input', calculateOptimalAmountB);
 
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
@@ -1873,17 +1859,6 @@
         }
       }, 30000);
     });
-
-    // Utility function to format large numbers
-    function formatNumber(num) {
-      if (num >= 1000000) {
-        return (num / 1000000).toFixed(2) + 'M';
-      }
-      if (num >= 1000) {
-        return (num / 1000).toFixed(2) + 'K';
-      }
-      return num.toFixed(2);
-    }
 
     // Export functions to global scope
     window.switchToMyPoolsView = switchToMyPoolsView;
