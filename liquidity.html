@@ -1307,289 +1307,432 @@
       }
     }
 
-    // ADD LIQUIDITY FUNCTION - COMPLETE VERSION
-async function addLiquidity() {
-  if (!account) {
-    await connectWallet();
-    return;
-  }
+    
+// ======= liquidity logic =======
+// CONFIG - fill these values before using
+const ROUTER = "0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C";       
+const FACTORY = "0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D";      
+const WVANA = "0x00eddd9621fb08436d0331c149d1690909a5906d";     
+const RPC_URL = "https://rpc.vana.org";       
+provider RPC (read-only)
+const VANA_NATIVE = "VANA_NATIVE"; // literal used in UI where native is selected
+const SCAN_BASE = "https://vanascan.io/tx/";
 
-  const fromAmt = $('fromAmount').value;
-  if (!fromAmt || parseFloat(fromAmt) <= 0) {
-    showToast('Enter an amount');
-    return;
-  }
+// ABIs (minimal)
+const ERC20_ABI = [
+  "function decimals() view returns (uint8)",
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function symbol() view returns (string)"
+];
+const ROUTER_ABI = [
+  "function addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256) returns (uint256,uint256,uint256)",
+  "function addLiquidityETH(address,uint256,uint256,uint256,address,uint256) payable returns (uint256,uint256,uint256)"
+];
+const FACTORY_ABI = ["function getPair(address,address) view returns (address)","function createPair(address,address)"];
+const PAIR_ABI = ["function getReserves() view returns (uint112,uint112,uint32)","function token0() view returns (address)","function token1() view returns (address)"];
 
-  try {
-    setStatus('Adding liquidity...');
-    const btn = $('actionBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Adding...';
+// State
+let ethersLib;
+let provider;    // may be JsonRpcProvider or Web3Provider depending on connect state
+let signer;
+let account;
+let router;      // contract connected to signer when wallet connected
+let factory;
+let readFactory; // read-only factory (provider)
+let readRouter;  // read-only router (provider)
 
-    const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-    let amountBDesired;
+// DOM shortcuts
+const $ = id => document.getElementById(id);
 
-    // Calculate optimal amount for token B based on pool reserves
-    const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-    const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+// Elements expected in your UI (common IDs used by your original file)
+const ACTION_BTN_ID = "actionBtn";   // main connect/add button
+const FROM_AMT_ID = "fromAmount";
+const TO_AMT_ID = "toAmount";
+const FROM_TOKEN_ID = "fromToken";   // optional token selects; fallback used in code
+const TO_TOKEN_ID = "toToken";
+const TX_LINK_ID = "txLink";
+const STATUS_ID = "status";
 
-    const pairAddress = await factory.getPair(tokenA, tokenB);
+// Utilities
+function nowSec(){ return Math.floor(Date.now()/1000); }
+function safeLog(...args){ try{ console.log(...args); } catch(e){} }
+function showToast(msg, isError=false){
+  // try to use your existing showToast if present, otherwise fallback alert
+  if (typeof window.showToast === "function") { window.showToast(msg, isError); return; }
+  if(isError) console.error(msg); else console.log(msg);
+  // minimal inline toast if DOM has toast-wrap
+  const wrap = document.getElementById('toast-wrap');
+  if(!wrap) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + (isError ? 'error' : 'success');
+  el.innerText = msg;
+  wrap.appendChild(el);
+  setTimeout(()=> el.remove(), 3500);
+}
 
-    if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-      // Pool exists - calculate amountB based on reserves
-      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-      const [reserve0, reserve1] = await pairContract.getReserves();
-      const token0 = await pairContract.token0();
+function setStatus(s){
+  const el = $(STATUS_ID);
+  if(el) el.innerText = s;
+}
 
-      let reserveA, reserveB;
-      if (token0.toLowerCase() === tokenA.toLowerCase()) {
-        reserveA = reserve0;
-        reserveB = reserve1;
-      } else {
-        reserveA = reserve1;
-        reserveB = reserve0;
-      }
+// Ethers loader (try using window.ethers first)
+async function loadEthersLib(){
+  if(window.ethers) return window.ethers;
+  // try to load via CDN if allowed (but we assume original page already loads ethers)
+  throw new Error("ethers.js not found on page. Ensure ethers v5 is loaded.");
+}
 
-      const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-      amountBDesired = amountBOptimal;
+// Initialize read-only provider & contracts
+async function initReadContracts(){
+  try{
+    ethersLib = await loadEthersLib();
+    if(RPC_URL && RPC_URL.length>0){
+      provider = new ethersLib.providers.JsonRpcProvider(RPC_URL);
+      readFactory = new ethersLib.Contract(FACTORY, FACTORY_ABI, provider);
+      readRouter = new ethersLib.Contract(ROUTER, ROUTER_ABI, provider);
     } else {
-      // New pool - use the value from toAmount input
-      const toAmt = $('toAmount').value;
-      if (!toAmt || parseFloat(toAmt) <= 0) {
-        showToast('Enter amount for both tokens for new pool');
-        btn.disabled = false;
-        btn.textContent = 'Add Liquidity';
-        return;
-      }
-      amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+      // fallback to default provider if RPC not provided (may be slower)
+      provider = new ethersLib.providers.JsonRpcProvider();
+      readFactory = new ethersLib.Contract(FACTORY, FACTORY_ABI, provider);
+      readRouter = new ethersLib.Contract(ROUTER, ROUTER_ABI, provider);
     }
-
-    // Set minimum amounts with 5% slippage
-    const amountAMin = amountADesired.mul(95).div(100);
-    const amountBMin = amountBDesired.mul(95).div(100);
-
-    const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
-        // CREATE PAIR IF NOT EXISTS - PERBAIKAN UTAMA
-    if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
-      setStatus('Creating new pool...');
-      
-      // GUNAKAN WVANA UNTUK VANA_NATIVE - PERBAIKAN PENTING
-      const tokenAForFactory = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenBForFactory = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-      
-      const createPairTx = await factory.createPair(tokenAForFactory, tokenBForFactory, { gasLimit: 3000000 });
-      await createPairTx.wait();
-      setStatus('Pool created, adding liquidity...');
-    }
-
-    // Handle approvals and liquidity addition
-    if (selectedFrom.address === 'VANA_NATIVE') {
-      // Native VANA case
-      setStatus('Approving tokens...');
-      const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
-      const allowanceB = await tokenBContract.allowance(account, ROUTER);
-      if (allowanceB.lt(amountBDesired)) {
-        const txApprove = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
-        await txApprove.wait();
-      }
-
-      setStatus('Adding liquidity...');
-      const tx = await router.addLiquidityETH(
-        selectedTo.address,
-        amountBDesired,
-        amountBMin,
-        amountAMin,
-        account,
-        deadline,
-        { value: amountADesired, gasLimit: 3000000 }
-      );
-
-      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-      setStatus('Submitted — waiting confirmation...');
-      await tx.wait();
-
-    } else if (selectedTo.address === 'VANA_NATIVE') {
-      // Native VANA as token B
-      setStatus('Approving tokens...');
-      const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
-      const allowanceA = await tokenAContract.allowance(account, ROUTER);
-      if (allowanceA.lt(amountADesired)) {
-        const txApprove = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
-        await txApprove.wait();
-      }
-
-      setStatus('Adding liquidity...');
-      const tx = await router.addLiquidityETH(
-        selectedFrom.address,
-        amountADesired,
-        amountAMin,
-        amountBMin,
-        account,
-        deadline,
-        { value: amountBDesired, gasLimit: 3000000 }
-      );
-
-      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-      setStatus('Submitted — waiting confirmation...');
-      await tx.wait();
-
-    } else {
-      // Both are ERC20 tokens
-      setStatus('Approving tokens...');
-      const tokenAContract = new ethers.Contract(selectedFrom.address, ERC20_ABI, signer);
-      const tokenBContract = new ethers.Contract(selectedTo.address, ERC20_ABI, signer);
-
-      const [allowanceA, allowanceB] = await Promise.all([
-        tokenAContract.allowance(account, ROUTER),
-        tokenBContract.allowance(account, ROUTER)
-      ]);
-
-      if (allowanceA.lt(amountADesired)) {
-        const txApproveA = await tokenAContract.approve(ROUTER, ethers.constants.MaxUint256);
-        await txApproveA.wait();
-      }
-
-      if (allowanceB.lt(amountBDesired)) {
-        const txApproveB = await tokenBContract.approve(ROUTER, ethers.constants.MaxUint256);
-        await txApproveB.wait();
-      }
-
-      setStatus('Adding liquidity...');
-      const tx = await router.addLiquidity(
-        selectedFrom.address,
-        selectedTo.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        account,
-        deadline,
-        { gasLimit: 3000000 }
-      );
-
-      $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-      setStatus('Submitted — waiting confirmation...');
-      await tx.wait();
-    }
-
-    showToast('Liquidity added successfully!');
-    setStatus('Liquidity added');
-
-    // Reset form and update data
-    $('fromAmount').value = '';
-    $('toAmount').value = '';
-    await updateBalances();
-    await updateDropdownBalances();
-    loadUserPools();
-    updateTVLStats();
-
-  } catch (error) {
-    console.error('Error adding liquidity:', error);
-    showToast('Failed to add liquidity: ' + (error.message || error));
-    setStatus('Add liquidity failed');
-  } finally {
-    const btn = $('actionBtn');
-    btn.disabled = false;
-    btn.textContent = 'Add Liquidity';
+    setStatus("Ready (read-only)");
+  }catch(e){
+    console.error("initReadContracts error", e);
+    setStatus("Init error");
   }
 }
 
-    // ADD MORE LIQUIDITY FUNCTION
-    function addMoreLiquidity(tokenA, tokenB) {
-      const tokenAObj = tokens.find(t => t.symbol === tokenA);
-      const tokenBObj = tokens.find(t => t.symbol === tokenB);
+// Connect wallet (MetaMask)
+async function connectWallet(){
+  try{
+    if(!window.ethereum) throw new Error("Wallet/injected provider not found");
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if(window.ethereum.request){
+      try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params:[{ chainId: await guessChainHex() }] }); } catch(e){ /* ignore */ }
+    }
+    provider = new ethersLib.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    router = new ethersLib.Contract(ROUTER, ROUTER_ABI, signer);
+    factory = new ethersLib.Contract(FACTORY, FACTORY_ABI, signer);
+    setStatus("Connected: " + account.slice(0,6) + "..." + account.slice(-4));
+    bindActionButton(); // refresh the action button behavior
+    await refreshBalancesUI();
+    return true;
+  }catch(e){
+    console.error("connectWallet", e);
+    showToast("Wallet connect failed: " + (e.message||e), true);
+    return false;
+  }
+}
 
-      if (tokenAObj && tokenBObj) {
-        selectedFrom = tokenAObj;
-        selectedTo = tokenBObj;
+// guessChainHex tries to read chain id from UI or defaults; kept permissive
+async function guessChainHex(){
+  try{
+    if(window.ethereum && window.ethereum.chainId) return window.ethereum.chainId;
+    return '0x0';
+  }catch(e){ return '0x0'; }
+}
 
-        $('fromLogo').src = selectedFrom.logo;
-        $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo;
-        $('toSymbol').textContent = selectedTo.symbol;
+// resolve token metadata
+async function resolveTokenMeta(addr){
+  // addr may be 'VANA_NATIVE' literal
+  if(!ethersLib) ethersLib = window.ethers;
+  if(!addr) return { address: addr, decimals: 18, symbol: addr };
+  if(addr === VANA_NATIVE) return { address: addr, decimals: 18, symbol: 'VANA' };
+  try{
+    const c = new ethersLib.Contract(addr, ERC20_ABI, provider);
+    const dec = await c.decimals();
+    const sym = await c.symbol();
+    return { address: addr, decimals: dec, symbol: sym };
+  }catch(e){
+    return { address: addr, decimals: 18, symbol: (addr.slice? addr.slice(0,6): addr) };
+  }
+}
 
-        switchToAddView();
-        updateLiquidityInfo();
-        showToast(`Ready to add more ${tokenA}-${tokenB} liquidity`);
+// Helper safe parseUnits (returns BigNumber or null)
+function safeParseUnits(str, decimals){
+  if(str === undefined || str === null || str === "") return null;
+  if(isNaN(Number(str))) return null;
+  try { return ethersLib.utils.parseUnits(String(str), decimals); } catch(e){ return null; }
+}
+
+// Ensure approval for ERC20 token (skip native/WVANA)
+async function ensureApproval(tokenAddr, ownerSigner, requiredAmount){
+  if(!tokenAddr || tokenAddr === WVANA) return; // WVANA is just ERC20 wrapper, but if treating native specially we skip here
+  try{
+    const token = new ethersLib.Contract(tokenAddr, ERC20_ABI, ownerSigner);
+    const signerAddr = await ownerSigner.getAddress();
+    const allowance = await token.allowance(signerAddr, ROUTER);
+    if(allowance.lt(requiredAmount)){
+      const tx = await token.connect(ownerSigner).approve(ROUTER, ethersLib.constants.MaxUint256);
+      await tx.wait();
+    }
+  }catch(e){ console.error("ensureApproval error", e); throw e; }
+}
+
+// Create pair if missing
+async function createPairIfMissing(tokenA, tokenB){
+  try{
+    const tA = tokenA === VANA_NATIVE ? WVANA : tokenA;
+    const tB = tokenB === VANA_NATIVE ? WVANA : tokenB;
+    const readFac = factory || readFactory;
+    const pair = await readFac.getPair(tA, tB);
+    if(!pair || pair === ethersLib.constants.AddressZero){
+      // require signer factory to create pair
+      if(!factory) factory = new ethersLib.Contract(FACTORY, FACTORY_ABI, signer);
+      const tx = await factory.createPair(tA, tB, { gasLimit: 3000000 });
+      await tx.wait();
+      return await readFac.getPair(tA, tB);
+    }
+    return pair;
+  }catch(e){
+    console.error("createPairIfMissing", e);
+    throw e;
+  }
+}
+
+// Compute counter amount based on reserves (return BigNumber)
+// returns null if pair missing or reserves zero
+async function computeCounterAmount(tokenA, tokenB, amountA, fromIsA){
+  try{
+    const tA = tokenA === VANA_NATIVE ? WVANA : tokenA;
+    const tB = tokenB === VANA_NATIVE ? WVANA : tokenB;
+    const fac = factory || readFactory;
+    const pairAddr = await fac.getPair(tA, tB);
+    if(!pairAddr || pairAddr === ethersLib.constants.AddressZero) return null;
+    const pair = new ethersLib.Contract(pairAddr, PAIR_ABI, provider);
+    const reserves = await pair.getReserves();
+    const token0 = await pair.token0();
+    let reserveA = reserves[0], reserveB = reserves[1];
+    if(token0.toLowerCase() !== tA.toLowerCase()){ reserveA = reserves[1]; reserveB = reserves[0]; }
+    if(reserveA.eq(0) || reserveB.eq(0)) return null;
+    if(fromIsA){
+      // amountB = amountA * reserveB / reserveA
+      return amountA.mul(reserveB).div(reserveA);
+    } else {
+      // amountA = amountB * reserveA / reserveB
+      return amountA.mul(reserveA).div(reserveB);
+    }
+  }catch(e){
+    console.error("computeCounterAmount", e);
+    return null;
+  }
+}
+
+// UI sync handlers: when user edits fromAmount, compute toAmount if pool exists; vice versa
+let syncing = false;
+async function handleFromInput(){
+  if(syncing) return;
+  syncing = true;
+  try{
+    const fromStr = $(FROM_AMT_ID).value;
+    if(!fromStr || Number(fromStr) <= 0){ syncing = false; return; }
+    if(!window.selectedFrom || !window.selectedTo){ syncing = false; return; }
+    if(!window.selectedFrom.decimals || !window.selectedTo.decimals){ syncing = false; return; }
+    const decA = window.selectedFrom.decimals, decB = window.selectedTo.decimals;
+    const amtA = safeParseUnits(fromStr, decA);
+    if(!amtA){ syncing = false; return; }
+    const other = await computeCounterAmount(window.selectedFrom.address, window.selectedTo.address, amtA, true);
+    if(other){
+      $(TO_AMT_ID).value = parseFloat(ethersLib.utils.formatUnits(other, decB)).toFixed(6);
+    }
+  }catch(e){ console.error("handleFromInput", e); }
+  syncing = false;
+}
+
+async function handleToInput(){
+  if(syncing) return;
+  syncing = true;
+  try{
+    const toStr = $(TO_AMT_ID).value;
+    if(!toStr || Number(toStr) <= 0){ syncing = false; return; }
+    if(!window.selectedFrom || !window.selectedTo){ syncing = false; return; }
+    if(!window.selectedFrom.decimals || !window.selectedTo.decimals){ syncing = false; return; }
+    const decA = window.selectedFrom.decimals, decB = window.selectedTo.decimals;
+    const amtB = safeParseUnits(toStr, decB);
+    if(!amtB){ syncing = false; return; }
+    const other = await computeCounterAmount(window.selectedFrom.address, window.selectedTo.address, amtB, false);
+    if(other){
+      $(FROM_AMT_ID).value = parseFloat(ethersLib.utils.formatUnits(other, decA)).toFixed(6);
+    }
+  }catch(e){ console.error("handleToInput", e); }
+  syncing = false;
+}
+
+// MAIN addLiquidity function - no slippage (min amounts = desired)
+async function addLiquidity(){
+  try{
+    if(!ethersLib) ethersLib = window.ethers;
+    if(!account){
+      const ok = await connectWallet();
+      if(!ok) return;
+    }
+    if(!window.selectedFrom || !window.selectedTo){
+      showToast("Please select tokens", true);
+      return;
+    }
+    // get decimals
+    const metaA = window.selectedFrom;
+    const metaB = window.selectedTo;
+    if(!metaA.decimals || !metaB.decimals){
+      showToast("Token decimals not loaded", true);
+      return;
+    }
+
+    // parse inputs safely
+    let amtAStr = $(FROM_AMT_ID).value;
+    let amtBStr = $(TO_AMT_ID).value;
+    let amtA = safeParseUnits(amtAStr, metaA.decimals);
+    let amtB = safeParseUnits(amtBStr, metaB.decimals);
+
+    // default null -> BigNumber(0)
+    amtA = amtA || ethersLib.BigNumber.from(0);
+    amtB = amtB || ethersLib.BigNumber.from(0);
+
+    // create pair if missing
+    const tA = metaA.address, tB = metaB.address;
+    const pairAddr = await createPairIfMissing(tA, tB);
+
+    // if new pool (reserves zero), require both inputs present
+    const pair = new ethersLib.Contract(pairAddr, PAIR_ABI, provider);
+    const reserves = await pair.getReserves();
+    const token0 = await pair.token0();
+    let reserveA = reserves[0], reserveB = reserves[1];
+    const tAAdj = tA === VANA_NATIVE ? WVANA : tA;
+    if(token0.toLowerCase() !== tAAdj.toLowerCase()){ reserveA = reserves[1]; reserveB = reserves[0]; }
+
+    if(reserveA.eq(0) || reserveB.eq(0)){
+      // new pool
+      if(amtA.eq(0) || amtB.eq(0)){
+        showToast("New pool detected — please enter BOTH amounts manually", true);
+        return;
+      }
+    } else {
+      // existing pool: compute missing side if any
+      if(amtA.eq(0) && amtB.gt(0)){
+        const computedA = amtB.mul(reserveA).div(reserveB);
+        amtA = computedA;
+        $(FROM_AMT_ID).value = parseFloat(ethersLib.utils.formatUnits(amtA, metaA.decimals)).toFixed(6);
+      } else if(amtB.eq(0) && amtA.gt(0)){
+        const computedB = amtA.mul(reserveB).div(reserveA);
+        amtB = computedB;
+        $(TO_AMT_ID).value = parseFloat(ethersLib.utils.formatUnits(amtB, metaB.decimals)).toFixed(6);
       }
     }
 
-    // PERBAIKAN: Fungsi untuk check allowance LP tokens
-    async function checkLPAllowance(pairAddress) {
-      if (!account || !signer) return false;
-      
-      try {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
-        const userBalance = await pairContract.balanceOf(account);
-        const allowance = await pairContract.allowance(account, ROUTER);
-        
-        return allowance.gte(userBalance);
-      } catch (error) {
-        console.error('Error checking LP allowance:', error);
-        return false;
-      }
+    // final validation
+    if(amtA.eq(0) || amtB.eq(0)){
+      showToast("Invalid zero amount", true);
+      return;
     }
 
-    // PERBAIKAN: Fungsi untuk approve LP tokens
-    async function approveLPTokens(pairAddress) {
-      if (!account || !signer) return false;
-      
-      try {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
-        const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
-        await txApprove.wait();
-        return true;
-      } catch (error) {
-        console.error('Error approving LP tokens:', error);
-        return false;
-      }
+    // prepare approval & tx
+    const deadline = nowSec() + 60*20;
+
+    // ensure approvals for ERC20 tokens that are not native placeholder
+    if(metaA.address !== VANA_NATIVE && metaA.address !== WVANA){
+      await ensureApproval(metaA.address, signer, amtA);
+    }
+    if(metaB.address !== VANA_NATIVE && metaB.address !== WVANA){
+      await ensureApproval(metaB.address, signer, amtB);
     }
 
-    // REMOVE LIQUIDITY MODAL FUNCTIONS - DIPERBAIKI
-    async function showRemoveModal(poolAddress) {
-      currentRemovePool = poolAddress;
-      currentRemovePercentage = 0;
+    // execute router call
+    const btn = $(ACTION_BTN_ID);
+    if(btn) { btn.disabled = true; btn.innerText = "Processing..."; }
 
-      try {
-        const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-        const token1 = await pairContract.token1();
-        const userBalance = await pairContract.balanceOf(account);
-        const totalSupply = await pairContract.totalSupply();
+    let tx;
+    if(metaA.address === VANA_NATIVE && metaB.address !== VANA_NATIVE){
+      tx = await router.addLiquidityETH(metaB.address, amtB, amtB, amtA, account, deadline, { value: amtA, gasLimit: 3000000 });
+    } else if(metaB.address === VANA_NATIVE && metaA.address !== VANA_NATIVE){
+      tx = await router.addLiquidityETH(metaA.address, amtA, amtA, amtB, account, deadline, { value: amtB, gasLimit: 3000000 });
+    } else {
+      tx = await router.addLiquidity(tA === VANA_NATIVE? WVANA : tA, tB === VANA_NATIVE? WVANA : tB, amtA, amtB, amtA, amtB, account, deadline, { gasLimit: 3000000 });
+    }
 
-        // Get token symbols
-        const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
-        const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+    if($(TX_LINK_ID)) $(TX_LINK_ID).innerHTML = `<a href="${SCAN_BASE + tx.hash}" target="_blank">View tx</a>`;
+    showToast("Transaction sent: " + tx.hash);
+    await tx.wait();
+    showToast("Liquidity added");
+    setStatus("Success");
+    if(btn) { btn.disabled = false; btn.innerText = "Add Liquidity"; }
 
-        const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
-          token0Contract.symbol(),
-          token1Contract.symbol(),
-          token0Contract.decimals(),
-          token1Contract.decimals()
-        ]);
+    // optional: refresh balances/info if functions exist
+    if(typeof window.updateBalances === 'function') await window.updateBalances();
+    if(typeof window.updateLiquidityInfo === 'function') await window.updateLiquidityInfo();
+    if(typeof window.loadUserPools === 'function') await window.loadUserPools();
 
-        // PERBAIKAN: Check allowance status
-        const hasAllowance = await checkLPAllowance(poolAddress);
+  }catch(e){
+    console.error("addLiquidity error", e);
+    showToast("Add liquidity failed: " + (e && e.message ? e.message : e), true);
+    setStatus("Transaction failed");
+    const btn = $(ACTION_BTN_ID); if(btn){ btn.disabled = false; btn.innerText = "Add Liquidity"; }
+  }
+}
 
-        // Update modal info
-        $('removePoolInfo').innerHTML = `
-          <div style="text-align:center;margin-bottom:16px">
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
-              <img src="https://vanswap.xyz/assets/${symbol0.toLowerCase()}.png" alt="${symbol0}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-              <span style="font-weight:600">${symbol0}</span>
-              <span>+</span>
-              <img src="https://vanswap.xyz/assets/${symbol1.toLowerCase()}.png" alt="${symbol1}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-              <span style="font-weight:600">${symbol1}</span>
-            </div>
-            <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(4)}</div>
-            ${!hasAllowance ? '<div style="color:var(--warning);font-size:12px;margin-top:8px">⚠️ Approval required</div>' : ''}
-          </div>
-        `;
+// Hook action button (connect or add)
+function bindActionButton(){
+  const btn = $(ACTION_BTN_ID);
+  if(!btn) return;
+  btn.onclick = async () => {
+    if(!account) await connectWallet();
+    else await addLiquidity();
+  };
+  updateActionBtn();
+}
 
-        $('removeTokenASymbol').textContent = symbol0;
-        $('removeTokenBSymbol').textContent = symbol1;
+// Update action button text/disabled state
+function updateActionBtn(){
+  const btn = $(ACTION_BTN_ID);
+  if(!btn) return;
+  if(!account){ btn.innerText = "Connect Wallet"; btn.disabled = false; return; }
+  const a = $(FROM_AMT_ID).value, b = $(TO_AMT_ID).value;
+  if((a && Number(a)>0) || (b && Number(b)>0)){ btn.innerText = "Add Liquidity"; btn.disabled = false; } else { btn.innerText = "Enter Amount"; btn.disabled = true; }
+}
+
+// Refresh balances placeholder: optional, depends on your original file implementations
+async function refreshBalancesUI(){
+  try{
+    if(!account) return;
+    if(typeof window.updateBalances === 'function') await window.updateBalances();
+  }catch(e){ console.warn("refreshBalancesUI", e); }
+}
+
+// Attach input listeners (single attach)
+function attachInputListeners(){
+  const f = $(FROM_AMT_ID), t = $(TO_AMT_ID);
+  if(f){ f.removeEventListener && f.removeEventListener('input', handleFromInput); f.addEventListener('input', handleFromInput); }
+  if(t){ t.removeEventListener && t.removeEventListener('input', handleToInput); t.addEventListener('input', handleToInput); }
+  // update action btn on change
+  [f,t].forEach(el => { if(el) el.addEventListener('input', updateActionBtn); });
+}
+
+// bootstrap
+(async function bootstrap(){
+  try{
+    ethersLib = window.ethers;
+    if(!ethersLib) throw new Error("ethers.js v5 not loaded on page. Add script <script src='https://cdn.jsdelivr.net/npm/ethers@5/dist/ethers.min.js'></script>'");
+    await initReadContracts();
+    bindActionButton();
+    attachInputListeners();
+    // expose for debugging
+    window.vs_addLiquidity = addLiquidity;
+    window.vs_handleFromInput = handleFromInput;
+    window.vs_handleToInput = handleToInput;
+    window.updateActionBtn = updateActionBtn;
+    // Provide placeholder selectedFrom/selectedTo if your UI uses different structures.
+    if(!window.selectedFrom) window.selectedFrom = { address: VANA_NATIVE, decimals: 18, symbol: 'VANA' };
+    if(!window.selectedTo) window.selectedTo = { address: VANA_NATIVE, decimals: 18, symbol: 'VANA' };
+    setStatus("Script loaded");
+  }catch(e){
+    console.error("bootstrap error", e);
+    setStatus("Script init error");
+  }
+}
 
         // Store pool data for calculations
         currentRemovePool = {
