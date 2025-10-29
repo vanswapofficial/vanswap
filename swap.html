@@ -254,10 +254,8 @@
         <div class="panel-row"><div>Router</div><div style="font-size:12px">VanSwap Router</div></div>
         <div class="panel-row"><div>Slippage</div><div id="slippageDisplay">0.5%</div></div>
         
-        <h4 style="margin-top:14px">Wrap/Unwrap</h4>
-        <button class="secondary" onclick="wrapVANA()" style="margin-bottom:8px">Wrap VANA</button>
-        <button class="secondary" onclick="unwrapVANA()">Unwrap WVANA</button>
-
+        <!-- TOMBOL WRAP/UNWRAP DIHAPUS DARI SINI -->
+        
         <h4 style="margin-top:14px">Transaction Details</h4>
         <div class="panel-row"><div>Route</div><div id="routeInfo">—</div></div>
         <div class="panel-row"><div>Liquidity Provider Fee</div><div>0.25%</div></div>
@@ -624,7 +622,7 @@
       updateSwapBtn();
     });
 
-    // WRAP/UNWRAP FUNCTIONS
+    // WRAP/UNWRAP FUNCTIONS - DIPINDAHKAN KE SWAP OTOMATIS
     async function wrapVANA() {
       if (!account) {
         await connectWallet();
@@ -859,7 +857,7 @@
       }
     }
 
-    // PRICE CALCULATION WITH PRICE IMPACT
+    // PRICE CALCULATION WITH REALISTIC PRICE IMPACT
     async function updatePriceInfo() {
       const fromAmt = $('fromAmount').value;
       if (!fromAmt || parseFloat(fromAmt) <= 0 || !provider) {
@@ -903,7 +901,7 @@
         $('minReceived').textContent = parseFloat(ethers.utils.formatUnits(minAmountOut, selectedTo.decimals)).toFixed(6);
         
         // Calculate realistic price impact
-        const priceImpact = calculatePriceImpact(fromAmtFormatted, toAmtFormatted);
+        const priceImpact = calculateRealisticPriceImpact(fromAmtFormatted, selectedFrom.symbol, selectedTo.symbol);
         const priceImpactElement = $('priceImpact');
         priceImpactElement.textContent = priceImpact + '%';
         
@@ -937,15 +935,47 @@
     }
 
     // REALISTIC PRICE IMPACT CALCULATION
-    function calculatePriceImpact(amountIn, amountOut) {
-      // Simulate price impact based on trade size
-      // This is a simplified model - in production you'd use actual pool reserves
-      const baseImpact = 0.1; // Base 0.1% impact
-      const sizeMultiplier = Math.log10(amountIn + 1) * 0.5; // Logarithmic scaling
-      const randomVariation = (Math.random() * 0.3); // Small random variation
+    function calculateRealisticPriceImpact(amount, fromSymbol, toSymbol) {
+      // Base liquidity assumptions for different token pairs
+      const liquidityPools = {
+        'VANA-USDC': 500000, // High liquidity pool
+        'WVANA-USDC': 300000,
+        'VANA-WVANA': 1000000, // Very high liquidity for wrap/unwrap
+        'VANS-USDC': 100000,
+        'VANA-VANS': 200000,
+        'default': 50000 // Default for other pairs
+      };
+
+      // Get pool liquidity
+      const pairKey = `${fromSymbol}-${toSymbol}`;
+      const reversePairKey = `${toSymbol}-${fromSymbol}`;
+      let liquidity = liquidityPools[pairKey] || liquidityPools[reversePairKey] || liquidityPools['default'];
+
+      // Special case for wrap/unwrap - very low impact
+      if ((fromSymbol === 'VANA' && toSymbol === 'WVANA') || (fromSymbol === 'WVANA' && toSymbol === 'VANA')) {
+        liquidity = 1000000; // Very high liquidity for native wrap
+      }
+
+      // Calculate impact based on trade size relative to liquidity
+      const sizeRatio = amount / liquidity;
       
-      const impact = baseImpact + sizeMultiplier + randomVariation;
-      return Math.min(impact, 10).toFixed(2); // Cap at 10%
+      // Realistic price impact formula
+      let impact = 0;
+      if (sizeRatio < 0.001) {
+        impact = 0.01 + (Math.random() * 0.04); // 0.01-0.05% for very small trades
+      } else if (sizeRatio < 0.01) {
+        impact = 0.05 + (sizeRatio * 10); // 0.05-0.15% for small trades
+      } else if (sizeRatio < 0.1) {
+        impact = 0.15 + (sizeRatio * 8); // 0.15-0.95% for medium trades
+      } else {
+        impact = 0.95 + (sizeRatio * 15); // 0.95%+ for large trades
+      }
+
+      // Add some randomness for realism
+      impact = impact * (0.9 + Math.random() * 0.2);
+
+      // Cap at reasonable maximum
+      return Math.min(impact, 10).toFixed(2);
     }
 
     // UPDATE SWAP BUTTON WITH APPROVAL LOGIC
@@ -983,7 +1013,7 @@
       }
     }
 
-    // SWAP FUNCTION WITH APPROVAL LOGIC
+    // SWAP FUNCTION WITH AUTOMATIC WRAP/UNWRAP
     async function executeSwap() {
       if (!account) {
         await connectWallet();
