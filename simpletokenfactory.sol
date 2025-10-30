@@ -5,12 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// ✅ Interface di luar contract
-interface IERC20 {
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-}
-
 /**
  * @title SimpleToken - Token ERC20 yang AMAN dan SEDERHANA
  * @dev msg.sender (user) otomatis jadi OWNER token
