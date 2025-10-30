@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract SimpleToken is ERC20 {
     uint8 private _decimals;
-    address public owner;
     
     constructor(
         string memory name_,
@@ -20,7 +19,6 @@ contract SimpleToken is ERC20 {
         uint256 initialSupply_
     ) ERC20(name_, symbol_) {
         _decimals = decimals_;
-        owner = msg.sender; // User yang deploy adalah OWNER
         _mint(msg.sender, initialSupply_); // Mint ke user
     }
     
