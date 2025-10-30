@@ -5,8 +5,16 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// ✅ Interface di luar contract
+interface IERC20 {
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+}
+
 /**
- * @title SimpleToken - ERC20 Token generator
+ * @title SimpleToken - Token ERC20 yang AMAN dan SEDERHANA
+ * @dev msg.sender (user) otomatis jadi OWNER token
+ */
 contract SimpleToken is ERC20 {
     uint8 private _decimals;
     address public owner;
@@ -25,12 +33,6 @@ contract SimpleToken is ERC20 {
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
-    
-    // ✅ msg.sender adalah OWNER token
-    // ❌ NO blacklist/whitelist
-    // ❌ NO anti-whale
-    // ❌ NO fee changes
-    // ❌ NO pausable
 }
 
 /**
@@ -57,10 +59,6 @@ contract SimpleTokenFactory is Ownable, ReentrancyGuard {
     
     /**
      * @dev Create token baru dengan fee VANA
-     * @param name Nama token
-     * @param Symbol simbol token
-     * @param decimals Decimal token
-     * @param initialSupply Supply awal
      */
     function createToken(
         string memory name,
@@ -80,7 +78,6 @@ contract SimpleTokenFactory is Ownable, ReentrancyGuard {
             symbol,
             decimals,
             initialSupply
-            // Tidak perlu kirim address, msg.sender otomatis jadi owner
         );
         
         address tokenAddress = address(newToken);
@@ -90,7 +87,7 @@ contract SimpleTokenFactory is Ownable, ReentrancyGuard {
         userTokens[msg.sender].push(tokenAddress);
         
         emit TokenCreated(
-            msg.sender, // User adalah pemilik
+            msg.sender,
             tokenAddress,
             name,
             symbol,
@@ -179,11 +176,5 @@ contract SimpleTokenFactory is Ownable, ReentrancyGuard {
         require(to != address(0), "Invalid recipient");
         
         IERC20(tokenAddress).transfer(to, amount);
-    }
-    
-    // ✅ Interface untuk ERC20
-    interface IERC20 {
-        function balanceOf(address account) external view returns (uint256);
-        function transfer(address to, uint256 amount) external returns (bool);
     }
 }
