@@ -1,56 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/**
- * @title SimpleToken - Token ERC20 yang AMAN dan SEDERHANA
- * @dev msg.sender (user) otomatis jadi OWNER token
- */
-contract SimpleToken is ERC20 {
-    uint8 private _decimals;
-    
-    constructor(
-        string memory name_,
-        string memory symbol_, 
-        uint8 decimals_,
-        uint256 initialSupply_
-    ) ERC20(name_, symbol_) {
-        _decimals = decimals_;
-        _mint(msg.sender, initialSupply_); // Mint ke user
-    }
-    
-    function decimals() public view virtual override returns (uint8) {
-        return _decimals;
-    }
+interface ISimpleToken {
+    // hanya untuk kompatibilitas jika perlu; tidak dipakai wajib
 }
 
 /**
- * @title SimpleTokenFactory - Factory untuk deploy token
- * @dev Fee dalam VANA (native) saja, dev bisa ubah fee
+ * @title SimpleTokenFactory
+ * @dev Factory untuk deploy SimpleToken. Factory menerima fee (native).
+ * Factory bisa menahan native/ERC20 (misal: accidental transfer) dan owner factory
+ * dapat menariknya. Namun factory **tidak** menjadi owner token buatan user.
  */
 contract SimpleTokenFactory is Ownable, ReentrancyGuard {
-    uint256 public createFee = 10 ether; // 10 VANA - BISA DIUBAH
+    using SafeERC20 for IERC20;
+
+    uint256 public createFee = 10 ether; // default 10 VANA
     address[] public allTokens;
     mapping(address => address[]) public userTokens;
-    
+
     event TokenCreated(
         address indexed user,
-        address tokenAddress,
+        address indexed tokenAddress,
         string name,
         string symbol,
         uint8 decimals,
         uint256 initialSupply
     );
-    
     event FeeUpdated(uint256 oldFee, uint256 newFee);
     event FeesWithdrawn(address indexed owner, uint256 amount);
-    event EmergencyWithdraw(address indexed token, uint256 amount);
-    
+    event NativeReceived(address indexed sender, uint256 amount);
+    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
+
+    constructor() {}
+
     /**
-     * @dev Create token baru dengan fee VANA
+     * @notice User membayar fee dan membuat token; user menjadi owner token.
      */
     function createToken(
         string memory name,
@@ -61,112 +49,75 @@ contract SimpleTokenFactory is Ownable, ReentrancyGuard {
         require(msg.value == createFee, "Incorrect VANA fee");
         require(bytes(name).length > 0, "Name cannot be empty");
         require(bytes(symbol).length > 0, "Symbol cannot be empty");
-        require(initialSupply > 0, "Initial supply must be greater than 0");
+        require(initialSupply > 0, "Initial supply must be > 0");
         require(decimals <= 18, "Decimals cannot exceed 18");
-        
-        // Deploy token baru - msg.sender otomatis jadi OWNER
+
         SimpleToken newToken = new SimpleToken(
             name,
             symbol,
             decimals,
-            initialSupply
+            initialSupply,
+            msg.sender
         );
-        
+
         address tokenAddress = address(newToken);
-        
-        // Simpan data
         allTokens.push(tokenAddress);
         userTokens[msg.sender].push(tokenAddress);
-        
-        emit TokenCreated(
-            msg.sender,
-            tokenAddress,
-            name,
-            symbol,
-            decimals,
-            initialSupply
-        );
-        
+
+        emit TokenCreated(msg.sender, tokenAddress, name, symbol, decimals, initialSupply);
         return tokenAddress;
     }
-    
+
     /**
-     * @dev Update fee (hanya owner)
+     * @notice Update fee (hanya owner factory)
      */
     function updateFee(uint256 newFee) external onlyOwner {
-        require(newFee > 0, "Fee must be greater than 0");
-        uint256 oldFee = createFee;
+        require(newFee > 0 && newFee <= 100 ether, "Invalid fee");
+        uint256 old = createFee;
         createFee = newFee;
-        emit FeeUpdated(oldFee, newFee);
+        emit FeeUpdated(old, newFee);
     }
-    
+
+    // menerima native ke factory (misal transfer langsung)
+    receive() external payable {
+        emit NativeReceived(msg.sender, msg.value);
+    }
+
     /**
-     * @dev Receive native tokens (VANA)
+     * @notice Owner factory menarik seluruh native (fee) yang ada di factory
      */
-    receive() external payable {}
-    
+    function withdrawFees() external onlyOwner nonReentrant {
+        uint256 bal = address(this).balance;
+        require(bal > 0, "No fees to withdraw");
+        (bool ok, ) = payable(owner()).call{value: bal}("");
+        require(ok, "Withdraw failed");
+        emit FeesWithdrawn(owner(), bal);
+    }
+
     /**
-     * @dev Get total tokens created
+     * @notice Owner factory menarik token ERC20 yang tersimpan di factory (misal accidental transfer)
+     */
+    function withdrawERC20(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+        require(tokenAddress != address(0), "Invalid token");
+        require(to != address(0), "Invalid recipient");
+        uint256 bal = IERC20(tokenAddress).balanceOf(address(this));
+        require(amount <= bal, "Insufficient token balance");
+        IERC20(tokenAddress).safeTransfer(to, amount);
+        emit ERC20Withdrawn(tokenAddress, to, amount);
+    }
+
+    /**
+     * @notice Helper views
      */
     function getTotalTokens() external view returns (uint256) {
         return allTokens.length;
     }
-    
-    /**
-     * @dev Get user's tokens
-     */
+
     function getUserTokens(address user) external view returns (address[] memory) {
         return userTokens[user];
     }
-    
-    /**
-     * @dev Get current fee
-     */
+
     function getCreateFee() external view returns (uint256) {
         return createFee;
-    }
-    
-    /**
-     * @dev Withdraw collected VANA fees to owner
-     */
-    function withdrawFees() external onlyOwner nonReentrant {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No VANA fees to withdraw");
-        
-        payable(owner()).transfer(balance);
-        emit FeesWithdrawn(owner(), balance);
-    }
-    
-    /**
-     * @dev Withdraw ERC20 tokens (jika ada yang salah kirim)
-     */
-    function withdrawERC20(address tokenAddress) external onlyOwner nonReentrant {
-        require(tokenAddress != address(0), "Invalid token address");
-        
-        uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-        require(balance > 0, "No balance to withdraw");
-        
-        IERC20(tokenAddress).transfer(owner(), balance);
-        emit EmergencyWithdraw(tokenAddress, balance);
-    }
-    
-    /**
-     * @dev Transfer native tokens (VANA) - untuk management
-     */
-    function transferNative(address to, uint256 amount) external onlyOwner nonReentrant {
-        require(to != address(0), "Invalid recipient");
-        require(amount <= address(this).balance, "Insufficient balance");
-        
-        payable(to).transfer(amount);
-    }
-    
-    /**
-     * @dev Transfer ERC20 tokens - untuk management
-     */
-    function transferERC20(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
-        require(tokenAddress != address(0), "Invalid token address");
-        require(to != address(0), "Invalid recipient");
-        
-        IERC20(tokenAddress).transfer(to, amount);
     }
 }
