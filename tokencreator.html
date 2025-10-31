@@ -690,7 +690,7 @@
         console.error('Error creating token:', error);
         
         if (error.code === 'INSUFFICIENT_FUNDS') {
-          showError('Insufficient VANA balance! Need 10 VANA fee + gas.');
+          showError('Insufficient VANA balance! Need 1 VANA fee + gas.');
         } else if (error.code === 'ACTION_REJECTED') {
           showError('Transaction cancelled by user.');
         } else if (error.message.includes('TokenCreated event not found')) {
