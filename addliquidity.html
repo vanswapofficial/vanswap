@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap — Liquidity (Vana Chain)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS styles tetap sama seperti sebelumnya */
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.12);
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --glass: rgba(255,255,255,0.03);
+      --warning: #ff9800;
+      --danger: #f44336;
+      --success: #4caf50;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    .logo span{font-weight:700;font-size:18px}
+    .connect-wallet{background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative}
+    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
+    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.5);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
+    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
+    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
+    .menu-item:hover{background:rgba(255,255,255,0.02)}
+    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
+    .main{max-width:1200px;margin:32px auto;padding:0 20px}
+    .swap-row{display:flex;gap:24px;align-items:flex-start}
+    @media (max-width:980px){.swap-row{flex-direction:column;padding-bottom:40px}}
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px;flex:1;max-width:540px;box-shadow:0 10px 30px rgba(0,0,0,0.55)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title{font-size:20px;font-weight:700}
+    .token-block{background:rgba(255,255,255,0.02);border-radius:12px;padding:10px;margin-bottom:12px;border:1px solid transparent}
+    .token-block:focus-within{border-color:var(--primary)}
+    .input-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .label{color:#cfece0;font-size:13px}
+    .balance{color:var(--muted);font-size:13px;cursor:pointer}
+    .row{display:flex;gap:12px;align-items:center}
+    .select-wrap{position:relative;min-width:140px}
+    .select{display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;background:rgba(0,0,0,0.12);cursor:pointer;border:1px solid rgba(255,255,255,0.02);min-width:120px;z-index:1500}
+    .select img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+    .symbol{font-weight:700}
+    .amount-wrap{flex:1;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+    .amount{width:100%;background:transparent;border:none;color:var(--text);font-size:22px;font-weight:700;text-align:right;padding:6px 0;outline:none}
+    .amount::placeholder{color:var(--muted)}
+    .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;margin-top:8px}
+    .usd{color:var(--muted);font-size:13px;white-space:nowrap}
+    .max{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:10px;font-weight:700;color:var(--primary);cursor:pointer;font-size:13px}
+    .max:disabled{opacity:0.5;cursor:not-allowed}
+    .token-list{position:absolute;top:calc(100% + 8px);left:0;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);min-width:320px;max-height:320px;overflow:auto;z-index:2200;box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:auto}
+    .token-search input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);margin-bottom:8px}
+    .token-option{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
+    .token-option:hover{background:rgba(255,255,255,0.02)}
+    .token-addr{font-size:12px;color:var(--muted)}
+    .controls{text-align:center;margin:8px 0}
+    .flip{background:var(--primary-dark);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px}
+    .price{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;margin-top:12px}
+    .info{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;padding:6px 0}
+    .primary{width:100%;background:var(--primary);border:none;padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px}
+    .primary:disabled{opacity:0.5;cursor:not-allowed}
+    .secondary{width:100%;background:transparent;border:1px solid var(--primary);padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px;color:var(--primary)}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .panel{flex:1;min-width:260px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px}
+    .panel h4{font-weight:700;margin-bottom:10px}
+    .panel-row{display:flex;justify-content:space-between;color:var(--muted);padding:8px 0}
+    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
+
+    /* New styles for liquidity */
+    .liquidity-info{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:16px}
+    .liquidity-info h4{font-weight:600;margin-bottom:8px;font-size:15px}
+    .liquidity-info p{color:var(--muted);font-size:13px;line-height:1.4;margin-bottom:8px}
+    .pool-share{display:flex;justify-content:space-between;margin-top:12px}
+    .pool-share .label{color:var(--muted)}
+    .pool-share .value{font-weight:600}
+    .add-icon{display:flex;align-items:center;justify-content:center;margin:12px 0}
+    .add-icon div{width:24px;height:24px;border-radius:50%;background:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:16px}
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab{flex:1;padding:10px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
+    .tab.active{background:var(--primary)}
+    .tab:hover:not(.active){background:rgba(255,255,255,0.04)}
+
+    /* New styles for pool management */
+    .pool-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px;margin-bottom:12px}
+    .pool-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .pool-tokens{display:flex;align-items:center;gap:8px}
+    .pool-token{display:flex;align-items:center;gap:6px}
+    .pool-token img{width:24px;height:24px;border-radius:6px}
+    .pool-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .metric{text-align:center}
+    .metric-value{font-weight:700;font-size:16px;margin-bottom:4px}
+    .metric-label{color:var(--muted);font-size:12px}
+    .pool-actions{display:flex;gap:8px;margin-top:12px}
+    .pool-action{flex:1;padding:8px;border-radius:8px;text-align:center;font-weight:600;cursor:pointer;font-size:13px}
+    .pool-add{background:var(--primary)}
+    .pool-remove{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
+
+    /* Remove Liquidity Modal */
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;max-width:400px;width:100%}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .modal-title{font-size:18px;font-weight:700}
+    .close-modal{background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer}
+    .percentage-buttons{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin:16px 0}
+    .percentage-btn{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-weight:600;text-align:center}
+    .percentage-btn.active{background:var(--primary);border-color:var(--primary)}
+    .remove-amounts{margin:16px 0}
+    .remove-amount{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .remove-amount:last-child{border-bottom:none}
+
+    /* Custom token feature */
+    .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
+    .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
+    .add-token-btn span{font-weight:600;font-size:14px}
+    .add-token-form{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;margin-top:12px;border:1px solid rgba(255,255,255,0.05)}
+    .form-group{margin-bottom:12px}
+    .form-label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+    .form-input{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:14px}
+    .form-input:focus{outline:none;border-color:var(--primary)}
+    .form-actions{display:flex;gap:8px;margin-top:16px}
+    .btn{flex:1;padding:10px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:14px}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text)}
+    .warning-box{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin-top:12px}
+    .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
+    .warning-text{color:var(--warning);font-size:13px;line-height:1.4}
+    .token-verified{color:var(--accent);font-size:11px;margin-left:6px}
+    .token-imported{color:var(--primary);font-size:11px;margin-left:6px}
+    .token-warning{color:var(--warning);font-size:11px;margin-left:6px}
+
+    /* TVL and stats */
+    .tvl-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .tvl-stat{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
+    .tvl-value{font-weight:700;font-size:18px;color:var(--accent);margin-bottom:4px}
+    .tvl-label{color:var(--muted);font-size:12px}
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
+
+    @media (max-width:520px){
+      .select img{width:28px;height:28px}.amount{font-size:20px}.menu-dropdown{right:12px;left:auto}.token-list{min-width:260px;left:0;right:0}
+      .pool-metrics{grid-template-columns:1fr}.tvl-stats{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="nav-container">
+      <a class="logo" href="swap.html">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VanSwap</span>
+      </a>
+
+      <div style="display:flex;align-items:center;gap:8px;position:relative;">
+        <button id="menuBtn" class="menu-dot-btn" title="Menu">⋮</button>
+        <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
+          <div class="menu-item" data-href="swap.html">Swap</div>
+          <div class="menu-item" data-href="liquidity.html">Liquidity</div>
+          <div class="menu-item" data-href="tokencreator">Create Token</div>
+          <div class="menu-item" data-href="/staking">Stake</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-href="/about">About</div>
+        </div>
+
+        <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="swap-row">
+      <!-- LIQUIDITY CARD -->
+      <section class="card" aria-label="Liquidity">
+        <div class="card-head">
+          <div class="title" id="mainTitle">Liquidity</div>
+        </div>
+
+        <!-- TVL Stats -->
+        <div class="tvl-stats">
+          <div class="tvl-stat">
+            <div class="tvl-value" id="totalTVL">$---</div>
+            <div class="tvl-label">Total Value Locked</div>
+          </div>
+          <div class="tvl-stat">
+            <div class="tvl-value" id="totalPairs">--</div>
+            <div class="tvl-label">Active Pairs</div>
+          </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+          <div class="tab active" id="myPoolsTab">My Pools</div>
+          <div class="tab" id="addTab">Add Liquidity</div>
+          <div class="tab" id="importTab">Import Pool</div>
+        </div>
+
+        <!-- MY POOLS VIEW -->
+        <div id="myPoolsView">
+          <div id="poolsList">
+            <!-- Pools will be populated here -->
+          </div>
+          <div class="empty-state" id="noPoolsMessage" style="display:none">
+            <div class="empty-icon">🏊‍♂️</div>
+            <h4>No Liquidity Pools Found</h4>
+            <p>You don't have any liquidity positions yet.</p>
+            <button class="primary" style="margin-top:16px" onclick="switchToAddView()">Add Liquidity</button>
+          </div>
+        </div>
+
+        <!-- ADD LIQUIDITY VIEW -->
+        <div id="addLiquidityView" style="display:none">
+          <!-- FROM -->
+          <div class="token-block" id="fromBlock">
+            <div class="input-head">
+              <div class="label">Token 1</div>
+              <div id="fromBalance" class="balance">—</div>
+            </div>
+            <div class="row">
+              <div class="select-wrap">
+                <div id="fromSelect" class="select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                  <img id="fromLogo" src="https://vanswap.xyz/assets/vana.png" alt="">
+                  <div style="min-width:0">
+                    <div id="fromSymbol" class="symbol">VANA</div>
+                  </div>
+                  <div style="margin-left:auto;color:var(--muted)">▼</div>
+                </div>
+
+                <div id="fromList" class="token-list" style="display:none"></div>
+              </div>
+
+              <div class="amount-wrap">
+                <input id="fromAmount" class="amount" placeholder="0.0" inputmode="decimal" autocomplete="off">
+                <div class="meta">
+                  <div id="fromUsd" class="usd">—</div>
+                  <button id="btnMax" class="max">MAX</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add icon -->
+          <div class="add-icon">
+            <div>+</div>
+          </div>
+
+          <!-- TO -->
+          <div class="token-block" id="toBlock">
+            <div class="input-head">
+              <div class="label">Token 2</div>
+              <div id="toBalance" class="balance">—</div>
+            </div>
+            <div class="row">
+              <div class="select-wrap">
+                <div id="toSelect" class="select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                  <img id="toLogo" src="https://vanswap.xyz/assets/usdc.png" alt="">
+                  <div style="min-width:0">
+                    <div id="toSymbol" class="symbol">USDC</div>
+                  </div>
+                  <div style="margin-left:auto;color:var(--muted)">▼</div>
+                </div>
+
+                <div id="toList" class="token-list" style="display:none"></div>
+              </div>
+
+              <div class="amount-wrap">
+                <input id="toAmount" class="amount" placeholder="0.0" inputmode="decimal" autocomplete="off">
+                <div class="meta">
+                  <div id="toUsd" class="usd">—</div>
+                  <button class="max" style="visibility:hidden">MAX</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Liquidity info -->
+          <div class="liquidity-info">
+            <h4>Liquidity Information</h4>
+            <p id="liquidityDescription">You are the first liquidity provider for this pair. The ratio of tokens you add will set the price of this pool.</p>
+            <div class="pool-share">
+              <div class="label">Your pool share:</div>
+              <div class="value" id="poolShareValue">0%</div>
+            </div>
+          </div>
+
+          <!-- action -->
+          <button id="actionBtn" class="primary">Connect Wallet</button>
+        </div>
+
+        <!-- IMPORT POOL VIEW -->
+        <div id="importPoolView" style="display:none">
+          <div class="add-token-form">
+            <div class="form-group">
+              <label class="form-label">Token A Address</label>
+              <input type="text" class="form-input" id="tokenAInput" placeholder="0x..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Token B Address</label>
+              <input type="text" class="form-input" id="tokenBInput" placeholder="0x..." />
+            </div>
+            <div class="warning-box">
+              <div class="warning-header">
+                <span>⚠️</span>
+                <span>Security Warning</span>
+              </div>
+              <div class="warning-text">
+                Anyone can create pools with any tokens. Verify the token addresses before importing. 
+                Fake pools may look similar to legitimate ones. Always double-check from official sources.
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" onclick="switchToMyPoolsView()">Cancel</button>
+              <button class="btn btn-primary" onclick="importPool()">Import Pool</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;color:var(--muted);font-size:13px;text-align:center">
+          <div id="status">Ready</div>
+          <div id="txLink" style="margin-top:6px;font-size:12px;word-break:break-all"></div>
+        </div>
+      </section>
+
+      <!-- PANEL -->
+      <aside class="panel" aria-label="Info">
+        <h4 id="panelTitle">Pool Information</h4>
+        <div class="panel-row"><div>Pooled <span id="tokenASymbol">VANA</span></div><div id="pooledTokenA">—</div></div>
+        <div class="panel-row"><div>Pooled <span id="tokenBSymbol">USDC</span></div><div id="pooledTokenB">—</div></div>
+        <div class="panel-row"><div>Your pool tokens</div><div id="poolTokens">—</div></div>
+        <div class="panel-row"><div>Your pool share</div><div id="poolSharePercent">0%</div></div>
+
+        <h4 style="margin-top:14px">Pool Stats</h4>
+        <div class="panel-row"><div><span id="tokenASymbol2">VANA</span> per <span id="tokenBSymbol2">USDC</span></div><div id="priceA">—</div></div>
+        <div class="panel-row"><div><span id="tokenBSymbol3">USDC</span> per <span id="tokenASymbol3">VANA</span></div><div id="priceB">—</div></div>
+        <div class="panel-row"><div>Total Liquidity</div><div id="totalLiquidity">$—</div></div>
+        <div class="panel-row"><div>24h Volume</div><div id="dailyVolume">$—</div></div>
+
+        <!-- Quick Add for Farming -->
+        <h4 style="margin-top:14px">Quick Add Liquidity</h4>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'USDC')">VANA-USDC</button>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'VANS')" style="margin-top:8px">VANA-VANS</button>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANS', 'USDC')" style="margin-top:8px">VANS-USDC</button>
+      </aside>
+    </div>
+  </main>
+
+  <!-- REMOVE LIQUIDITY MODAL -->
+  <div id="removeLiquidityModal" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Remove Liquidity</div>
+        <button class="close-modal" onclick="closeRemoveModal()">×</button>
+      </div>
+
+      <div id="removePoolInfo">
+        <!-- Pool info will be populated here -->
+      </div>
+
+      <div class="percentage-buttons">
+        <button class="percentage-btn" data-percent="25" onclick="setRemovePercentage(25)">25%</button>
+        <button class="percentage-btn" data-percent="50" onclick="setRemovePercentage(50)">50%</button>
+        <button class="percentage-btn" data-percent="75" onclick="setRemovePercentage(75)">75%</button>
+        <button class="percentage-btn" data-percent="100" onclick="setRemovePercentage(100)">100%</button>
+      </div>
+
+      <div class="remove-amounts">
+        <div class="remove-amount">
+          <span id="removeTokenASymbol">Token A</span>
+          <span id="removeTokenAAmount">0</span>
+        </div>
+        <div class="remove-amount">
+          <span id="removeTokenBSymbol">Token B</span>
+          <span id="removeTokenBAmount">0</span>
+        </div>
+      </div>
+
+      <button id="confirmRemoveBtn" class="primary" onclick="confirmRemoveLiquidity()">Remove Liquidity</button>
+    </div>
+  </div>
+
+  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+  // CONFIGURASI
+  const ROUTER = '0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C';
+  const WVANA = '0x00eddd9621fb08436d0331c149d1690909a5906d';
+  const FACTORY = '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D';
+  const VANS = '0x82741ff5937933244eb562A4b396f8079F1de914';
+  const USDC = '0xF1815bd50389c46847f0Bda824eC8da914045D14';
+  const BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
+  const RPC = 'https://rpc.vana.org';
+  const CHAIN_ID_HEX = '0x5C8';
+
+  // ABI CONTRACT
+  const ROUTER_ABI = [
+    'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
+    'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
+    'function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)',
+    'function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)',
+    'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)'
+  ];
+
+  const FACTORY_ABI = [
+    'function getPair(address tokenA, address tokenB) external view returns (address pair)',
+    'function createPair(address tokenA, address tokenB) external returns (address pair)',
+    'function allPairsLength() external view returns (uint)',
+    'function allPairs(uint) external view returns (address)'
+  ];
+
+  const PAIR_ABI = [
+    'function getReserves() view returns (uint112,uint112,uint32)',
+    'function token0() view returns (address)',
+    'function token1() view returns (address)',
+    'function totalSupply() view returns (uint256)',
+    'function balanceOf(address) view returns (uint256)',
+    'function symbol() view returns (string)',
+    'function approve(address spender, uint256 amount) external returns (bool)',
+    'function allowance(address owner, address spender) external view returns (uint256)'
+  ];
+
+  const ERC20_ABI = [
+    'function balanceOf(address account) external view returns (uint256)',
+    'function transfer(address to, uint256 amount) external returns (bool)',
+    'function approve(address spender, uint256 amount) external returns (bool)',
+    'function allowance(address owner, address spender) external view returns (uint256)',
+    'function decimals() external view returns (uint8)',
+    'function symbol() external view returns (string memory)',
+    'function name() external view returns (string memory)'
+  ];
+
+  // STATE VARIABLES
+  let provider = null;
+  let signer = null;
+  let account = null;
+  let router = null;
+  let factory = null;
+  let currentPair = null;
+  let userPools = [];
+  let currentRemovePool = null;
+  let currentRemovePercentage = 0;
+
+  const DEFAULT_TOKENS = [
+    { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true},
+    { symbol: 'WVANA', address: WVANA, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true},
+    { symbol: 'USDC', address: USDC, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true},
+    { symbol: 'VANS', address: VANS, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true},
+    { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true}
+  ];
+
+  let tokens = DEFAULT_TOKENS.slice();
+  let selectedFrom = tokens[0];
+  let selectedTo = tokens[2];
+
+  // HELPER FUNCTIONS
+  const $ = id => document.getElementById(id);
+
+  function showToast(msg, t = 2400){
+    const el = document.createElement('div'); 
+    el.className = 'toast'; 
+    el.textContent = msg;
+    el.style.position = 'fixed'; 
+    el.style.bottom = '20px'; 
+    el.style.left = '50%'; 
+    el.style.transform = 'translateX(-50%)';
+    el.style.background = 'var(--primary)'; 
+    el.style.color = 'white'; 
+    el.style.padding = '12px 20px';
+    el.style.borderRadius = '8px'; 
+    el.style.zIndex = '9999'; 
+    el.style.fontWeight = '600';
+    el.style.opacity = '0'; 
+    el.style.transition = 'opacity .18s';
+    document.body.appendChild(el);
+    setTimeout(()=> el.style.opacity = '1', 10);
+    setTimeout(()=> { el.style.opacity = '0'; setTimeout(()=> el.remove(), 300); }, t);
+  }
+
+  function setStatus(s){ 
+    if ($('status')) $('status').textContent = s; 
+  }
+
+  // 🎯 TOKEN MANAGEMENT FUNCTIONS
+  function loadCustomTokens() {
+    try {
+        const stored = localStorage.getItem('vanswap_custom_tokens');
+        if (stored) {
+            const customTokens = JSON.parse(stored);
+            customTokens.forEach(ct => {
+                if (!tokens.some(t => t.address.toLowerCase() === ct.address.toLowerCase())) {
+                    tokens.push(ct);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading custom tokens:', error);
+    }
+  }
+
+  function saveCustomTokens() {
+    const customTokens = tokens.filter(t => t.custom);
+    localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
+  }
+
+  // 🎯 TOKEN SELECTION FUNCTIONS
+  function buildTokenListHtml(type){
+    const listEl = (type==='from') ? $('fromList') : $('toList');
+    listEl.innerHTML = '';
+    
+    // Search input
+    const search = document.createElement('div'); 
+    search.className = 'token-search';
+    search.innerHTML = `<input placeholder="Search token..." oninput="filterTokens('${type}', this.value)" />`;
+    listEl.appendChild(search);
+    
+    // Header
+    const header = document.createElement('div'); 
+    header.style.color = 'var(--muted)'; 
+    header.style.fontSize='13px'; 
+    header.style.marginBottom = '8px'; 
+    header.textContent = `Select Token (${tokens.length})`;
+    listEl.appendChild(header);
+    
+    // Token options
+    for(const t of tokens){
+        const opt = document.createElement('div'); 
+        opt.className = 'token-option'; 
+        opt.setAttribute('data-addr', t.address);
+        
+        let statusBadge = '';
+        if (t.verified) {
+            statusBadge = '<span class="token-verified">✓ Verified</span>';
+        } else if (t.custom) {
+            statusBadge = '<span class="token-imported">Imported</span>';
+        } else {
+            statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
+        }
+
+        opt.innerHTML = `
+            <img src="${t.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'"/>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700">${t.symbol} ${statusBadge}</div>
+                <div class="token-addr">${t.address === 'VANA_NATIVE' ? 'Native Token' : (t.address.substring(0,6)+'...'+t.address.substring(38))}</div>
+            </div>
+            <div id="bal-${t.symbol}-${type}" style="color:var(--muted);font-size:13px">—</div>`;
+        
+        opt.addEventListener('click', (e)=>{ 
+            e.stopPropagation(); 
+            selectToken(type, t); 
+        });
+        listEl.appendChild(opt);
+    }
+
+    // Add Custom Token button
+    const addTokenBtn = document.createElement('div');
+    addTokenBtn.className = 'add-token-btn';
+    addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
+    addTokenBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showAddTokenForm(type);
+    });
+    listEl.appendChild(addTokenBtn);
+
+    if(tokens.length===0){ 
+        const no = document.createElement('div'); 
+        no.className='token-addr'; 
+        no.style.padding='12px'; 
+        no.textContent='No tokens'; 
+        listEl.appendChild(no); 
+    }
+    
+    listEl.style.display = 'block'; 
+    listEl.style.pointerEvents = 'auto';
+    
+    // Update balances in dropdown
+    updateDropdownBalances();
+  }
+
+  function showAddTokenForm(type) {
+    const listEl = (type==='from') ? $('fromList') : $('toList');
+
+    if (listEl.querySelector('.add-token-form')) {
+        return;
+    }
+
+    const form = document.createElement('div');
+    form.className = 'add-token-form';
+    form.innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Token Contract Address</label>
+            <input type="text" class="form-input" id="tokenAddressInput" placeholder="0x..." />
+        </div>
+        <div class="warning-box">
+            <div class="warning-header">
+                <span>⚠️</span>
+                <span>Security Warning</span>
+            </div>
+            <div class="warning-text">
+                Anyone can create ERC-20 tokens. Verify the token contract address before adding it. 
+                Fake tokens may look similar to legitimate ones. Always double-check the contract address from official sources.
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" id="cancelAddToken">Cancel</button>
+            <button class="btn btn-primary" id="importToken">Import Token</button>
+        </div>
+    `;
+
+    listEl.appendChild(form);
+
+    setTimeout(() => {
+        const input = form.querySelector('#tokenAddressInput');
+        if (input) input.focus();
+    }, 100);
+
+    form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
+        e.stopPropagation();
+        form.remove();
+    });
+
+    form.querySelector('#importToken').addEventListener('click', (e) => {
+        e.stopPropagation();
+        importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+    });
+
+    form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.stopPropagation();
+            importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+        }
+    });
+  }
+
+  async function importCustomToken(type, address) {
+    if (!address || address.trim() === '') {
+        showToast('Please enter a token address');
+        return;
+    }
+
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
+        showToast('Invalid token address format');
+        return;
+    }
+
+    const existingToken = tokens.find(t => 
+        t.address.toLowerCase() === address.trim().toLowerCase()
+    );
+
+    if (existingToken) {
+        showToast('Token already in list');
+        selectToken(type, existingToken);
+        return;
+    }
+
+    try {
+        setStatus('Importing token...');
+
+        if (!provider) {
+            provider = new ethers.providers.JsonRpcProvider(RPC);
+        }
+
+        const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+        const [symbol, decimals] = await Promise.all([
+            tokenContract.symbol(),
+            tokenContract.decimals()
+        ]);
+
+        const newToken = {
+            symbol: symbol,
+            address: address,
+            decimals: decimals,
+            logo: 'https://vanswap.xyz/assets/unknown.png',
+            custom: true,
+            verified: false
+        };
+
+        tokens.push(newToken);
+        saveCustomTokens();
+        selectToken(type, newToken);
+        buildTokenListHtml(type);
+
+        showToast(`Token ${symbol} imported successfully`);
+        setStatus('Token imported');
+
+    } catch (error) {
+        console.error('Error importing token:', error);
+        showToast('Failed to import token. Check the address and try again.');
+        setStatus('Import failed');
+    }
+  }
+
+  function filterTokens(type, term){ 
+    const listEl = (type==='from') ? $('fromList') : $('toList'); 
+    const opts = listEl.querySelectorAll('.token-option'); 
+    opts.forEach(o=>{ 
+        const text = o.textContent.toLowerCase(); 
+        const ok = text.includes((term||'').toLowerCase()); 
+        o.style.display = ok ? 'flex' : 'none'; 
+    }); 
+  }
+
+  async function selectToken(type, token){
+    if(type==='from'){ 
+        selectedFrom = token; 
+        $('fromLogo').src = token.logo; 
+        $('fromSymbol').textContent = token.symbol; 
+        $('fromList').style.display = 'none'; 
+    } else { 
+        selectedTo = token; 
+        $('toLogo').src = token.logo; 
+        $('toSymbol').textContent = token.symbol; 
+        $('toList').style.display = 'none'; 
+    }
+    updateBalances(); 
+    updateLiquidityInfo();
+    updateActionBtn(); 
+    updateUSDValues();
+  }
+
+  // 🎯 FUNGSI UTAMA: ADD LIQUIDITY COMPLETE
+  async function addLiquidity() {
+    console.log('🔄 addLiquidity function called');
+    
+    if (!account || !signer) {
+        console.log('❌ No wallet connected, connecting...');
+        await connectWallet();
+        if (!account || !signer) {
+            showToast('Please connect wallet first');
+            return;
+        }
+    }
+
+    const fromAmt = $('fromAmount').value.trim();
+    const toAmt = $('toAmount').value.trim();
+    
+    console.log('📊 Input amounts:', { fromAmt, toAmt });
+    
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+        showToast('Please enter amount for ' + selectedFrom.symbol);
+        return;
+    }
+
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+        showToast('Please enter amount for ' + selectedTo.symbol);
+        return;
+    }
+
+    const btn = $('actionBtn');
+    if (!btn) {
+        console.error('❌ Action button not found');
+        return;
+    }
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Processing...';
+        setStatus('Preparing add liquidity...');
+
+        if (typeof selectedFrom.decimals === 'undefined' || typeof selectedTo.decimals === 'undefined') {
+            showToast('Token decimals not detected, try refreshing or select different tokens');
+            btn.disabled = false;
+            btn.textContent = 'Add Liquidity';
+            return;
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+
+        console.log('🔢 Parsed amounts:', {
+            amountADesired: amountADesired.toString(),
+            amountBDesired: amountBDesired.toString()
+        });
+
+        const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
+        const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
+
+        console.log('🏷️ Token addresses:', { addressA, addressB });
+
+        const pairAddress = await ensurePairExists(addressA, addressB);
+        if (!pairAddress) {
+            throw new Error('Failed to create or find liquidity pair');
+        }
+
+        const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        const amountAMin = amountADesired.mul(99).div(100);
+        const amountBMin = amountBDesired.mul(99).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+        console.log('⚙️ Transaction params:', {
+            amountAMin: amountAMin.toString(),
+            amountBMin: amountBMin.toString(),
+            deadline
+        });
+
+        if (selectedFrom.address === 'VANA_NATIVE' && selectedTo.address !== 'VANA_NATIVE') {
+            console.log('💰 Case: Native -> ERC20');
+            await ensureApproved(selectedTo.address, amountBDesired);
+            
+            setStatus('Adding liquidity with native token...');
+            const tx = await routerWithSigner.addLiquidityETH(
+                selectedTo.address,
+                amountBDesired,
+                amountBMin,
+                amountAMin,
+                account,
+                deadline,
+                { value: amountADesired, gasLimit: 3000000 }
+            );
+            
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Transaction submitted...');
+            await tx.wait();
+
+        } else if (selectedTo.address === 'VANA_NATIVE' && selectedFrom.address !== 'VANA_NATIVE') {
+            console.log('💰 Case: ERC20 -> Native');
+            await ensureApproved(selectedFrom.address, amountADesired);
+            
+            setStatus('Adding liquidity with ERC20 token...');
+            const tx = await routerWithSigner.addLiquidityETH(
+                selectedFrom.address,
+                amountADesired,
+                amountAMin,
+                amountBMin,
+                account,
+                deadline,
+                { value: amountBDesired, gasLimit: 3000000 }
+            );
+            
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Transaction submitted...');
+            await tx.wait();
+
+        } else {
+            console.log('💰 Case: ERC20 -> ERC20');
+            await ensureApproved(selectedFrom.address, amountADesired);
+            await ensureApproved(selectedTo.address, amountBDesired);
+            
+            setStatus('Adding liquidity...');
+            const tx = await routerWithSigner.addLiquidity(
+                addressA,
+                addressB,
+                amountADesired,
+                amountBDesired,
+                amountAMin,
+                amountBMin,
+                account,
+                deadline,
+                { gasLimit: 3000000 }
+            );
+            
+            $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+            setStatus('Transaction submitted...');
+            await tx.wait();
+        }
+
+        showToast('✅ Liquidity added successfully!');
+        setStatus('Liquidity added');
+
+        await updateBalances();
+        await updateDropdownBalances();
+        await updateLiquidityInfo();
+        await loadUserPools();
+        await updateTVLStats();
+
+    } catch (err) {
+        console.error('❌ addLiquidity error:', err);
+        let errorMsg = 'Add liquidity failed';
+        if (err.message) {
+            if (err.message.includes('user rejected')) {
+                errorMsg = 'Transaction rejected by user';
+            } else if (err.message.includes('insufficient')) {
+                errorMsg = 'Insufficient balance';
+            } else if (err.message.includes('deadline')) {
+                errorMsg = 'Transaction expired, try again';
+            } else {
+                errorMsg = err.message;
+            }
+        }
+        showToast('❌ ' + errorMsg);
+        setStatus('Add liquidity failed');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Add Liquidity';
+        }
+    }
+  }
+
+  // 🔧 FUNGSI: Ensure pair exists (create if not)
+  async function ensurePairExists(tokenA, tokenB) {
+    try {
+        const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
+        let pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
+
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+            setStatus('Creating new pair...');
+            console.log('🆕 Creating new pair for:', { tokenA, tokenB });
+            
+            const tx = await factoryWithSigner.createPair(tokenA, tokenB);
+            await tx.wait();
+            
+            pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
+            console.log('✅ Pair created:', pairAddress);
+            showToast('New liquidity pair created!');
+        } else {
+            console.log('✅ Pair exists:', pairAddress);
+        }
+
+        return pairAddress;
+    } catch (error) {
+        console.error('❌ ensurePairExists error:', error);
+        throw error;
+    }
+  }
+
+  // 🔧 FUNGSI: Auto-calculate amount B
+  async function calculateOptimalAmountB(amountADesired) {
+    try {
+        const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
+        const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
+
+        const pairAddress = await factory.getPair(addressA, addressB);
+        
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+            console.log('🆕 Pool does not exist yet - user must input both amounts');
+            return null;
+        }
+
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+        if (token0.toLowerCase() === addressA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+        } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+            console.log('⚠️ Pool has zero reserves');
+            return null;
+        }
+
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+        console.log('🎯 Optimal amount B calculated:', amountBOptimal.toString());
+        return amountBOptimal;
+
+    } catch (error) {
+        console.error('❌ Error calculating optimal amount B:', error);
+        return null;
+    }
+  }
+
+  // 🔧 FUNGSI: Auto-calculate saat input amount A
+  async function onFromAmountInput() {
+    const fromAmt = $('fromAmount').value.trim();
+    
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+        $('toAmount').value = '';
+        updateActionBtn();
+        updateUSDValues();
+        return;
+    }
+
+    try {
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = await calculateOptimalAmountB(amountADesired);
+        
+        if (amountBOptimal && !amountBOptimal.isZero()) {
+            const toAmtFormatted = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+            $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
+            console.log('✅ Auto-filled amount B:', toAmtFormatted);
+        }
+
+        updateActionBtn();
+        updateUSDValues();
+        updateLiquidityInfo();
+
+    } catch (error) {
+        console.error('❌ Error in onFromAmountInput:', error);
+    }
+  }
+
+  // 🔧 FUNGSI: Ensure token approval
+  async function ensureApproved(tokenAddress, neededAmount) {
+    if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
+
+    try {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+        const allowance = await tokenContract.allowance(account, ROUTER);
+        
+        if (ethers.BigNumber.from(allowance).lt(neededAmount)) {
+            setStatus('Approving token...');
+            const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+            await tx.wait();
+            setStatus('Token approved');
+        }
+    } catch (err) {
+        console.error('ensureApproved error:', err);
+        throw err;
+    }
+  }
+
+  // 🔧 FUNGSI: Connect wallet
+  async function connectWallet() {
+    if (!window.ethereum) { 
+        alert('Please install MetaMask or another Web3 wallet'); 
+        return; 
+    }
+    
+    try {
+        await ensureVanaChain();
+        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+        account = accounts[0];
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        
+        $('connectBtn').textContent = account.substring(0,6) + '...' + account.substring(38);
+        setStatus('Connected');
+        
+        await updateBalances(); 
+        await updateDropdownBalances(); 
+        updateActionBtn(); 
+        updateLiquidityInfo();
+        loadUserPools();
+        updateTVLStats();
+        
+        showToast('Wallet connected successfully');
+        
+    } catch (e) {
+        console.error('connectWallet error:', e);
+        showToast('Connection failed: ' + (e.message || e));
+    }
+  }
+
+  // 🔧 FUNGSI: Ensure Vana Chain
+  async function ensureVanaChain(){
+    if(!window.ethereum) return false;
+    try{
+        const net = await window.ethereum.request({ method: 'eth_chainId' });
+        if(net !== CHAIN_ID_HEX){
+            try{
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
+                return true;
+            }catch(switchErr){
+                if(switchErr.code === 4902){
+                    await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_ID_HEX, chainName: 'Vana Chain', rpcUrls:[RPC], nativeCurrency:{name:'VANA',symbol:'VANA',decimals:18}, blockExplorerUrls:['https://vanascan.io/'] }] });
+                    return true;
+                }
+                return false;
+            }
+        }
+        return true;
+    }catch(e){
+        console.error('ensureVanaChain', e);
+        return false;
+    }
+  }
+
+  // 🔧 FUNGSI: Update balances
+  async function updateBalances(){
+    if(!provider || !account) return;
+    try{
+        if(selectedFrom.address === 'VANA_NATIVE'){
+            const b = await provider.getBalance(account);
+            $('fromBalance').textContent = parseFloat(ethers.utils.formatEther(b)).toFixed(4);
+        }else{
+            const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+            const b = await c.balanceOf(account);
+            const d = await c.decimals();
+            $('fromBalance').textContent = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4);
+        }
+        if(selectedTo.address === 'VANA_NATIVE'){
+            const b2 = await provider.getBalance(account);
+            $('toBalance').textContent = parseFloat(ethers.utils.formatEther(b2)).toFixed(4);
+        }else{
+            const c2 = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
+            const b2 = await c2.balanceOf(account);
+            const d2 = await c2.decimals();
+            $('toBalance').textContent = parseFloat(ethers.utils.formatUnits(b2,d2)).toFixed(4);
+        }
+    }catch(e){ console.error('updateBalances', e); }
+  }
+
+  // 🔧 FUNGSI: Update dropdown balances
+  async function updateDropdownBalances(){ 
+    if(!provider || !account) return; 
+    for(const t of tokens){ 
+        try{ 
+            let bal='0'; 
+            if(t.address === 'VANA_NATIVE'){ 
+                const b = await provider.getBalance(account); 
+                bal = parseFloat(ethers.utils.formatEther(b)).toFixed(4); 
+            } else { 
+                const c = new ethers.Contract(t.address, ERC20_ABI, provider); 
+                const b = await c.balanceOf(account); 
+                const d = await c.decimals(); 
+                bal = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(4); 
+            } 
+            const fromEl = document.querySelector(`#bal-${t.symbol}-from`);
+            const toEl = document.querySelector(`#bal-${t.symbol}-to`);
+            if(fromEl) fromEl.textContent = bal; 
+            if(toEl) toEl.textContent = bal; 
+        }catch(e){ 
+            const fromEl = document.querySelector(`#bal-${t.symbol}-from`);
+            const toEl = document.querySelector(`#bal-${t.symbol}-to`);
+            if(fromEl) fromEl.textContent = '0'; 
+            if(toEl) toEl.textContent = '0'; 
+        } 
+    } 
+  }
+
+  // 🔧 FUNGSI: Set max amount
+  async function setMax(){ 
+    if(!account || !provider){ 
+        await connectWallet(); 
+        return; 
+    } 
+    try{ 
+        if(selectedFrom.address === 'VANA_NATIVE'){ 
+            const b = await provider.getBalance(account); 
+            const usable = b.mul(95).div(100); 
+            $('fromAmount').value = ethers.utils.formatEther(usable); 
+        } else { 
+            const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider); 
+            const b = await c.balanceOf(account); 
+            const d = selectedFrom.decimals || await c.decimals(); 
+            $('fromAmount').value = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(d > 6 ? 6 : d); 
+        } 
+        onFromAmountInput();
+    }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
+  }
+
+  // 🔧 FUNGSI: Update USD values
+  async function updateUSDValues() {
+    const fromAmt = $('fromAmount').value;
+    const toAmt = $('toAmount').value;
+
+    if (fromAmt && parseFloat(fromAmt) > 0) {
+        $('fromUsd').textContent = `~$${(parseFloat(fromAmt) * 0.1).toFixed(2)}`;
+    } else {
+        $('fromUsd').textContent = '—';
+    }
+
+    if (toAmt && parseFloat(toAmt) > 0) {
+        $('toUsd').textContent = `~$${(parseFloat(toAmt) * 1).toFixed(2)}`;
+    } else {
+        $('toUsd').textContent = '—';
+    }
+  }
+
+  // 🔧 FUNGSI: Update action button
+  function updateActionBtn() {
+    const btn = $('actionBtn');
+    if (!btn) return;
+
+    if (!account) {
+        btn.textContent = 'Connect Wallet';
+        btn.disabled = false;
+        btn.onclick = connectWallet;
+        return;
+    }
+
+    const fromAmt = parseFloat($('fromAmount').value);
+    const toAmt = parseFloat($('toAmount').value);
+
+    if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) {
+        btn.textContent = 'Enter Amounts';
+        btn.disabled = true;
+        btn.onclick = null;
+        return;
+    }
+
+    btn.textContent = 'Add Liquidity';
+    btn.disabled = false;
+    btn.onclick = addLiquidity;
+  }
+
+  // 🔧 FUNGSI: Update liquidity info
+  async function updateLiquidityInfo() {
+    if (!provider) return;
+    
+    $('tokenASymbol').textContent = selectedFrom.symbol;
+    $('tokenASymbol2').textContent = selectedFrom.symbol;
+    $('tokenASymbol3').textContent = selectedFrom.symbol;
+    $('tokenBSymbol').textContent = selectedTo.symbol;
+    $('tokenBSymbol2').textContent = selectedTo.symbol;
+    $('tokenBSymbol3').textContent = selectedTo.symbol;
+
+    const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
+    const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
+    
+    try {
+        const pairAddress = await factory.getPair(addressA, addressB);
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+            $('liquidityDescription').textContent = 'Add liquidity to earn 0.25% fees on all trades';
+        } else {
+            $('liquidityDescription').textContent = 'You are the first liquidity provider. The ratio will set the pool price.';
+        }
+    } catch (error) {
+        console.error('Error updating liquidity info:', error);
+    }
+  }
+
+  // 🔧 FUNGSI: Initialize event listeners
+  function initializeEventListeners() {
+    console.log('🔌 Initializing event listeners...');
+    
+    // Connect wallet button
+    const connectBtn = $('connectBtn');
+    if (connectBtn) {
+        connectBtn.addEventListener('click', connectWallet);
+    }
+
+    // Action button
+    const actionBtn = $('actionBtn');
+    if (actionBtn) {
+        actionBtn.addEventListener('click', addLiquidity);
+    }
+
+    // Max button
+    const btnMax = $('btnMax');
+    if (btnMax) {
+        btnMax.addEventListener('click', setMax);
+    }
+
+    // From amount input
+    const fromAmount = $('fromAmount');
+    if (fromAmount) {
+        fromAmount.addEventListener('input', onFromAmountInput);
+    }
+
+    // To amount input
+    const toAmount = $('toAmount');
+    if (toAmount) {
+        toAmount.addEventListener('input', function() {
+            updateActionBtn();
+            updateUSDValues();
+            updateLiquidityInfo();
+        });
+    }
+
+    // Balance click untuk max
+    const fromBalance = $('fromBalance');
+    if (fromBalance) {
+        fromBalance.addEventListener('click', setMax);
+    }
+
+    // Token dropdowns
+    $('fromSelect').addEventListener('click', (e)=>{ 
+        e.stopPropagation(); 
+        const el = $('fromList'); 
+        if(el.style.display === 'block'){ 
+            el.style.display = 'none'; 
+        } else { 
+            buildTokenListHtml('from'); 
+            el.style.display = 'block'; 
+            $('toList').style.display = 'none'; 
+        } 
+    });
+    
+    $('toSelect').addEventListener('click', (e)=>{ 
+        e.stopPropagation(); 
+        const el = $('toList'); 
+        if(el.style.display === 'block'){ 
+            el.style.display = 'none'; 
+        } else { 
+            buildTokenListHtml('to'); 
+            el.style.display = 'block'; 
+            $('fromList').style.display = 'none'; 
+        } 
+    });
+    
+    document.addEventListener('click', (e)=>{ 
+        if(!e.target.closest('.select-wrap')){ 
+            $('fromList').style.display = 'none'; 
+            $('toList').style.display = 'none'; 
+        } 
+    });
+
+    // Menu dropdown
+    const menuBtn = $('menuBtn');
+    const menuDropdown = $('menuDropdown');
+    if (menuBtn && menuDropdown) {
+        menuBtn.addEventListener('click', (e)=>{ 
+            e.stopPropagation(); 
+            menuDropdown.classList.toggle('show'); 
+        });
+        
+        menuDropdown.querySelectorAll('.menu-item').forEach(it=>{ 
+            it.addEventListener('click', ()=> { 
+                const href = it.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            }); 
+        });
+        
+        document.addEventListener('click', ()=> menuDropdown.classList.remove('show'));
+    }
+
+    console.log('✅ Event listeners initialized');
+  }
+
+  // 🎯 VIEW MANAGEMENT FUNCTIONS
+  function switchToMyPoolsView() {
+    $('myPoolsTab').classList.add('active');
+    $('addTab').classList.remove('active');
+    $('importTab').classList.remove('active');
+    $('myPoolsView').style.display = 'block';
+    $('addLiquidityView').style.display = 'none';
+    $('importPoolView').style.display = 'none';
+    $('mainTitle').textContent = 'My Liquidity Pools';
+    loadUserPools();
+  }
+
+  function switchToAddView() {
+    $('addTab').classList.add('active');
+    $('myPoolsTab').classList.remove('active');
+    $('importTab').classList.remove('active');
+    $('myPoolsView').style.display = 'none';
+    $('addLiquidityView').style.display = 'block';
+    $('importPoolView').style.display = 'none';
+    $('mainTitle').textContent = 'Add Liquidity';
+    updateActionBtn();
+    updateLiquidityInfo();
+  }
+
+  function switchToImportView() {
+    $('importTab').classList.add('active');
+    $('myPoolsTab').classList.remove('active');
+    $('addTab').classList.remove('active');
+    $('myPoolsView').style.display = 'none';
+    $('addLiquidityView').style.display = 'none';
+    $('importPoolView').style.display = 'block';
+    $('mainTitle').textContent = 'Import Pool';
+  }
+
+  // 🎯 QUICK ADD LIQUIDITY
+  function quickAddLiquidity(tokenASymbol, tokenBSymbol) {
+    const tokenA = tokens.find(t => t.symbol === tokenASymbol);
+    const tokenB = tokens.find(t => t.symbol === tokenBSymbol);
+
+    if (tokenA && tokenB) {
+        selectedFrom = tokenA;
+        selectedTo = tokenB;
+
+        $('fromLogo').src = selectedFrom.logo;
+        $('fromSymbol').textContent = selectedFrom.symbol;
+        $('toLogo').src = selectedTo.logo;
+        $('toSymbol').textContent = selectedTo.symbol;
+
+        switchToAddView();
+        updateLiquidityInfo();
+        showToast(`Ready to add ${tokenASymbol}-${tokenBSymbol} liquidity`);
+    }
+  }
+
+  // 🎯 LOAD USER POOLS (simplified)
+  async function loadUserPools() {
+    if (!account || !provider) {
+        $('noPoolsMessage').style.display = 'block';
+        $('poolsList').innerHTML = '';
+        return;
+    }
+    $('noPoolsMessage').style.display = 'block';
+  }
+
+  // 🎯 UPDATE TVL STATS (simplified)
+  async function updateTVLStats() {
+    $('totalTVL').textContent = '$---';
+    $('totalPairs').textContent = '--';
+  }
+
+  // 🎯 REMOVE LIQUIDITY FUNCTIONS (placeholder)
+  function showRemoveModal(poolAddress) {
+    showToast('Remove liquidity feature coming soon');
+  }
+
+  function setRemovePercentage(percent) {
+    // Placeholder
+  }
+
+  function closeRemoveModal() {
+    $('removeLiquidityModal').style.display = 'none';
+  }
+
+  function confirmRemoveLiquidity() {
+    showToast('Remove liquidity feature coming soon');
+  }
+
+  // 🎯 IMPORT POOL (placeholder)
+  function importPool() {
+    showToast('Import pool feature coming soon');
+  }
+
+  // 🎯 INITIALIZATION
+  document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 VanSwap Liquidity Initializing...');
+    
+    try {
+        // Load custom tokens first
+        loadCustomTokens();
+        
+        // Initialize provider untuk read-only operations
+        provider = new ethers.providers.JsonRpcProvider(RPC);
+        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+
+        // Update stats
+        updateTVLStats();
+
+        // Check jika wallet sudah connected
+        if (window.ethereum && window.ethereum.selectedAddress) {
+            account = window.ethereum.selectedAddress;
+            $('connectBtn').textContent = account.substring(0,6) + '...' + account.substring(38);
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+            await updateBalances();
+            await updateDropdownBalances();
+            updateActionBtn();
+            updateLiquidityInfo();
+            loadUserPools();
+        }
+        
+        // Initialize event listeners
+        initializeEventListeners();
+        
+        // Tab event listeners
+        $('myPoolsTab').addEventListener('click', switchToMyPoolsView);
+        $('addTab').addEventListener('click', switchToAddView);
+        $('importTab').addEventListener('click', switchToImportView);
+        
+        // Start dengan My Pools view
+        switchToMyPoolsView();
+        
+        console.log('✅ VanSwap initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ Initialization error:', error);
+    }
+  });
+
+  // Export functions ke global scope
+  window.switchToMyPoolsView = switchToMyPoolsView;
+  window.switchToAddView = switchToAddView;
+  window.switchToImportView = switchToImportView;
+  window.quickAddLiquidity = quickAddLiquidity;
+  window.addLiquidity = addLiquidity;
+  window.setMax = setMax;
+  window.connectWallet = connectWallet;
+  window.showRemoveModal = showRemoveModal;
+  window.setRemovePercentage = setRemovePercentage;
+  window.closeRemoveModal = closeRemoveModal;
+  window.confirmRemoveLiquidity = confirmRemoveLiquidity;
+  window.importPool = importPool;
+  window.filterTokens = filterTokens;
+  </script>
+</body>
+</html>
