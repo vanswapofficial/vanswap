@@ -89,13 +89,13 @@
       --card-bg: rgba(14,42,33,0.85);
       --card-border: rgba(26,127,94,0.12);
     }
-    
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    
+
     body {
       font-family: 'Kanit', sans-serif;
       background: linear-gradient(135deg, #04140d 0%, #07261b 50%, #0a2e21 100%);
@@ -104,18 +104,18 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
-    
+
     /* Animations */
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-20px); }
     }
-    
+
     @keyframes glow {
       0%, 100% { box-shadow: 0 0 20px rgba(49, 208, 170, 0.3); }
       50% { box-shadow: 0 0 40px rgba(49, 208, 170, 0.6); }
     }
-    
+
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -126,12 +126,12 @@
         transform: translateY(0);
       }
     }
-    
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
     }
-    
+
     /* Header */
     .header {
       position: fixed;
@@ -143,7 +143,7 @@
       backdrop-filter: blur(10px);
       border-bottom: 1px solid rgba(26, 127, 94, 0.1);
     }
-    
+
     .nav-container {
       max-width: 1200px;
       margin: 0 auto;
@@ -152,7 +152,7 @@
       align-items: center;
       justify-content: space-between;
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
@@ -161,7 +161,7 @@
       color: var(--text);
       animation: fadeInUp 1s ease;
     }
-    
+
     .logo img {
       width: 50px;
       height: 50px;
@@ -169,7 +169,7 @@
       object-fit: cover;
       animation: float 6s ease-in-out infinite;
     }
-    
+
     .logo span {
       font-weight: 800;
       font-size: 24px;
@@ -177,12 +177,12 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .nav-links {
       display: flex;
       gap: 30px;
     }
-    
+
     .nav-link {
       color: var(--muted);
       text-decoration: none;
@@ -190,11 +190,11 @@
       transition: all 0.3s ease;
       position: relative;
     }
-    
+
     .nav-link:hover {
       color: var(--accent);
     }
-    
+
     .nav-link::after {
       content: '';
       position: absolute;
@@ -205,11 +205,11 @@
       background: var(--accent);
       transition: width 0.3s ease;
     }
-    
+
     .nav-link:hover::after {
       width: 100%;
     }
-    
+
     .launch-btn {
       background: var(--accent);
       color: #052017;
@@ -223,12 +223,12 @@
       text-decoration: none;
       display: inline-block;
     }
-    
+
     .launch-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 10px 25px rgba(49, 208, 170, 0.4);
     }
-    
+
     /* Hero Section */
     .hero {
       min-height: 100vh;
@@ -239,13 +239,13 @@
       position: relative;
       padding: 120px 20px 80px;
     }
-    
+
     .hero-content {
       max-width: 800px;
       z-index: 2;
       animation: fadeInUp 1s ease 0.2s both;
     }
-    
+
     .hero h1 {
       font-size: 4rem;
       font-weight: 800;
@@ -255,7 +255,7 @@
       -webkit-text-fill-color: transparent;
       line-height: 1.1;
     }
-    
+
     .tagline {
       font-size: 1.5rem;
       color: var(--muted);
@@ -263,12 +263,12 @@
       line-height: 1.6;
       font-weight: 300;
     }
-    
+
     .highlight {
       color: var(--accent);
       font-weight: 600;
     }
-    
+
     .cta-buttons {
       display: flex;
       gap: 20px;
@@ -276,7 +276,7 @@
       margin-top: 40px;
       flex-wrap: wrap;
     }
-    
+
     .btn {
       padding: 16px 32px;
       border-radius: 12px;
@@ -286,35 +286,99 @@
       font-size: 1.1rem;
       display: inline-block;
     }
-    
+
     .btn-primary {
       background: var(--accent);
       color: #052017;
       animation: glow 3s ease-in-out infinite;
     }
-    
+
     .btn-primary:hover {
       transform: translateY(-3px);
       box-shadow: 0 15px 30px rgba(49, 208, 170, 0.4);
     }
-    
+
     .btn-secondary {
       background: transparent;
       color: var(--text);
       border: 2px solid var(--primary);
     }
-    
+
     .btn-secondary:hover {
       background: var(--primary);
       transform: translateY(-3px);
     }
-    
+
+    /* Feature Columns Section */
+    .feature-columns {
+      padding: 60px 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .column-item {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      transition: all 0.3s ease;
+      animation: fadeInUp 1s ease;
+    }
+
+    .column-item:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent);
+      box-shadow: 0 10px 25px rgba(49, 208, 170, 0.2);
+    }
+
+    .column-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      background: rgba(49, 208, 170, 0.1);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .column-item h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    .column-link {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 8px 16px;
+      background: var(--primary);
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .column-link:hover {
+      background: var(--accent);
+      color: #052017;
+    }
+
     /* Features Section */
     .features {
       padding: 100px 20px;
       background: rgba(4, 20, 13, 0.7);
     }
-    
+
     .features-grid {
       max-width: 1200px;
       margin: 0 auto;
@@ -322,7 +386,7 @@
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 30px;
     }
-    
+
     .feature-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -332,12 +396,12 @@
       transition: all 0.3s ease;
       animation: fadeInUp 1s ease;
     }
-    
+
     .feature-card:hover {
       transform: translateY(-10px);
       border-color: var(--accent);
     }
-    
+
     .feature-icon {
       width: 80px;
       height: 80px;
@@ -349,24 +413,24 @@
       justify-content: center;
       font-size: 2rem;
     }
-    
+
     .feature-card h3 {
       font-size: 1.5rem;
       margin-bottom: 15px;
       color: var(--accent);
     }
-    
+
     .feature-card p {
       color: var(--muted);
       line-height: 1.6;
     }
-    
+
     /* Stats Section */
     .stats {
       padding: 80px 20px;
       text-align: center;
     }
-    
+
     .stats-grid {
       max-width: 1000px;
       margin: 0 auto;
@@ -374,75 +438,75 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 40px;
     }
-    
+
     .stat-item {
       animation: fadeInUp 1s ease;
     }
-    
+
     .stat-number {
       font-size: 3rem;
       font-weight: 800;
       color: var(--accent);
       margin-bottom: 10px;
     }
-    
+
     .stat-label {
       color: var(--muted);
       font-size: 1.1rem;
     }
-    
+
     /* SEO Content Section */
     .seo-content {
       padding: 80px 20px;
       background: rgba(4, 20, 13, 0.5);
     }
-    
+
     .seo-container {
       max-width: 800px;
       margin: 0 auto;
     }
-    
+
     .seo-content h2 {
       text-align: center;
       margin-bottom: 40px;
       color: var(--accent);
       font-size: 2.5rem;
     }
-    
+
     .seo-grid {
       display: grid;
       gap: 30px;
     }
-    
+
     .seo-item h3 {
       color: var(--text);
       margin-bottom: 15px;
       font-size: 1.5rem;
     }
-    
+
     .seo-item p {
       color: var(--muted);
       line-height: 1.6;
       margin-bottom: 15px;
     }
-    
+
     .seo-item ul {
       color: var(--muted);
       line-height: 1.6;
       padding-left: 20px;
     }
-    
+
     .seo-item li {
       margin-bottom: 8px;
     }
-    
+
     /* Footer */
     .footer {
       background: rgba(4, 20, 13, 0.9);
       padding: 60px 20px 30px;
       border-top: 1px solid rgba(26, 127, 94, 0.1);
     }
-    
+
     .footer-content {
       max-width: 1200px;
       margin: 0 auto;
@@ -451,12 +515,12 @@
       align-items: center;
       gap: 40px;
     }
-    
+
     .social-links {
       display: flex;
       gap: 20px;
     }
-    
+
     .social-link {
       width: 50px;
       height: 50px;
@@ -470,22 +534,22 @@
       transition: all 0.3s ease;
       font-size: 1.2rem;
     }
-    
+
     .social-link:hover {
       background: var(--accent);
       color: #052017;
       transform: translateY(-3px);
     }
-    
+
     .footer-text {
       text-align: center;
       color: var(--muted);
     }
-    
+
     .footer-text p {
       margin-bottom: 10px;
     }
-    
+
     /* Background Elements */
     .bg-elements {
       position: absolute;
@@ -496,14 +560,14 @@
       overflow: hidden;
       z-index: 1;
     }
-    
+
     .bg-element {
       position: absolute;
       border-radius: 50%;
       background: rgba(49, 208, 170, 0.1);
       animation: float 6s ease-in-out infinite;
     }
-    
+
     .bg-1 {
       width: 300px;
       height: 300px;
@@ -511,7 +575,7 @@
       left: 5%;
       animation-delay: 0s;
     }
-    
+
     .bg-2 {
       width: 200px;
       height: 200px;
@@ -519,7 +583,7 @@
       right: 10%;
       animation-delay: 2s;
     }
-    
+
     .bg-3 {
       width: 150px;
       height: 150px;
@@ -527,61 +591,69 @@
       left: 20%;
       animation-delay: 4s;
     }
-    
+
     /* Mobile Responsive */
     @media (max-width: 768px) {
       .nav-links {
         display: none;
       }
-      
+
       .hero h1 {
         font-size: 2.5rem;
       }
-      
+
       .tagline {
         font-size: 1.2rem;
       }
-      
+
       .cta-buttons {
         flex-direction: column;
         align-items: center;
       }
-      
+
       .btn {
         width: 100%;
         max-width: 300px;
       }
-      
+
+      .columns-grid {
+        grid-template-columns: 1fr;
+      }
+
       .features-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .stats-grid {
         grid-template-columns: repeat(2, 1fr);
       }
-      
+
       .seo-content h2 {
         font-size: 2rem;
       }
     }
-    
+
     @media (max-width: 480px) {
       .hero h1 {
         font-size: 2rem;
       }
-      
+
       .tagline {
         font-size: 1rem;
       }
-      
+
+      .columns-grid {
+        grid-template-columns: 1fr;
+      }
+
       .stats-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .stat-number {
         font-size: 2.5rem;
       }
-      
+
       .seo-content h2 {
         font-size: 1.8rem;
       }
@@ -596,14 +668,14 @@
         <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap DEX Logo - Decentralized Exchange on Vana Chain" loading="lazy">
         <span>VANSWAP</span>
       </a>
-      
+
       <nav class="nav-links">
         <a href="swap.html" class="nav-link">Swap</a>
         <a href="liquidity.html" class="nav-link">Liquidity</a>
         <a href="tokencreator.html" class="nav-link">Create Token</a>
         <a href="docs.html" class="nav-link">Docs</a>
       </nav>
-      
+
       <a href="swap.html" class="launch-btn">Launch App</a>
     </div>
   </header>
@@ -615,7 +687,7 @@
       <div class="bg-element bg-2"></div>
       <div class="bg-element bg-3"></div>
     </div>
-    
+
     <div class="hero-content">
       <h1>Trade, Earn, and Grow on Vana Chain</h1>
       <p class="tagline">
@@ -625,6 +697,39 @@
         on Vana Chain's premier decentralized exchange
       </p>
       
+      <!-- Feature Columns Section -->
+      <div class="feature-columns">
+        <div class="columns-grid">
+          <div class="column-item" style="animation-delay: 0.2s">
+            <div class="column-icon">🔄</div>
+            <h3>Swap</h3>
+            <p>Trade tokens instantly with minimal fees</p>
+            <a href="https://vanswap.xyz/swap" class="column-link">Start Swapping</a>
+          </div>
+          
+          <div class="column-item" style="animation-delay: 0.4s">
+            <div class="column-icon">💧</div>
+            <h3>Add Liquidity</h3>
+            <p>Provide liquidity and earn fees</p>
+            <a href="https://vanswap.xyz/liquidity" class="column-link">Add Liquidity</a>
+          </div>
+          
+          <div class="column-item" style="animation-delay: 0.6s">
+            <div class="column-icon">💰</div>
+            <h3>Staking</h3>
+            <p>Stake tokens and earn rewards</p>
+            <a href="https://vanswap.xyz/staking" class="column-link">Start Staking</a>
+          </div>
+          
+          <div class="column-item" style="animation-delay: 0.8s">
+            <div class="column-icon">🪙</div>
+            <h3>Create Token</h3>
+            <p>Launch your own token easily</p>
+            <a href="https://vanswap.xyz/tokencreator" class="column-link">Create Token</a>
+          </div>
+        </div>
+      </div>
+
       <div class="cta-buttons">
         <a href="swap.html" class="btn btn-primary">Launch App</a>
         <a href="docs.html" class="btn btn-secondary">Learn More</a>
@@ -640,13 +745,13 @@
         <h3>Lightning Fast</h3>
         <p>Experience sub-second transaction times with minimal fees on Vana Chain's optimized network</p>
       </div>
-      
+
       <div class="feature-card" style="animation-delay: 0.4s">
         <div class="feature-icon">🔒</div>
         <h3>Secure & Safe</h3>
         <p>Your funds are protected by battle-tested smart contracts and decentralized security measures</p>
       </div>
-      
+
       <div class="feature-card" style="animation-delay: 0.6s">
         <div class="feature-icon">🌱</div>
         <h3>Earn Yield</h3>
@@ -662,17 +767,17 @@
         <div class="stat-number" id="tvl">$12.5M</div>
         <div class="stat-label">Total Value Locked</div>
       </div>
-      
+
       <div class="stat-item" style="animation-delay: 0.4s">
         <div class="stat-number" id="pairs">50+</div>
         <div class="stat-label">Trading Pairs</div>
       </div>
-      
+
       <div class="stat-item" style="animation-delay: 0.6s">
         <div class="stat-number" id="users">15K+</div>
         <div class="stat-label">Active Users</div>
       </div>
-      
+
       <div class="stat-item" style="animation-delay: 0.8s">
         <div class="stat-number" id="fees">0.25%</div>
         <div class="stat-label">Trading Fees</div>
@@ -684,13 +789,13 @@
   <section class="seo-content">
     <div class="seo-container">
       <h2>VanSwap - Leading Decentralized Exchange on Vana Chain</h2>
-      
+
       <div class="seo-grid">
         <div class="seo-item">
           <h3>What is VanSwap?</h3>
           <p>VanSwap is a cutting-edge decentralized exchange (DEX) built on Vana Chain, offering lightning-fast token swaps, yield farming opportunities, and advanced liquidity provision features. As the premier DEX on Vana Chain, VanSwap provides users with secure, low-fee trading experiences while maintaining complete decentralization and user control over assets.</p>
         </div>
-        
+
         <div class="seo-item">
           <h3>Key Features of VanSwap DEX</h3>
           <ul>
@@ -702,7 +807,7 @@
             <li>Cross-chain compatibility and multi-asset support</li>
           </ul>
         </div>
-        
+
         <div class="seo-item">
           <h3>Why Choose VanSwap on Vana Chain?</h3>
           <p>VanSwap leverages Vana Chain's high-throughput blockchain technology to deliver sub-second transaction finality with fees that are significantly lower than traditional networks. Our platform combines the security of decentralized finance with the speed and efficiency modern traders demand. Whether you're looking to swap tokens, provide liquidity, or farm yields, VanSwap offers the tools and infrastructure to grow your cryptocurrency portfolio efficiently and securely.</p>
@@ -720,7 +825,7 @@
         <a href="https://t.me/vanswap_xyz" class="social-link" target="_blank" rel="noopener">📢</a>
         <a href="https://x.com/vanswap_xyz" class="social-link" target="_blank" rel="noopener">💻</a>
       </div>
-      
+
       <div class="footer-text">
         <p>© 2025 VanSwap. Built on Vana Chain</p>
         <p>Decentralized Exchange Revolutionizing DeFi</p>
@@ -743,14 +848,14 @@
         }
       }, 16);
     }
-    
+
     // Animate stats when they come into view
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const statNumber = entry.target.querySelector('.stat-number');
           const value = statNumber.textContent;
-          
+
           if (value.includes('$')) {
             const num = parseInt(value.replace('$', '').replace('M', '')) * 1000000;
             statNumber.textContent = '$0';
@@ -769,12 +874,12 @@
         }
       });
     }, { threshold: 0.5 });
-    
+
     // Observe all stat items
     document.querySelectorAll('.stat-item').forEach(item => {
       observer.observe(item);
     });
-    
+
     // Add floating animation to feature cards on scroll
     const featureObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -783,8 +888,14 @@
         }
       });
     }, { threshold: 0.1 });
-    
+
     document.querySelectorAll('.feature-card').forEach(card => {
+      card.style.animationPlayState = 'paused';
+      featureObserver.observe(card);
+    });
+    
+    // Add floating animation to column items on scroll
+    document.querySelectorAll('.column-item').forEach(card => {
       card.style.animationPlayState = 'paused';
       featureObserver.observe(card);
     });
