@@ -749,33 +749,216 @@ async function calculateExactAmountB(amountADesired) {
             return null;
         }
 
-        // 🎯 GUNAKAN ROUTER UNTUK HITUNG EXACT AMOUNT B
-        const routerContract = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
+        // ✅ FUNGSI BARU: Validasi Balance Sebelum Add Liquidity
+async function validateBalancesBeforeAddLiquidity(fromAmt, toAmt) {
+    try {
+        if (!account) throw new Error('Connect wallet first');
         
-        // Untuk pool exist, gunakan getAmountsOut untuk hitung exact amount
-        const path = [addressA, addressB];
-        const amounts = await routerContract.getAmountsOut(amountADesired, path);
+        console.log('🔍 Validating balances...');
         
-        const exactAmountB = amounts[1]; // Amount token B yang dibutuhkan
+        // Validasi Token From
+        let balanceFrom, decFrom;
+        if (selectedFrom.address === 'VANA_NATIVE') {
+            balanceFrom = await provider.getBalance(account);
+            decFrom = 18;
+        } else {
+            const tokenFrom = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+            decFrom = await tokenFrom.decimals();
+            balanceFrom = await tokenFrom.balanceOf(account);
+        }
         
-        console.log('🎯 Exact amount B from router:', {
-            amountA: ethers.utils.formatUnits(amountADesired, selectedFrom.decimals),
-            exactAmountB: ethers.utils.formatUnits(exactAmountB, selectedTo.decimals),
-            path: path
-        });
-
-        return exactAmountB;
-
+        const amountFrom = ethers.utils.parseUnits(fromAmt, decFrom);
+        if (balanceFrom.lt(amountFrom)) {
+            throw new Error(`Insufficient ${selectedFrom.symbol} balance. You have ${ethers.utils.formatUnits(balanceFrom, decFrom)}, trying to use ${fromAmt}`);
+        }
+        
+        // Validasi Token To
+        let balanceTo, decTo;
+        if (selectedTo.address === 'VANA_NATIVE') {
+            balanceTo = await provider.getBalance(account);
+            decTo = 18;
+        } else {
+            const tokenTo = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
+            decTo = await tokenTo.decimals();
+            balanceTo = await tokenTo.balanceOf(account);
+        }
+        
+        const amountTo = ethers.utils.parseUnits(toAmt, decTo);
+        if (balanceTo.lt(amountTo)) {
+            throw new Error(`Insufficient ${selectedTo.symbol} balance. You have ${ethers.utils.formatUnits(balanceTo, decTo)}, trying to use ${toAmt}`);
+        }
+        
+        console.log('✅ Balance validation passed');
+        return true;
     } catch (error) {
-        console.error('❌ Error calculating exact amount B:', error);
-        
-        // Fallback ke calculation manual jika router gagal
-        console.log('🔄 Falling back to manual calculation...');
-        return await calculateOptimalAmountB(amountADesired);
+        console.error('❌ Balance validation failed:', error);
+        throw error;
     }
 }
 
-// 🎯 FUNGSI UTAMA: ADD LIQUIDITY COMPLETE (DIPERBAIKI)
+// 🎯 FUNGSI BARU: Calculate optimal amount B untuk liquidity
+async function calculateOptimalAmountB(amountADesired) {
+    try {
+        const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
+        const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
+
+        const pairAddress = await factory.getPair(addressA, addressB);
+        
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+            console.log('🆕 Pool does not exist yet - user must set initial ratio');
+            showToast('⭐ New pool: Set your desired initial ratio!', false);
+            setStatus('⭐ New pool: You set the initial price!');
+            return null; // Biarkan user tentukan ratio manual
+        }
+
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+        if (token0.toLowerCase() === addressA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+        } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+        }
+
+        console.log('📊 Pool reserves:', {
+            reserveA: reserveA.toString(),
+            reserveB: reserveB.toString(),
+            tokenA: selectedFrom.symbol,
+            tokenB: selectedTo.symbol
+        });
+
+        // ✅ HANDLE ZERO RESERVES - USER INPUT MANUAL
+        if (reserveA.isZero() || reserveB.isZero()) {
+            console.log('⚠️ Pool has zero reserves - user must input both amounts');
+            showToast('⭐ New pool: Set your desired initial ratio!', false);
+            setStatus('⭐ New pool: You set the initial price!');
+            return null; // Biarkan user input manual
+        }
+
+        // ✅ HITUNG OPTIMAL AMOUNT B BERDASARKAN RESERVES
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+        
+        console.log('🎯 Optimal amount B for liquidity:', {
+            input: ethers.utils.formatUnits(amountADesired, selectedFrom.decimals) + ' ' + selectedFrom.symbol,
+            output: ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals) + ' ' + selectedTo.symbol,
+            ratio: `1 ${selectedFrom.symbol} = ${ethers.utils.formatUnits(amountBOptimal.mul(ethers.utils.parseUnits("1", selectedFrom.decimals)).div(amountADesired), selectedTo.decimals)} ${selectedTo.symbol}`
+        });
+
+        return amountBOptimal;
+
+    } catch (error) {
+        console.error('❌ Error calculating optimal amount B:', error);
+        showToast('Error calculating amount', true);
+        setStatus('Error calculating optimal amount');
+        return null;
+    }
+}
+
+// 🔧 FUNGSI: Ensure pair exists (create if not)
+async function ensurePairExists(tokenA, tokenB) {
+    try {
+        const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
+        let pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
+
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+            setStatus('Creating new pair...');
+            console.log('🆕 Creating new pair for:', { tokenA, tokenB });
+            
+            const tx = await factoryWithSigner.createPair(tokenA, tokenB, { gasLimit: 3000000 });
+            await tx.wait();
+            
+            pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
+            
+            if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+                throw new Error('Pair creation failed - address is zero');
+            }
+            
+            console.log('✅ Pair created:', pairAddress);
+            showToast('New liquidity pair created!');
+        } else {
+            console.log('✅ Pair exists:', pairAddress);
+        }
+
+        return pairAddress;
+    } catch (error) {
+        console.error('❌ ensurePairExists error:', error);
+        throw error;
+    }
+}
+
+// 🔧 FUNGSI: Auto-calculate saat input amount A
+async function onFromAmountInput() {
+    const fromAmt = $('fromAmount').value.trim();
+    
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+        $('toAmount').value = '';
+        updateActionBtn();
+        updateUSDValues();
+        return;
+    }
+
+    try {
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = await calculateOptimalAmountB(amountADesired);
+        
+        if (amountBOptimal && !amountBOptimal.isZero()) {
+            // ✅ ADA LIQUIDITY: Auto-calculate berdasarkan reserves
+            const toAmtFormatted = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+            $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
+            console.log('✅ Auto-filled based on pool reserves');
+            setStatus('Amount calculated from pool reserves');
+        } else {
+            // ❌ POOL BARU/KOSONG: Biarkan user input manual
+            console.log('🆕 New pool - user sets initial ratio');
+            setStatus('⭐ New pool: Set your desired ratio for ' + selectedTo.symbol);
+            // Jangan auto-fill, biarkan user input manual
+        }
+
+        updateActionBtn();
+        updateUSDValues();
+        updateLiquidityInfo();
+
+    } catch (error) {
+        console.error('❌ Error in onFromAmountInput:', error);
+        setStatus('Error calculating amount');
+    }
+}
+
+// 🔧 FUNGSI: Ensure token approval
+async function ensureApproved(tokenAddress, neededAmount) {
+    if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
+
+    try {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+        const allowance = await tokenContract.allowance(account, ROUTER);
+        
+        console.log('🔍 Checking allowance:', {
+            token: tokenAddress,
+            allowance: allowance.toString(),
+            needed: neededAmount.toString()
+        });
+        
+        if (ethers.BigNumber.from(allowance).lt(neededAmount)) {
+            setStatus('Approving token...');
+            console.log('✅ Approving token:', tokenAddress);
+            const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256, { gasLimit: 100000 });
+            await tx.wait();
+            setStatus('Token approved');
+            console.log('✅ Token approved successfully');
+        } else {
+            console.log('✅ Token already approved');
+        }
+    } catch (err) {
+        console.error('ensureApproved error:', err);
+        throw err;
+    }
+}
+
+// 🎯 FUNGSI UTAMA: ADD LIQUIDITY COMPLETE (IMPROVED)
 async function addLiquidity() {
     console.log('🔄 addLiquidity function called');
     
@@ -798,6 +981,11 @@ async function addLiquidity() {
         return;
     }
 
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+        showToast('Please enter amount for ' + selectedTo.symbol);
+        return;
+    }
+
     const btn = $('actionBtn');
     if (!btn) {
         console.error('❌ Action button not found');
@@ -809,6 +997,9 @@ async function addLiquidity() {
         btn.innerHTML = '<span class="spinner"></span>Processing...';
         setStatus('Preparing add liquidity...');
 
+        // ✅ VALIDASI BALANCE SEBELUM TRANSAKSI
+        await validateBalancesBeforeAddLiquidity(fromAmt, toAmt);
+
         if (typeof selectedFrom.decimals === 'undefined' || typeof selectedTo.decimals === 'undefined') {
             showToast('Token decimals not detected, try refreshing or select different tokens');
             btn.disabled = false;
@@ -816,32 +1007,10 @@ async function addLiquidity() {
             return;
         }
 
-        // Parse amount A
         const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        let amountBDesired;
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
 
-        // 🎯 JIKA USER SUDAH INPUT AMOUNT B, GUNAKAN ITU
-        if (toAmt && parseFloat(toAmt) > 0) {
-            amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-        } else {
-            // 🎯 JIKA TIDAK, HITUNG EXACT AMOUNT B DARI ROUTER
-            setStatus('Calculating optimal amount...');
-            amountBDesired = await calculateExactAmountB(amountADesired);
-            
-            if (!amountBDesired || amountBDesired.isZero()) {
-                showToast('Please enter amount for ' + selectedTo.symbol);
-                btn.disabled = false;
-                btn.textContent = 'Add Liquidity';
-                return;
-            }
-            
-            // Auto-fill amount B ke input field
-            const toAmtFormatted = ethers.utils.formatUnits(amountBDesired, selectedTo.decimals);
-            $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
-            console.log('✅ Auto-filled exact amount B:', $('toAmount').value);
-        }
-
-        console.log('🔢 Final amounts:', {
+        console.log('🔢 Parsed amounts:', {
             amountADesired: amountADesired.toString(),
             amountBDesired: amountBDesired.toString()
         });
@@ -858,16 +1027,15 @@ async function addLiquidity() {
 
         const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
         
-        // 🎯 TANPA SLIPPAGE - SET MIN AMOUNTS SAMA DENGAN DESIRED AMOUNTS
-        const amountAMin = amountADesired;    // NO SLIPPAGE
-        const amountBMin = amountBDesired;    // NO SLIPPAGE
-        
+        // ✅ 0% SLIPPAGE: amountMin = amountDesired
+        const amountAMin = amountADesired; // No slippage
+        const amountBMin = amountBDesired; // No slippage
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-        console.log('⚙️ Transaction params (NO SLIPPAGE):', {
+        console.log('⚙️ Transaction params (0% slippage):', {
             amountAMin: amountAMin.toString(),
             amountBMin: amountBMin.toString(),
-            slippage: '0%'
+            deadline
         });
 
         if (selectedFrom.address === 'VANA_NATIVE' && selectedTo.address !== 'VANA_NATIVE') {
@@ -878,8 +1046,8 @@ async function addLiquidity() {
             const tx = await routerWithSigner.addLiquidityETH(
                 selectedTo.address,
                 amountBDesired,
-                amountBMin,    // NO SLIPPAGE
-                amountAMin,    // NO SLIPPAGE
+                amountBMin,    // 0% slippage
+                amountAMin,    // 0% slippage
                 account,
                 deadline,
                 { value: amountADesired, gasLimit: 3000000 }
@@ -897,8 +1065,8 @@ async function addLiquidity() {
             const tx = await routerWithSigner.addLiquidityETH(
                 selectedFrom.address,
                 amountADesired,
-                amountAMin,    // NO SLIPPAGE
-                amountBMin,    // NO SLIPPAGE
+                amountAMin,    // 0% slippage
+                amountBMin,    // 0% slippage
                 account,
                 deadline,
                 { value: amountBDesired, gasLimit: 3000000 }
@@ -919,8 +1087,8 @@ async function addLiquidity() {
                 addressB,
                 amountADesired,
                 amountBDesired,
-                amountAMin,    // NO SLIPPAGE
-                amountBMin,    // NO SLIPPAGE
+                amountAMin,    // 0% slippage
+                amountBMin,    // 0% slippage
                 account,
                 deadline,
                 { gasLimit: 3000000 }
@@ -934,6 +1102,11 @@ async function addLiquidity() {
         showToast('✅ Liquidity added successfully!');
         setStatus('Liquidity added');
 
+        // Reset form setelah success
+        $('fromAmount').value = '';
+        $('toAmount').value = '';
+        updateActionBtn();
+
         await updateBalances();
         await updateDropdownBalances();
         await updateLiquidityInfo();
@@ -944,12 +1117,12 @@ async function addLiquidity() {
         console.error('❌ addLiquidity error:', err);
         let errorMsg = 'Add liquidity failed';
         if (err.message) {
-            if (err.message.includes('INSUFFICIENT')) {
-                errorMsg = 'Amounts may have changed. Try again with updated amounts.';
-            } else if (err.message.includes('user rejected')) {
+            if (err.message.includes('user rejected')) {
                 errorMsg = 'Transaction rejected by user';
             } else if (err.message.includes('insufficient')) {
                 errorMsg = 'Insufficient balance';
+            } else if (err.message.includes('INSUFFICIENT') || err.message.includes('amount')) {
+                errorMsg = 'Amounts may have changed. Please adjust and try again.';
             } else if (err.message.includes('deadline')) {
                 errorMsg = 'Transaction expired, try again';
             } else {
@@ -966,128 +1139,174 @@ async function addLiquidity() {
     }
 }
 
-// 🔧 FUNGSI: Ensure pair exists (create if not)
-async function ensurePairExists(tokenA, tokenB) {
-    try {
-        const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
-        let pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
-
-        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
-            setStatus('Creating new pair...');
-            console.log('🆕 Creating new pair for:', { tokenA, tokenB });
-            
-            const tx = await factoryWithSigner.createPair(tokenA, tokenB);
-            await tx.wait();
-            
-            pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
-            console.log('✅ Pair created:', pairAddress);
-            showToast('New liquidity pair created!');
-        } else {
-            console.log('✅ Pair exists:', pairAddress);
-        }
-
-        return pairAddress;
-    } catch (error) {
-        console.error('❌ ensurePairExists error:', error);
-        throw error;
-    }
+// ✅ UTILITY: Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
-// 🔧 FUNGSI: Auto-calculate amount B (FALLBACK)
-async function calculateOptimalAmountB(amountADesired) {
-    try {
-        const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
-        const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
-
-        const pairAddress = await factory.getPair(addressA, addressB);
-        
-        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
-            console.log('🆕 Pool does not exist yet - user must input both amounts');
-            return null;
-        }
-
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === addressA.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-        } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-        }
-
-        if (reserveA.isZero() || reserveB.isZero()) {
-            console.log('⚠️ Pool has zero reserves');
-            return null;
-        }
-
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-        console.log('🎯 Optimal amount B calculated:', amountBOptimal.toString());
-        return amountBOptimal;
-
-    } catch (error) {
-        console.error('❌ Error calculating optimal amount B:', error);
-        return null;
+// ✅ UPDATE EVENT LISTENERS - LENGKAP
+function bindUIEvents() {
+    // Event listener untuk input amount A
+    const fromAmountInput = $('fromAmount');
+    if (fromAmountInput) {
+        fromAmountInput.addEventListener('input', debounce(onFromAmountInput, 300));
     }
-}
-
-// 🔧 FUNGSI: Auto-calculate saat input amount A (DIPERBAIKI)
-async function onFromAmountInput() {
-    const fromAmt = $('fromAmount').value.trim();
     
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-        $('toAmount').value = '';
-        updateActionBtn();
-        updateUSDValues();
-        return;
+    // Event listener untuk tombol Add Liquidity
+    const actionBtn = $('actionBtn');
+    if (actionBtn) {
+        actionBtn.addEventListener('click', addLiquidity);
     }
-
-    try {
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        
-        // 🎯 GUNAKAN ROUTER UNTUK HITUNG EXACT AMOUNT B
-        const exactAmountB = await calculateExactAmountB(amountADesired);
-        
-        if (exactAmountB && !exactAmountB.isZero()) {
-            const toAmtFormatted = ethers.utils.formatUnits(exactAmountB, selectedTo.decimals);
-            $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
-            console.log('✅ Auto-filled exact amount B from router:', $('toAmount').value);
-        } else {
-            // Jika pool baru atau router gagal, kosongkan amount B
-            $('toAmount').value = '';
-            console.log('ℹ️ New pool or calculation failed - user must input amount B');
-        }
-
-        updateActionBtn();
-        updateUSDValues();
-        updateLiquidityInfo();
-
-    } catch (error) {
-        console.error('❌ Error in onFromAmountInput:', error);
-        $('toAmount').value = '';
+    
+    // Event listener untuk token selection (jika ada)
+    const fromTokenSelect = $('fromTokenSelect');
+    const toTokenSelect = $('toTokenSelect');
+    
+    if (fromTokenSelect) {
+        fromTokenSelect.addEventListener('change', async function() {
+            await onTokenSelection('from', this.value);
+            updateActionBtn();
+            updateUSDValues();
+        });
+    }
+    
+    if (toTokenSelect) {
+        toTokenSelect.addEventListener('change', async function() {
+            await onTokenSelection('to', this.value);
+            updateActionBtn();
+            updateUSDValues();
+        });
+    }
+    
+    // Event listener untuk switch tokens (jika ada tombol switch)
+    const switchTokensBtn = $('switchTokens');
+    if (switchTokensBtn) {
+        switchTokensBtn.addEventListener('click', switchTokens);
     }
 }
 
-// 🔧 FUNGSI: Ensure token approval
-async function ensureApproved(tokenAddress, neededAmount) {
-    if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
-
+// ✅ FUNGSI TAMBAHAN YANG DIBUTUHKAN (jika belum ada)
+async function onTokenSelection(direction, tokenAddress) {
     try {
-        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-        const allowance = await tokenContract.allowance(account, ROUTER);
+        let tokenInfo;
         
-        if (ethers.BigNumber.from(allowance).lt(neededAmount)) {
-            setStatus('Approving token...');
-            const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
-            await tx.wait();
-            setStatus('Token approved');
+        if (tokenAddress === 'VANA_NATIVE') {
+            tokenInfo = {
+                symbol: 'VANA',
+                address: 'VANA_NATIVE',
+                decimals: 18,
+                logo: 'assets/vana.png'
+            };
+        } else {
+            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+            const [symbol, decimals] = await Promise.all([
+                tokenContract.symbol(),
+                tokenContract.decimals()
+            ]);
+            
+            tokenInfo = {
+                symbol: symbol,
+                address: tokenAddress,
+                decimals: decimals,
+                logo: `assets/${symbol.toLowerCase()}.png`
+            };
         }
-    } catch (err) {
-        console.error('ensureApproved error:', err);
-        throw err;
+        
+        if (direction === 'from') {
+            selectedFrom = tokenInfo;
+            // Update UI untuk from token
+            const fromTokenLogo = $('fromTokenLogo');
+            const fromTokenSymbol = $('fromTokenSymbol');
+            if (fromTokenLogo) fromTokenLogo.src = tokenInfo.logo;
+            if (fromTokenSymbol) fromTokenSymbol.textContent = tokenInfo.symbol;
+        } else {
+            selectedTo = tokenInfo;
+            // Update UI untuk to token
+            const toTokenLogo = $('toTokenLogo');
+            const toTokenSymbol = $('toTokenSymbol');
+            if (toTokenLogo) toTokenLogo.src = tokenInfo.logo;
+            if (toTokenSymbol) toTokenSymbol.textContent = tokenInfo.symbol;
+        }
+        
+        await updateBalances();
+        updateActionBtn();
+        
+    } catch (error) {
+        console.error('Error in token selection:', error);
+        showToast('Error selecting token', true);
+    }
+}
+
+function switchTokens() {
+    // Swap selected tokens
+    const temp = selectedFrom;
+    selectedFrom = selectedTo;
+    selectedTo = temp;
+    
+    // Swap input values
+    const fromAmount = $('fromAmount').value;
+    const toAmount = $('toAmount').value;
+    $('fromAmount').value = toAmount;
+    $('toAmount').value = fromAmount;
+    
+    // Update UI
+    const fromTokenLogo = $('fromTokenLogo');
+    const fromTokenSymbol = $('fromTokenSymbol');
+    const toTokenLogo = $('toTokenLogo');
+    const toTokenSymbol = $('toTokenSymbol');
+    
+    if (fromTokenLogo && selectedFrom.logo) fromTokenLogo.src = selectedFrom.logo;
+    if (fromTokenSymbol) fromTokenSymbol.textContent = selectedFrom.symbol;
+    if (toTokenLogo && selectedTo.logo) toTokenLogo.src = selectedTo.logo;
+    if (toTokenSymbol) toTokenSymbol.textContent = selectedTo.symbol;
+    
+    updateActionBtn();
+    updateUSDValues();
+}
+
+function updateActionBtn() {
+    const fromAmt = $('fromAmount').value;
+    const toAmt = $('toAmount').value;
+    const btn = $('actionBtn');
+    
+    if (!btn) return;
+    
+    if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) {
+        btn.disabled = true;
+        btn.textContent = 'Enter Amounts';
+    } else if (!account) {
+        btn.disabled = false;
+        btn.textContent = 'Connect Wallet';
+    } else {
+        btn.disabled = false;
+        btn.textContent = 'Add Liquidity';
+    }
+}
+
+// ✅ INISIALISASI SAAT DOM READY
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Initializing VanSwap Liquidity...');
+    bindUIEvents();
+    initializeApp();
+});
+
+// ✅ FUNGSI INISIALISASI APP
+async function initializeApp() {
+    try {
+        await loadTokenList();
+        await updateBalances();
+        updateActionBtn();
+        console.log('✅ VanSwap Liquidity initialized');
+    } catch (error) {
+        console.error('❌ Initialization error:', error);
     }
 }
   // 🔧 FUNGSI: Connect wallet
