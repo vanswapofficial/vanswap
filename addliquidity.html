@@ -1538,18 +1538,34 @@ function addMoreLiquidity(tokenASymbol, tokenBSymbol) {
     }
 }
 
-// 🎯 FUNGSI: Remove liquidity modal (diperbaiki)
+// 🎯 FUNGSI: Remove liquidity yang diperbaiki
 async function showRemoveModal(poolAddress) {
+    console.log('🔄 showRemoveModal called with:', poolAddress);
+    
+    if (!account || !signer) {
+        showToast('Please connect wallet first');
+        return;
+    }
+
     currentRemovePool = poolAddress;
     currentRemovePercentage = 0;
 
     try {
+        setStatus('Loading pool information...');
+        
         const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
         const [reserve0, reserve1] = await pairContract.getReserves();
         const token0 = await pairContract.token0();
         const token1 = await pairContract.token1();
         const userBalance = await pairContract.balanceOf(account);
         const totalSupply = await pairContract.totalSupply();
+
+        console.log('📊 Pool data:', {
+            reserves: [reserve0.toString(), reserve1.toString()],
+            token0, token1,
+            userBalance: userBalance.toString(),
+            totalSupply: totalSupply.toString()
+        });
 
         // Get token symbols
         const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
@@ -1562,8 +1578,11 @@ async function showRemoveModal(poolAddress) {
             token1Contract.decimals()
         ]);
 
+        console.log('🏷️ Token info:', { symbol0, symbol1, decimals0, decimals1 });
+
         // Check allowance status
         const hasAllowance = await checkLPAllowance(poolAddress);
+        console.log('🔐 Allowance status:', hasAllowance);
 
         // Update modal info
         $('removePoolInfo').innerHTML = `
@@ -1607,31 +1626,44 @@ async function showRemoveModal(poolAddress) {
         $('removeTokenBAmount').textContent = '0';
 
         $('removeLiquidityModal').style.display = 'flex';
+        setStatus('Ready to remove liquidity');
 
     } catch (error) {
-        console.error('Error loading remove modal:', error);
-        showToast('Failed to load pool information');
+        console.error('❌ Error loading remove modal:', error);
+        showToast('Failed to load pool information: ' + error.message);
+        setStatus('Error loading pool');
     }
 }
 
-// 🎯 FUNGSI: Check LP token allowance
+// 🎯 FUNGSI: Check LP token allowance (diperbaiki)
 async function checkLPAllowance(pairAddress) {
-    if (!account || !signer) return false;
+    if (!account || !signer) {
+        console.log('❌ No account or signer');
+        return false;
+    }
 
     try {
         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
         const userBalance = await pairContract.balanceOf(account);
         const allowance = await pairContract.allowance(account, ROUTER);
 
+        console.log('🔐 Allowance check:', {
+            userBalance: userBalance.toString(),
+            allowance: allowance.toString(),
+            hasAllowance: allowance.gte(userBalance)
+        });
+
         return allowance.gte(userBalance);
     } catch (error) {
-        console.error('Error checking LP allowance:', error);
+        console.error('❌ Error checking LP allowance:', error);
         return false;
     }
 }
 
-// 🎯 FUNGSI: Set remove percentage
+// 🎯 FUNGSI: Set remove percentage (diperbaiki)
 function setRemovePercentage(percent) {
+    console.log('📊 Setting remove percentage:', percent);
+    
     currentRemovePercentage = percent;
 
     // Update button states
@@ -1650,31 +1682,57 @@ function setRemovePercentage(percent) {
         const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
         const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
 
-        $('removeTokenAAmount').textContent = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
-        $('removeTokenBAmount').textContent = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
+        const amount0Formatted = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
+        const amount1Formatted = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
+
+        $('removeTokenAAmount').textContent = amount0Formatted;
+        $('removeTokenBAmount').textContent = amount1Formatted;
+
+        console.log('💰 Calculated amounts:', {
+            liquidityAmount: liquidityAmount.toString(),
+            amount0: amount0Formatted,
+            amount1: amount1Formatted
+        });
     }
 }
 
-// 🎯 FUNGSI: Confirm remove liquidity
+// 🎯 FUNGSI: Confirm remove liquidity (diperbaiki)
 async function confirmRemoveLiquidity() {
+    console.log('🔄 confirmRemoveLiquidity called');
+    
     if (!currentRemovePool || currentRemovePercentage === 0) {
         showToast('Please select a percentage to remove');
         return;
     }
 
+    if (!account || !signer) {
+        showToast('Please connect wallet first');
+        return;
+    }
+
+    const btn = $('confirmRemoveBtn');
+    
     try {
-        setStatus('Removing liquidity...');
-        const btn = $('confirmRemoveBtn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>Removing...';
+        btn.innerHTML = '<span class="spinner"></span>Processing...';
+        setStatus('Preparing remove liquidity...');
 
         const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+        
+        console.log('📊 Remove liquidity details:', {
+            pool: currentRemovePool.address,
+            percentage: currentRemovePercentage,
+            liquidityAmount: liquidityAmount.toString(),
+            token0: currentRemovePool.token0,
+            token1: currentRemovePool.token1
+        });
 
         // Check and handle allowance
         if (!currentRemovePool.hasAllowance) {
             setStatus('Approving LP tokens...');
             btn.innerHTML = '<span class="spinner"></span>Approving...';
 
+            console.log('🔐 Approving LP tokens...');
             const approved = await approveLPTokens(currentRemovePool.address);
             if (!approved) {
                 throw new Error('Failed to approve LP tokens');
@@ -1685,14 +1743,24 @@ async function confirmRemoveLiquidity() {
             btn.innerHTML = '<span class="spinner"></span>Removing...';
         }
 
-        // Calculate minimum amounts
-        const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
-        const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+        // Calculate minimum amounts (0.5% slippage)
+        const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(995).div(1000);
+        const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(995).div(1000);
 
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
+
+        console.log('⚙️ Remove params:', {
+            amount0Min: amount0Min.toString(),
+            amount1Min: amount1Min.toString(),
+            deadline
+        });
 
         setStatus('Removing liquidity...');
-        const tx = await router.removeLiquidity(
+        
+        // Pastikan router menggunakan signer
+        const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        
+        const tx = await routerWithSigner.removeLiquidity(
             currentRemovePool.token0,
             currentRemovePool.token1,
             liquidityAmount,
@@ -1703,45 +1771,168 @@ async function confirmRemoveLiquidity() {
             { gasLimit: 3000000 }
         );
 
+        console.log('📝 Transaction submitted:', tx.hash);
+        
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-        setStatus('Submitted — waiting confirmation...');
-        await tx.wait();
+        setStatus('Transaction submitted — waiting confirmation...');
+        
+        const receipt = await tx.wait();
+        console.log('✅ Transaction confirmed:', receipt);
 
-        showToast('Liquidity removed successfully!');
+        showToast('✅ Liquidity removed successfully!');
         setStatus('Liquidity removed');
 
         // Close modal and refresh data
         closeRemoveModal();
         await updateBalances();
         await updateDropdownBalances();
-        loadUserPools();
-        updateTVLStats();
+        await loadUserPools();
+        await updateTVLStats();
 
     } catch (error) {
-        console.error('Error removing liquidity:', error);
-        showToast('Failed to remove liquidity: ' + (error.message || error));
+        console.error('❌ Error removing liquidity:', error);
+        
+        let errorMsg = 'Remove liquidity failed';
+        if (error.message) {
+            if (error.message.includes('user rejected')) {
+                errorMsg = 'Transaction rejected by user';
+            } else if (error.message.includes('insufficient')) {
+                errorMsg = 'Insufficient liquidity';
+            } else if (error.message.includes('deadline')) {
+                errorMsg = 'Transaction expired, try again';
+            } else if (error.message.includes('INSUFFICIENT_LIQUIDITY')) {
+                errorMsg = 'Insufficient liquidity in pool';
+            } else if (error.message.includes('INSUFFICIENT_OUTPUT_AMOUNT')) {
+                errorMsg = 'Slippage too high, try increasing tolerance';
+            } else {
+                errorMsg = error.message;
+            }
+        }
+        
+        showToast('❌ ' + errorMsg);
         setStatus('Remove liquidity failed');
     } finally {
-        const btn = $('confirmRemoveBtn');
         btn.disabled = false;
         btn.textContent = 'Remove Liquidity';
     }
 }
 
-// 🎯 FUNGSI: Approve LP tokens
+// 🎯 FUNGSI: Approve LP tokens (diperbaiki)
 async function approveLPTokens(pairAddress) {
-    if (!account || !signer) return false;
+    if (!account || !signer) {
+        console.log('❌ No account or signer for approval');
+        return false;
+    }
 
     try {
+        console.log('🔐 Starting LP token approval for:', pairAddress);
+        
         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
+        
+        // Check current allowance first
+        const currentAllowance = await pairContract.allowance(account, ROUTER);
+        console.log('📊 Current allowance:', currentAllowance.toString());
+        
+        setStatus('Approving LP tokens...');
         const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+        
+        console.log('📝 Approval transaction submitted:', txApprove.hash);
+        setStatus('Approval transaction submitted...');
+        
         await txApprove.wait();
+        console.log('✅ LP tokens approved successfully');
+        
+        setStatus('LP tokens approved');
         return true;
+        
     } catch (error) {
-        console.error('Error approving LP tokens:', error);
+        console.error('❌ Error approving LP tokens:', error);
+        
+        let errorMsg = 'Approval failed';
+        if (error.message.includes('user rejected')) {
+            errorMsg = 'Approval rejected by user';
+        }
+        
+        showToast('❌ ' + errorMsg);
         return false;
     }
 }
+
+// 🎯 FUNGSI: Close remove modal
+function closeRemoveModal() {
+    $('removeLiquidityModal').style.display = 'none';
+    currentRemovePool = null;
+    currentRemovePercentage = 0;
+}
+
+// 🎯 PERBAIKAN: Update renderUserPools untuk handle remove button
+function renderUserPools() {
+    const poolsList = $('poolsList');
+
+    if (userPools.length === 0) {
+        $('noPoolsMessage').style.display = 'block';
+        poolsList.innerHTML = '';
+        return;
+    }
+
+    $('noPoolsMessage').style.display = 'none';
+    poolsList.innerHTML = '';
+
+    userPools.forEach(pool => {
+        const poolCard = document.createElement('div');
+        poolCard.className = 'pool-card';
+
+        poolCard.innerHTML = `
+            <div class="pool-header">
+                <div class="pool-tokens">
+                    <div class="pool-token">
+                        <img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" alt="${pool.tokenA}" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+                        <span>${pool.tokenA}</span>
+                    </div>
+                    <span>+</span>
+                    <div class="pool-token">
+                        <img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" alt="${pool.tokenB}" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+                        <span>${pool.tokenB}</span>
+                    </div>
+                </div>
+                <div style="color:var(--accent);font-weight:700">$${pool.value.toFixed(2)}</div>
+            </div>
+            <div class="pool-metrics">
+                <div class="metric">
+                    <div class="metric-value">${pool.balance}</div>
+                    <div class="metric-label">Pool Tokens</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${pool.share.toFixed(4)}%</div>
+                    <div class="metric-label">Share</div>
+                </div>
+            </div>
+            <div class="pool-actions">
+                <div class="pool-action pool-add" onclick="addMoreLiquidity('${pool.tokenA}', '${pool.tokenB}')">Add</div>
+                <div class="pool-action pool-remove" onclick="showRemoveModal('${pool.address}')">Remove</div>
+            </div>
+        `;
+
+        poolsList.appendChild(poolCard);
+    });
+}
+
+// 🎯 PERBAIKAN: Tambahkan event listener untuk close modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Close modal ketika klik outside
+    window.addEventListener('click', (e) => {
+        if (e.target === $('removeLiquidityModal')) {
+            closeRemoveModal();
+        }
+    });
+    
+    // Close modal dengan ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && $('removeLiquidityModal').style.display === 'flex') {
+            closeRemoveModal();
+        }
+    });
+});
 
 // 🎯 FUNGSI: Update TVL stats dengan data real
 async function updateTVLStats() {
