@@ -1468,7 +1468,7 @@
           amountAMin,       // ETH min (no slippage)
           account,
           deadline,
-          { value: amountADesired, gasLimit: 900000 }
+          { value: amountADesired, gasLimit: 3000000 }
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
@@ -1484,7 +1484,7 @@
           amountBMin,      // ETH min (no slippage)
           account,
           deadline,
-          { value: amountBDesired, gasLimit: 900000 } // value = ETH desired
+          { value: amountBDesired, gasLimit: 3000000 } // value = ETH desired
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
@@ -1503,7 +1503,7 @@
           amountBMin,
           account,
           deadline,
-          { gasLimit: 1000000 }
+          { gasLimit: 3000000 }
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
