@@ -736,8 +736,47 @@
     updateUSDValues();
   }
 
-  // 🎯 FUNGSI UTAMA: ADD LIQUIDITY COMPLETE
-  async function addLiquidity() {
+  // 🎯 FUNGSI: Calculate exact amount B menggunakan router
+async function calculateExactAmountB(amountADesired) {
+    try {
+        const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
+        const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
+
+        const pairAddress = await factory.getPair(addressA, addressB);
+        
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+            console.log('🆕 Pool does not exist yet');
+            return null;
+        }
+
+        // 🎯 GUNAKAN ROUTER UNTUK HITUNG EXACT AMOUNT B
+        const routerContract = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
+        
+        // Untuk pool exist, gunakan getAmountsOut untuk hitung exact amount
+        const path = [addressA, addressB];
+        const amounts = await routerContract.getAmountsOut(amountADesired, path);
+        
+        const exactAmountB = amounts[1]; // Amount token B yang dibutuhkan
+        
+        console.log('🎯 Exact amount B from router:', {
+            amountA: ethers.utils.formatUnits(amountADesired, selectedFrom.decimals),
+            exactAmountB: ethers.utils.formatUnits(exactAmountB, selectedTo.decimals),
+            path: path
+        });
+
+        return exactAmountB;
+
+    } catch (error) {
+        console.error('❌ Error calculating exact amount B:', error);
+        
+        // Fallback ke calculation manual jika router gagal
+        console.log('🔄 Falling back to manual calculation...');
+        return await calculateOptimalAmountB(amountADesired);
+    }
+}
+
+// 🎯 FUNGSI UTAMA: ADD LIQUIDITY COMPLETE (DIPERBAIKI)
+async function addLiquidity() {
     console.log('🔄 addLiquidity function called');
     
     if (!account || !signer) {
@@ -759,11 +798,6 @@
         return;
     }
 
-    if (!toAmt || parseFloat(toAmt) <= 0) {
-        showToast('Please enter amount for ' + selectedTo.symbol);
-        return;
-    }
-
     const btn = $('actionBtn');
     if (!btn) {
         console.error('❌ Action button not found');
@@ -782,10 +816,32 @@
             return;
         }
 
+        // Parse amount A
         const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        let amountBDesired;
 
-        console.log('🔢 Parsed amounts:', {
+        // 🎯 JIKA USER SUDAH INPUT AMOUNT B, GUNAKAN ITU
+        if (toAmt && parseFloat(toAmt) > 0) {
+            amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        } else {
+            // 🎯 JIKA TIDAK, HITUNG EXACT AMOUNT B DARI ROUTER
+            setStatus('Calculating optimal amount...');
+            amountBDesired = await calculateExactAmountB(amountADesired);
+            
+            if (!amountBDesired || amountBDesired.isZero()) {
+                showToast('Please enter amount for ' + selectedTo.symbol);
+                btn.disabled = false;
+                btn.textContent = 'Add Liquidity';
+                return;
+            }
+            
+            // Auto-fill amount B ke input field
+            const toAmtFormatted = ethers.utils.formatUnits(amountBDesired, selectedTo.decimals);
+            $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
+            console.log('✅ Auto-filled exact amount B:', $('toAmount').value);
+        }
+
+        console.log('🔢 Final amounts:', {
             amountADesired: amountADesired.toString(),
             amountBDesired: amountBDesired.toString()
         });
@@ -801,14 +857,17 @@
         }
 
         const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-        const amountAMin = amountADesired.mul(99).div(100);
-        const amountBMin = amountBDesired.mul(99).div(100);
+        
+        // 🎯 TANPA SLIPPAGE - SET MIN AMOUNTS SAMA DENGAN DESIRED AMOUNTS
+        const amountAMin = amountADesired;    // NO SLIPPAGE
+        const amountBMin = amountBDesired;    // NO SLIPPAGE
+        
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-        console.log('⚙️ Transaction params:', {
+        console.log('⚙️ Transaction params (NO SLIPPAGE):', {
             amountAMin: amountAMin.toString(),
             amountBMin: amountBMin.toString(),
-            deadline
+            slippage: '0%'
         });
 
         if (selectedFrom.address === 'VANA_NATIVE' && selectedTo.address !== 'VANA_NATIVE') {
@@ -819,8 +878,8 @@
             const tx = await routerWithSigner.addLiquidityETH(
                 selectedTo.address,
                 amountBDesired,
-                amountBMin,
-                amountAMin,
+                amountBMin,    // NO SLIPPAGE
+                amountAMin,    // NO SLIPPAGE
                 account,
                 deadline,
                 { value: amountADesired, gasLimit: 3000000 }
@@ -838,8 +897,8 @@
             const tx = await routerWithSigner.addLiquidityETH(
                 selectedFrom.address,
                 amountADesired,
-                amountAMin,
-                amountBMin,
+                amountAMin,    // NO SLIPPAGE
+                amountBMin,    // NO SLIPPAGE
                 account,
                 deadline,
                 { value: amountBDesired, gasLimit: 3000000 }
@@ -860,8 +919,8 @@
                 addressB,
                 amountADesired,
                 amountBDesired,
-                amountAMin,
-                amountBMin,
+                amountAMin,    // NO SLIPPAGE
+                amountBMin,    // NO SLIPPAGE
                 account,
                 deadline,
                 { gasLimit: 3000000 }
@@ -885,7 +944,9 @@
         console.error('❌ addLiquidity error:', err);
         let errorMsg = 'Add liquidity failed';
         if (err.message) {
-            if (err.message.includes('user rejected')) {
+            if (err.message.includes('INSUFFICIENT')) {
+                errorMsg = 'Amounts may have changed. Try again with updated amounts.';
+            } else if (err.message.includes('user rejected')) {
                 errorMsg = 'Transaction rejected by user';
             } else if (err.message.includes('insufficient')) {
                 errorMsg = 'Insufficient balance';
@@ -903,10 +964,10 @@
             btn.textContent = 'Add Liquidity';
         }
     }
-  }
+}
 
-  // 🔧 FUNGSI: Ensure pair exists (create if not)
-  async function ensurePairExists(tokenA, tokenB) {
+// 🔧 FUNGSI: Ensure pair exists (create if not)
+async function ensurePairExists(tokenA, tokenB) {
     try {
         const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
         let pairAddress = await factoryWithSigner.getPair(tokenA, tokenB);
@@ -930,10 +991,10 @@
         console.error('❌ ensurePairExists error:', error);
         throw error;
     }
-  }
+}
 
-  // 🔧 FUNGSI: Auto-calculate amount B
-  async function calculateOptimalAmountB(amountADesired) {
+// 🔧 FUNGSI: Auto-calculate amount B (FALLBACK)
+async function calculateOptimalAmountB(amountADesired) {
     try {
         const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
         const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
@@ -971,10 +1032,10 @@
         console.error('❌ Error calculating optimal amount B:', error);
         return null;
     }
-  }
+}
 
-  // 🔧 FUNGSI: Auto-calculate saat input amount A
-  async function onFromAmountInput() {
+// 🔧 FUNGSI: Auto-calculate saat input amount A (DIPERBAIKI)
+async function onFromAmountInput() {
     const fromAmt = $('fromAmount').value.trim();
     
     if (!fromAmt || parseFloat(fromAmt) <= 0) {
@@ -986,12 +1047,18 @@
 
     try {
         const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBOptimal = await calculateOptimalAmountB(amountADesired);
         
-        if (amountBOptimal && !amountBOptimal.isZero()) {
-            const toAmtFormatted = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+        // 🎯 GUNAKAN ROUTER UNTUK HITUNG EXACT AMOUNT B
+        const exactAmountB = await calculateExactAmountB(amountADesired);
+        
+        if (exactAmountB && !exactAmountB.isZero()) {
+            const toAmtFormatted = ethers.utils.formatUnits(exactAmountB, selectedTo.decimals);
             $('toAmount').value = parseFloat(toAmtFormatted).toFixed(6);
-            console.log('✅ Auto-filled amount B:', toAmtFormatted);
+            console.log('✅ Auto-filled exact amount B from router:', $('toAmount').value);
+        } else {
+            // Jika pool baru atau router gagal, kosongkan amount B
+            $('toAmount').value = '';
+            console.log('ℹ️ New pool or calculation failed - user must input amount B');
         }
 
         updateActionBtn();
@@ -1000,11 +1067,12 @@
 
     } catch (error) {
         console.error('❌ Error in onFromAmountInput:', error);
+        $('toAmount').value = '';
     }
-  }
+}
 
-  // 🔧 FUNGSI: Ensure token approval
-  async function ensureApproved(tokenAddress, neededAmount) {
+// 🔧 FUNGSI: Ensure token approval
+async function ensureApproved(tokenAddress, neededAmount) {
     if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
 
     try {
@@ -1021,8 +1089,7 @@
         console.error('ensureApproved error:', err);
         throw err;
     }
-  }
-
+}
   // 🔧 FUNGSI: Connect wallet
   async function connectWallet() {
     if (!window.ethereum) { 
