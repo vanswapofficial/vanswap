@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vanswap Token Generator</title>
+  <style>
+    :root {
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.7);
+      --background: #04140d;
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --warning: #ffd700;
+      --warning-dark: #e6c200;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #04140d 0%, #07261b 50%, #0a2e21 100%);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 0;
+      z-index: 1000;
+      background: rgba(4, 20, 13, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(26, 127, 94, 0.1);
+    }
+    
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+    }
+    
+    .logo span {
+      font-weight: 800;
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .connect-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .connect-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(49, 208, 170, 0.4);
+    }
+    
+    .main {
+      max-width: 500px;
+      margin: 120px auto 40px;
+      padding: 0 20px;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .input {
+      width: 100%;
+      padding: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    
+    .create-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+    
+    .create-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(49, 208, 170, 0.4);
+    }
+    
+    .create-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .fee-notice {
+      text-align: center;
+      color: var(--warning);
+      font-size: 14px;
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    
+    .success-message {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .success-title {
+      color: #4caf50;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    
+    .token-info {
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    
+    .token-address {
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+      word-break: break-all;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .copy-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .copy-btn:hover {
+      background: #4ad8b7;
+    }
+    
+    .explorer-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .explorer-link:hover {
+      text-decoration: underline;
+    }
+    
+    .wallet-status {
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .wallet-address {
+      font-family: monospace;
+      color: var(--accent);
+    }
+    
+    @media (max-width: 768px) {
+      .main {
+        margin: 100px auto 40px;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+      
+      .title {
+        font-size: 24px;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="nav-container">
+      <a href="/" class="logo">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="Vanswap">
+        <span>VANSWAP</span>
+      </a>
+      <button id="connectWalletBtn" class="connect-btn">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="card">
+      <h1 class="title">Vanswap Token Generator</h1>
+      <p class="subtitle">Create your own ERC20 token on Vana Chain</p>
+      
+      <div id="walletStatus" class="wallet-status">
+        🔗 Connected: <span id="walletAddress" class="wallet-address"></span>
+      </div>
+      
+      <form id="tokenForm">
+        <div class="form-group">
+          <label class="label">Name</label>
+          <input type="text" id="tokenName" class="input" placeholder="My Crypto Token" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="label">Symbol</label>
+          <input type="text" id="tokenSymbol" class="input" placeholder="MCT" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="label">Decimal</label>
+          <select id="tokenDecimal" class="input" required>
+            <option value="18">18 (Standard)</option>
+            <option value="6">6 (Like USDT)</option>
+            <option value="8">8 (Like BTC)</option>
+            <option value="0">0 (Integer)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="label">Supply</label>
+          <input type="number" id="tokenSupply" class="input" placeholder="1000000" required>
+        </div>
+        
+        <button type="submit" id="createBtn" class="create-btn">
+          Create Token
+        </button>
+        
+        <div class="fee-notice">
+          *Fee 1 VANA will be charged for token creation
+        </div>
+      </form>
+      
+      <div id="successMessage" class="success-message">
+        <div class="success-title">✅ Token Created Successfully!</div>
+        <div class="token-info">
+          <strong>Token Address:</strong>
+          <div id="tokenAddress" class="token-address">
+            <span id="tokenAddressText"></span>
+            <button class="copy-btn" id="copyAddressBtn">Copy</button>
+          </div>
+        </div>
+        <div class="token-info">
+          <strong>TX Hash:</strong>
+          <div id="txHash" class="token-address">
+            <span id="txHashText"></span>
+            <button class="copy-btn" id="copyTxBtn">Copy</button>
+          </div>
+        </div>
+        <div class="token-info">
+          <a href="https://vanascan.io" id="explorerLink" class="explorer-link" target="_blank">
+            🔍 View on Vanascan
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+  <script>
+    // Factory Contract Configuration
+    const FACTORY_ABI = [
+      "function createToken(string name, string symbol, uint8 decimals, uint256 initialSupply) external payable returns (address)",
+      "function createFee() external view returns (uint256)",
+      "function updateFee(uint256 newFee) external",
+      "function withdrawFees() external",
+      "function getTotalTokens() external view returns (uint256)",
+      "function getUserTokens(address user) external view returns (address[])",
+      "event TokenCreated(address indexed user, address tokenAddress, string name, string symbol, uint8 decimals, uint256 initialSupply)",
+      "event FeeUpdated(uint256 oldFee, uint256 newFee)"
+    ];
+    
+    // Factory contract address
+    const FACTORY_ADDRESS = "0xe126Cf45f15599c4A0f06cE12302C09452a27a9d";
+    
+    // Token Contract ABI
+    const TOKEN_ABI = [
+      "function name() public view returns (string)",
+      "function symbol() public view returns (string)",
+      "function decimals() public view returns (uint8)",
+      "function totalSupply() public view returns (uint256)",
+      "function balanceOf(address account) public view returns (uint256)",
+      "function transfer(address recipient, uint256 amount) public returns (bool)",
+      "function allowance(address owner, address spender) public view returns (uint256)",
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)",
+      "function initialize(address owner, uint256 initialSupply) external",
+      "event Transfer(address indexed from, address indexed to, uint256 value)",
+      "event Approval(address indexed owner, address indexed spender, uint256 value)"
+    ];
+    
+    let provider, signer, factory;
+    let userAddress = '';
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (window.ethereum) {
+        try {
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+          
+          // Check if wallet is already connected
+          const accounts = await provider.listAccounts();
+          if (accounts.length > 0) {
+            await setupWallet(accounts[0]);
+          }
+          
+          // Listen for account changes
+          window.ethereum.on('accountsChanged', async (accounts) => {
+            if (accounts.length > 0) {
+              await setupWallet(accounts[0]);
+            } else {
+              resetWallet();
+            }
+          });
+          
+        } catch (error) {
+          console.error('Error initializing:', error);
+        }
+      } else {
+        alert('Please install MetaMask to use this dApp!');
+      }
+    });
+
+    // Connect wallet button handler
+    document.getElementById('connectWalletBtn').addEventListener('click', async function() {
+      if (!window.ethereum) {
+        alert('Please install MetaMask first!');
+        return;
+      }
+
+      try {
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        await setupWallet(accounts[0]);
+      } catch (error) {
+        alert('Failed to connect wallet: ' + error.message);
+      }
+    });
+
+    async function setupWallet(address) {
+      userAddress = address;
+      const shortAddress = address.substring(0, 6) + '...' + address.substring(38);
+      document.getElementById('walletAddress').textContent = shortAddress;
+      document.getElementById('walletStatus').style.display = 'block';
+      document.getElementById('connectWalletBtn').textContent = 'Connected';
+      document.getElementById('connectWalletBtn').style.background = 'var(--primary)';
+      document.getElementById('connectWalletBtn').style.color = 'white';
+    }
+
+    function resetWallet() {
+      userAddress = '';
+      document.getElementById('walletStatus').style.display = 'none';
+      document.getElementById('connectWalletBtn').textContent = 'Connect Wallet';
+      document.getElementById('connectWalletBtn').style.background = 'var(--accent)';
+      document.getElementById('connectWalletBtn').style.color = '#052017';
+    }
+
+    // Handle form submission
+    document.getElementById('tokenForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      if (!window.ethereum) {
+        alert('Please install MetaMask first!');
+        return;
+      }
+
+      if (!userAddress) {
+        try {
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          await setupWallet(accounts[0]);
+        } catch (error) {
+          alert('Failed to connect wallet: ' + error.message);
+          return;
+        }
+      }
+
+      const name = document.getElementById('tokenName').value;
+      const symbol = document.getElementById('tokenSymbol').value;
+      const decimal = parseInt(document.getElementById('tokenDecimal').value);
+      const supply = document.getElementById('tokenSupply').value;
+
+      // Validation
+      if (!name || !symbol || !supply) {
+        alert('Please fill all fields!');
+        return;
+      }
+
+      if (symbol.length > 11) {
+        alert('Symbol maximum 11 characters!');
+        return;
+      }
+
+      try {
+        const createBtn = document.getElementById('createBtn');
+        createBtn.disabled = true;
+        createBtn.textContent = 'Creating Token...';
+
+        // Convert supply to proper decimals
+        const initialSupplyWei = ethers.utils.parseUnits(supply, decimal);
+        const fee = ethers.utils.parseEther("10"); // 10 VANA fee
+
+        // Call factory contract
+        const tx = await factory.createToken(
+          name, 
+          symbol, 
+          decimal, 
+          initialSupplyWei,
+          { value: fee }
+        );
+
+        // Show TX info
+        document.getElementById('txHashText').textContent = tx.hash;
+        
+        // Wait for confirmation
+        const receipt = await tx.wait();
+        
+        // Get token address from event
+        const event = receipt.events.find(e => e.event === 'TokenCreated');
+        const tokenAddress = event.args.tokenAddress;
+        
+        // Show success message
+        document.getElementById('tokenAddressText').textContent = tokenAddress;
+        document.getElementById('explorerLink').href = 
+          `https://vanascan.io/address/${tokenAddress}#code`;
+        document.getElementById('successMessage').style.display = 'block';
+        
+        // Reset form
+        document.getElementById('tokenForm').reset();
+        
+        // Scroll to success message
+        document.getElementById('successMessage').scrollIntoView({ 
+          behavior: 'smooth' 
+        });
+
+      } catch (error) {
+        console.error('Error creating token:', error);
+        
+        if (error.code === 'INSUFFICIENT_FUNDS') {
+          alert('Insufficient VANA balance! Need 10 VANA fee + gas.');
+        } else if (error.code === 'ACTION_REJECTED') {
+          alert('Transaction cancelled by user.');
+        } else {
+          alert('Failed to create token: ' + error.message);
+        }
+      } finally {
+        const createBtn = document.getElementById('createBtn');
+        createBtn.disabled = false;
+        createBtn.textContent = 'Create Token';
+      }
+    });
+
+    // Copy functions
+    document.getElementById('copyAddressBtn').addEventListener('click', function() {
+      const tokenAddress = document.getElementById('tokenAddressText').textContent;
+      navigator.clipboard.writeText(tokenAddress).then(() => {
+        const originalText = this.textContent;
+        this.textContent = 'Copied!';
+        setTimeout(() => {
+          this.textContent = originalText;
+        }, 2000);
+      });
+    });
+
+    document.getElementById('copyTxBtn').addEventListener('click', function() {
+      const txHash = document.getElementById('txHashText').textContent;
+      navigator.clipboard.writeText(txHash).then(() => {
+        const originalText = this.textContent;
+        this.textContent = 'Copied!';
+        setTimeout(() => {
+          this.textContent = originalText;
+        }, 2000);
+      });
+    });
+
+    // Auto-connect wallet when page loads
+    window.addEventListener('load', async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_accounts' 
+          });
+          if (accounts.length > 0) {
+            await setupWallet(accounts[0]);
+          }
+        } catch (error) {
+          console.error('Error auto-connecting:', error);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
