@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ETH Wallet Generator</title>
     <style>
-        /* CSS SAMA PERSIS SEPERTI SEBELUMNYA */
         * {
             margin: 0;
             padding: 0;
@@ -112,6 +111,15 @@
             font-size: 12px;
         }
 
+        .btn-refresh {
+            background: #3498db;
+            color: white;
+            padding: 10px 15px;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -209,12 +217,8 @@
             font-size: 24px;
             font-weight: bold;
             color: #27ae60;
-            margin-bottom: 5px;
-        }
-
-        .usd-balance {
-            font-size: 14px;
-            color: #7f8c8d;
+            margin-bottom: 15px;
+            text-align: center;
         }
 
         .private-key-container {
@@ -351,10 +355,10 @@
 
                 <div class="info-card">
                     <h3>💰 Saldo ETH</h3>
-                    <div class="balance-display">
-                        <span id="ethBalance">0.0000</span> ETH
-                    </div>
-                    <div class="usd-balance" id="usdBalance">$0.00</div>
+                    <div class="balance-display" id="ethBalance">Loading...</div>
+                    <button onclick="refreshBalance()" class="btn btn-refresh">
+                        🔄 Refresh Saldo
+                    </button>
                 </div>
 
                 <div class="info-card">
@@ -384,17 +388,14 @@
         </div>
     </div>
 
-    <!-- ETHERJS HARUS DILOAD SEBELUM SCRIPT KITA -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
     
     <script>
-        // Tunggu sampai ethers.js selesai load
         let provider = null;
         let currentWallet = null;
         let walletCounter = 0;
         let isPrivateKeyVisible = false;
 
-        // Cek apakah ethers sudah terload
         function checkEthers() {
             if (typeof ethers === 'undefined') {
                 addLog('❌ Error: ethers.js belum terload. Refresh halaman!', 'error');
@@ -403,31 +404,27 @@
             return true;
         }
 
-        // Initialize provider dengan Alchemy RPC
         function initProvider() {
             if (!checkEthers()) return;
             
             try {
-                const ALCHEMY_URL = "https://eth-mainnet.g.alchemy.com/v2/MuLXFm60Tsz3ntyrSC1O4";
-                provider = new ethers.providers.JsonRpcProvider(ALCHEMY_URL);
-                addLog('✅ Terhubung ke Ethereum Mainnet via Alchemy', 'success');
+                const LLAMAR_URL = "https://eth.llamarpc.com";
+                provider = new ethers.providers.JsonRpcProvider(LLAMAR_URL);
+                addLog('✅ Terhubung ke Ethereum Mainnet via LLAMAR', 'success');
             } catch (error) {
-                addLog('❌ Gagal terhubung ke Alchemy RPC: ' + error.message, 'error');
+                addLog('❌ Gagal terhubung ke LAMMAR RPC: ' + error.message, 'error');
             }
         }
 
-        // Generate new wallet
         async function generateWallet() {
             if (!checkEthers()) return;
             
             try {
                 addLog('🔄 Generating wallet baru...', 'info');
                 
-                // Generate random wallet dengan mnemonic 12 kata
                 currentWallet = ethers.Wallet.createRandom();
                 walletCounter++;
                 
-                // Update UI
                 await displayWalletInfo();
                 document.getElementById('nextBtn').disabled = false;
                 
@@ -439,79 +436,57 @@
             }
         }
 
-        // Generate next wallet
         async function generateNext() {
             await generateWallet();
         }
 
-        // Display wallet information
         async function displayWalletInfo() {
             if (!currentWallet || !checkEthers()) return;
             
-            // Display mnemonic
             document.getElementById('mnemonicDisplay').textContent = currentWallet.mnemonic.phrase;
-            
-            // Display address
             document.getElementById('walletAddress').textContent = currentWallet.address;
-            
-            // Display wallet counter
             document.getElementById('walletCounter').textContent = walletCounter;
             
-            // Reset private key display
             isPrivateKeyVisible = false;
             document.getElementById('privateKeyDisplay').textContent = '••••••••••••••••••••••••••••••••';
             document.getElementById('toggleIcon').textContent = '👁️';
             document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">👁️</span> Tampilkan';
             
-            // Show wallet section
             document.getElementById('walletSection').classList.remove('hidden');
             
-            // Get balance
             await getWalletBalance();
         }
 
-        // Get wallet balance from blockchain
         async function getWalletBalance() {
             if (!currentWallet || !provider || !checkEthers()) return;
             
             try {
-                addLog('🔄 Mengecek saldo...', 'info');
+                document.getElementById('ethBalance').textContent = 'Loading...';
                 
-                // Get balance in wei
                 const balanceWei = await provider.getBalance(currentWallet.address);
-                
-                // Convert to ETH
                 const balanceEth = ethers.utils.formatEther(balanceWei);
                 
-                // Display ETH balance
-                document.getElementById('ethBalance').textContent = parseFloat(balanceEth).toFixed(6);
+                document.getElementById('ethBalance').textContent = parseFloat(balanceEth).toFixed(6) + ' ETH';
                 
-                // Get ETH price and calculate USD balance
-                const ethPrice = await getEthPrice();
-                const balanceUSD = (parseFloat(balanceEth) * ethPrice).toFixed(2);
-                
-                document.getElementById('usdBalance').textContent = `$${balanceUSD} USD`;
-                
-                addLog(`💰 Saldo: ${parseFloat(balanceEth).toFixed(6)} ETH ($${balanceUSD})`, 'success');
+                addLog(`💰 Saldo: ${parseFloat(balanceEth).toFixed(6)} ETH`, 'success');
                 
             } catch (error) {
                 document.getElementById('ethBalance').textContent = 'Error';
-                document.getElementById('usdBalance').textContent = 'Gagal memuat saldo';
                 addLog('❌ Error fetching balance: ' + error.message, 'error');
             }
         }
 
-        // Get ETH price
-        async function getEthPrice() {
-            try {
-                // Fixed price untuk demo
-                return 2500;
-            } catch (error) {
-                return 2500;
+        // FUNGSI REFRESH SALDO BARU
+        async function refreshBalance() {
+            if (!currentWallet) {
+                addLog('❌ Tidak ada wallet yang aktif', 'error');
+                return;
             }
+            
+            addLog('🔄 Refresh saldo...', 'info');
+            await getWalletBalance();
         }
 
-        // Toggle private key visibility
         function togglePrivateKey() {
             if (!currentWallet) return;
             
@@ -530,7 +505,6 @@
             }
         }
 
-        // Copy to clipboard
         function copyToClipboard(elementId) {
             const element = document.getElementById(elementId);
             const text = element.textContent;
@@ -542,7 +516,6 @@
             });
         }
 
-        // Add log entry
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('log');
             const logEntry = document.createElement('div');
@@ -553,14 +526,11 @@
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        // Clear log
         function clearLog() {
             document.getElementById('log').innerHTML = '<div class="log-entry">Log cleared</div>';
         }
 
-        // Initialize when page loads
         window.onload = function() {
-            // Tunggu sebentar untuk pastikan ethers.js loaded
             setTimeout(() => {
                 if (typeof ethers !== 'undefined') {
                     initProvider();
