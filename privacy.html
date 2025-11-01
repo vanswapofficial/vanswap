@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - VanSwap | Vana Chain DEX</title>
+    <meta name="description" content="VanSwap Privacy Policy - Learn how we protect your privacy and handle data on our decentralized exchange.">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --accent: #31d0aa;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.7);
+            --card-bg: rgba(14,42,33,0.85);
+            --card-border: rgba(26,127,94,0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1300;
+            border-bottom: 1px solid rgba(0,0,0,0.25);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .logo span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .connect-wallet {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .legal-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .legal-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .legal-subtitle {
+            font-size: 18px;
+            color: var(--muted);
+        }
+
+        .last-updated {
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 40px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+
+        .subsection {
+            margin-bottom: 32px;
+        }
+
+        .subsection-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--muted);
+        }
+
+        ul, ol {
+            margin: 16px 0;
+            padding-left: 24px;
+            color: var(--muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: rgba(49, 208, 170, 0.1);
+            border: 1px solid rgba(49, 208, 170, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-title {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning-box {
+            background: rgba(255,152,0,0.1);
+            border: 1px solid rgba(255,152,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-title {
+            color: #ff9800;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .privacy-feature {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .feature-title {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .data-table th {
+            background: rgba(26,127,94,0.3);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 60px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .legal-title {
+                font-size: 32px;
+            }
+            
+            .content-card {
+                padding: 24px;
+            }
+            
+            .footer-links {
+                gap: 20px;
+            }
+            
+            .data-table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <a class="logo" href="index.html">
+                <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                <span>VanSwap</span>
+            </a>
+
+            <div class="nav-links">
+                <a class="nav-link" href="swap.html">Swap</a>
+                <a class="nav-link" href="liquidity.html">Liquidity</a>
+                <a class="nav-link" href="about.html">About</a>
+                <a class="nav-link" href="docs.html">Docs</a>
+            </div>
+
+            <button class="connect-wallet">Connect Wallet</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="legal-header">
+            <h1 class="legal-title">Privacy Policy</h1>
+            <p class="legal-subtitle">How we protect and handle your information</p>
+        </div>
+
+        <div class="last-updated">
+            Last updated: December 2024
+        </div>
+
+        <div class="content-card">
+            <div class="info-box">
+                <div class="info-title">
+                    <span>🔒</span>
+                    <span>Privacy-First Approach</span>
+                </div>
+                <p>VanSwap is built with privacy as a core principle. As a decentralized protocol, we minimize data collection and give you control over your information.</p>
+            </div>
+
+            <h2 class="section-title">1. Introduction</h2>
+            
+            <div class="subsection">
+                <p>VanSwap ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our decentralized exchange protocol.</p>
+                
+                <p>Please read this Privacy Policy carefully. By using VanSwap, you consent to the data practices described in this policy. If you do not agree with the terms of this Privacy Policy, please do not access the site or use our services.</p>
+            </div>
+
+            <h2 class="section-title">2. Information We Collect</h2>
+            
+            <div class="subsection">
+                <div class="info-box">
+                    <div class="info-title">
+                        <span>💡</span>
+                        <span>Minimal Data Collection</span>
+                    </div>
+                    <p>As a decentralized protocol, VanSwap does not require personal identification information. We collect minimal data necessary for protocol functionality.</p>
+                </div>
+
+                <h3 class="subsection-title">2.1 Automatically Collected Information</h3>
+                <p>When you interact with VanSwap, we may collect:</p>
+                <ul>
+                    <li><strong>Wallet Address:</strong> Public blockchain addresses (pseudonymous)</li>
+                    <li><strong>Transaction Data:</strong> On-chain transaction details (public)</li>
+                    <li><strong>Browser Information:</strong> IP address, browser type, device type</li>
+                    <li><strong>Usage Data:</strong> Protocol interaction patterns and preferences</li>
+                </ul>
+
+                <h3 class="subsection-title">2.2 Information You Provide</h3>
+                <p>You may choose to provide:</p>
+                <ul>
+                    <li><strong>Contact Information:</strong> When submitting token listing requests</li>
+                    <li><strong>Token Information:</strong> Details for token listing consideration</li>
+                    <li><strong>Communication Data:</strong> Emails or messages sent to our team</li>
+                </ul>
+
+                <div class="warning-box">
+                    <div class="warning-title">
+                        <span>⚠️</span>
+                        <span>Public Blockchain Data</span>
+                    </div>
+                    <p>Transactions on Vana Chain are public and permanent. Wallet addresses and transaction details are visible to anyone on the blockchain.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">3. How We Use Your Information</h2>
+            
+            <div class="subsection">
+                <p>We use collected information for the following purposes:</p>
+                
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Purpose</th>
+                                <th>Information Used</th>
+                                <th>Legal Basis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Protocol Operation</td>
+                                <td>Wallet addresses, transaction data</td>
+                                <td>Contractual necessity</td>
+                            </tr>
+                            <tr>
+                                <td>Service Improvement</td>
+                                <td>Usage patterns, analytics</td>
+                                <td>Legitimate interest</td>
+                            </tr>
+                            <tr>
+                                <td>Security & Fraud Prevention</td>
+                                <td>IP addresses, transaction patterns</td>
+                                <td>Legitimate interest</td>
+                            </tr>
+                            <tr>
+                                <td>Customer Support</td>
+                                <td>Contact information, communication</td>
+                                <td>Consent</td>
+                            </tr>
+                            <tr>
+                                <td>Token Listing Processing</td>
+                                <td>Submitted token details</td>
+                                <td>Contractual necessity</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="section-title">4. Information Sharing and Disclosure</h2>
+            
+            <div class="subsection">
+                <p>We do not sell your personal information. We may share information in the following circumstances:</p>
+                
+                <div class="privacy-feature">
+                    <div class="feature-title">Limited Sharing Principle</div>
+                    <p>We only share information when absolutely necessary for protocol operation or when required by law.</p>
+                </div>
+
+                <h3 class="subsection-title">4.1 Service Providers</h3>
+                <p>We may share information with trusted third-party providers for:</p>
+                <ul>
+                    <li>Analytics and performance monitoring</li>
+                    <li>Infrastructure and hosting services</li>
+                    <li>Customer support platforms</li>
+                    <li>Security and fraud detection services</li>
+                </ul>
+
+                <h3 class="subsection-title">4.2 Legal Requirements</h3>
+                <p>We may disclose information if required by:</p>
+                <ul>
+                    <li>Law enforcement or regulatory authorities</li>
+                    <li>Court orders or legal processes</li>
+                    <li>Protection of our rights or user safety</li>
+                </ul>
+
+                <h3 class="subsection-title">4.3 Blockchain Nature</h3>
+                <p>Due to the decentralized nature of blockchain technology:</p>
+                <ul>
+                    <li>Transaction data is publicly visible on Vana Chain</li>
+                    <li>Wallet addresses and balances are publicly accessible</li>
+                    <li>Smart contract interactions are transparent and immutable</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">5. Data Security</h2>
+            
+            <div class="subsection">
+                <p>We implement appropriate technical and organizational security measures to protect your information:</p>
+                
+                <div class="privacy-feature">
+                    <div class="feature-title">Security Measures</div>
+                    <ul>
+                        <li>Encryption of sensitive data in transit</li>
+                        <li>Secure infrastructure and access controls</li>
+                        <li>Regular security assessments and audits</li>
+                        <li>Minimal data retention policies</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <div class="warning-title">
+                        <span>🔑</span>
+                        <span>Your Responsibility</span>
+                    </div>
+                    <p>You are responsible for maintaining the security of your wallet private keys and seed phrases. VanSwap cannot recover lost keys or reverse transactions.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">6. Your Privacy Rights</h2>
+            
+            <div class="subsection">
+                <p>Depending on your jurisdiction, you may have the following rights:</p>
+                
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Right</th>
+                                <th>Description</th>
+                                <th>How to Exercise</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Access</td>
+                                <td>Know what data we have about you</td>
+                                <td>Contact us via email</td>
+                            </tr>
+                            <tr>
+                                <td>Correction</td>
+                                <td>Correct inaccurate data</td>
+                                <td>Contact us via email</td>
+                            </tr>
+                            <tr>
+                                <td>Deletion</td>
+                                <td>Request deletion of your data</td>
+                                <td>Contact us via email</td>
+                            </tr>
+                            <tr>
+                                <td>Portability</td>
+                                <td>Receive your data in usable format</td>
+                                <td>Contact us via email</td>
+                            </tr>
+                            <tr>
+                                <td>Objection</td>
+                                <td>Object to certain data processing</td>
+                                <td>Adjust browser settings or contact us</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>To exercise these rights, please contact us using the information in the "Contact Us" section.</p>
+            </div>
+
+            <h2 class="section-title">7. Data Retention</h2>
+            
+            <div class="subsection">
+                <p>We retain personal information only for as long as necessary:</p>
+                
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data Type</th>
+                                <th>Retention Period</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Analytics Data</td>
+                                <td>24 months</td>
+                                <td>Service improvement</td>
+                            </tr>
+                            <tr>
+                                <td>Contact Information</td>
+                                <td>36 months</td>
+                                <td>Customer support</td>
+                            </tr>
+                            <tr>
+                                <td>Transaction Data</td>
+                                <td>Indefinite (on-chain)</td>
+                                <td>Blockchain immutability</td>
+                            </tr>
+                            <tr>
+                                <td>Token Listing Requests</td>
+                                <td>24 months</td>
+                                <td>Business operations</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="section-title">8. International Data Transfers</h2>
+            
+            <div class="subsection">
+                <p>As a global decentralized protocol, your information may be processed in various countries. We ensure appropriate safeguards are in place for international data transfers.</p>
+                
+                <div class="info-box">
+                    <div class="info-title">
+                        <span>🌐</span>
+                        <span>Global Service</span>
+                    </div>
+                    <p>VanSwap operates as a global protocol. By using our services, you acknowledge that your data may be processed in countries with different data protection laws.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">9. Third-Party Services</h2>
+            
+            <div class="subsection">
+                <p>VanSwap integrates with various third-party services:</p>
+                
+                <ul>
+                    <li><strong>Wallet Providers:</strong> MetaMask, Trust Wallet, etc.</li>
+                    <li><strong>Blockchain Networks:</strong> Vana Chain infrastructure</li>
+                    <li><strong>Analytics Services:</strong> Google Analytics, Mixpanel</li>
+                    <li><strong>Hosting Providers:</strong> Cloud infrastructure services</li>
+                </ul>
+
+                <p>These services have their own privacy policies, and we encourage you to review them.</p>
+            </div>
+
+            <h2 class="section-title">10. Children's Privacy</h2>
+            
+            <div class="subsection">
+                <p>VanSwap is not intended for children under 18 years of age. We do not knowingly collect personal information from children under 18.</p>
+                
+                <p>If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately.</p>
+            </div>
+
+            <h2 class="section-title">11. Changes to This Privacy Policy</h2>
+            
+            <div class="subsection">
+                <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
+                
+                <p>You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.</p>
+            </div>
+
+            <h2 class="section-title">12. Contact Us</h2>
+            
+            <div class="subsection">
+                <p>If you have any questions about this Privacy Policy, please contact us:</p>
+                
+                <div class="privacy-feature">
+                    <div class="feature-title">Contact Information</div>
+                    <ul>
+                        <li><strong>Website:</strong> https://vanswap.xyz</li>
+                        <li><strong>Twitter:</strong> https://x.com/vanswap_xyz</li>
+                        <li><strong>Telegram:</strong> https://t.me/vanswap_xyz</li>
+                        <li><strong>Documentation:</strong> https://vanswap.xyz/docs.html</li>
+                    </ul>
+                </div>
+
+                <p>For privacy-specific inquiries, please reach out through our official communication channels.</p>
+            </div>
+
+            <div class="info-box">
+                <div class="info-title">
+                    <span>🛡️</span>
+                    <span>Your Privacy Matters</span>
+                </div>
+                <p>We are committed to protecting your privacy and being transparent about our data practices. Thank you for trusting VanSwap with your decentralized finance activities.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a class="footer-link" href="index.html">Home</a>
+            <a class="footer-link" href="swap.html">Swap</a>
+            <a class="footer-link" href="liquidity.html">Liquidity</a>
+            <a class="footer-link" href="about.html">About</a>
+            <a class="footer-link" href="docs.html">Documentation</a>
+            <a class="footer-link" href="privacy.html">Privacy Policy</a>
+            <a class="footer-link" href="terms.html">Terms of Service</a>
+            <a class="footer-link" href="disclaimer.html">Risk Disclaimer</a>
+        </div>
+        
+        <div style="color: var(--muted); font-size: 14px;">
+            <p>© 2025 VanSwap. Built on Vana Chain. All rights reserved.</p>
+            <p style="margin-top: 8px; opacity: 0.7;">VanSwap - The lightest, fastest DEX on Vana Chain</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple wallet connection placeholder
+        document.querySelector('.connect-wallet').addEventListener('click', function() {
+            alert('Wallet connection would be implemented here');
+        });
+
+        // Update current year in footer
+        document.addEventListener('DOMContentLoaded', function() {
+            const yearElement = document.querySelector('footer p');
+            if (yearElement) {
+                yearElement.innerHTML = yearElement.innerHTML.replace('2025', new Date().getFullYear());
+            }
+        });
+    </script>
+</body>
+</html>
