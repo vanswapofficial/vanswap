@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - VanSwap | Lightest DEX on Vana Chain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --accent: #31d0aa;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.7);
+            --card-bg: rgba(14,42,33,0.85);
+            --card-border: rgba(26,127,94,0.12);
+            --glass: rgba(255,255,255,0.03);
+            --warning: #ff9800;
+            --danger: #f44336;
+            --success: #4caf50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1300;
+            border-bottom: 1px solid rgba(0,0,0,0.25);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            position: relative;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .logo span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .connect-wallet {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 1400;
+            position: relative;
+        }
+
+        .main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .hero-section {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--muted);
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .feature-description {
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        .comparison-section {
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .comparison-table {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            background: var(--primary-dark);
+            padding: 20px;
+            font-weight: 600;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .checkmark {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .x-mark {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .tech-section {
+            margin-bottom: 60px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .tech-item {
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tech-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tech-desc {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .security-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 60px;
+        }
+
+        .security-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .security-item {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .security-icon {
+            font-size: 36px;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .security-item-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .security-item-desc {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .cta-section {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            border-radius: 16px;
+            margin-bottom: 60px;
+        }
+
+        .cta-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .cta-description {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .cta-button {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .footer-link {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .table-header, .table-row {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .table-header div:nth-child(2),
+            .table-header div:nth-child(3),
+            .table-row div:nth-child(2),
+            .table-row div:nth-child(3) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="nav-container">
+            <a class="logo" href="index.html">
+                <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                <span>VanSwap</span>
+            </a>
+
+            <div class="nav-links">
+                <a class="nav-link" href="swap.html">Swap</a>
+                <a class="nav-link" href="liquidity.html">Liquidity</a>
+                <a class="nav-link" href="about.html">About</a>
+                <a class="nav-link" href="tokencreator.html">Create Token</a>
+                <a class="nav-link" href="staking.html">Stake</a>
+            </div>
+
+            <button class="connect-wallet">Connect Wallet</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <!-- HERO SECTION -->
+        <section class="hero-section">
+            <h1 class="hero-title">VanSwap Protocol</h1>
+            <p class="hero-subtitle">The lightest, smoothest, and most secure decentralized exchange on Vana Chain. Experience seamless trading without lag.</p>
+        </section>
+
+        <!-- FEATURES SECTION -->
+        <section class="features-section">
+            <h2 class="section-title">Why Choose VanSwap?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Lightning Fast</h3>
+                    <p class="feature-description">Built for speed with zero lag. Experience instant swaps and smooth interactions on the Vana Chain network.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3 class="feature-title">Maximum Security</h3>
+                    <p class="feature-description">Your funds and data security are our top priority. Non-custodial trading with battle-tested smart contracts.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💎</div>
+                    <h3 class="feature-title">Simple & Efficient</h3>
+                    <p class="feature-description">Clean, intuitive interface designed for both beginners and advanced traders. No unnecessary complexity.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3 class="feature-title">Uniswap V2 Based</h3>
+                    <p class="feature-description">Powered by the proven Uniswap V2 router protocol, ensuring reliability and compatibility.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARISON SECTION -->
+        <section class="comparison-section">
+            <h2 class="section-title">VanSwap vs Traditional DEXs</h2>
+            <div class="comparison-table">
+                <div class="table-header">
+                    <div>Feature</div>
+                    <div>VanSwap</div>
+                    <div>Other DEXs</div>
+                </div>
+                <div class="table-row">
+                    <div>Zero Lag Experience</div>
+                    <div class="checkmark">✓</div>
+                    <div class="x-mark">✗</div>
+                </div>
+                <div class="table-row">
+                    <div>Built on Vana Chain</div>
+                    <div class="checkmark">✓</div>
+                    <div class="x-mark">✗</div>
+                </div>
+                <div class="table-row">
+                    <div>Ultra-Light Interface</div>
+                    <div class="checkmark">✓</div>
+                    <div class="x-mark">✗</div>
+                </div>
+                <div class="table-row">
+                    <div>Data Privacy Focus</div>
+                    <div class="checkmark">✓</div>
+                    <div class="x-mark">✗</div>
+                </div>
+                <div class="table-row">
+                    <div>Fund Security First</div>
+                    <div class="checkmark">✓</div>
+                    <div class="x-mark">✗</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TECHNOLOGY SECTION -->
+        <section class="tech-section">
+            <h2 class="section-title">Our Technology Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-name">Uniswap V2 Router</div>
+                    <div class="tech-desc">Battle-tested AMM protocol for secure and efficient swaps</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">Vana Chain</div>
+                    <div class="tech-desc">High-performance blockchain optimized for DeFi applications</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">Ethers.js</div>
+                    <div class="tech-desc">Lightweight library for blockchain interactions</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">Modern Web3</div>
+                    <div class="tech-desc">Latest Web3 standards for optimal user experience</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECURITY SECTION -->
+        <section class="security-section">
+            <h2 class="security-title">Security & Privacy First</h2>
+            <div class="security-grid">
+                <div class="security-item">
+                    <div class="security-icon">🛡️</div>
+                    <div class="security-item-title">Non-Custodial</div>
+                    <div class="security-item-desc">You maintain full control of your funds. We never hold your assets.</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">🔐</div>
+                    <div class="security-item-title">Audited Contracts</div>
+                    <div class="security-item-desc">Our smart contracts follow industry best practices and security standards.</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">🌐</div>
+                    <div class="security-item-title">Data Protection</div>
+                    <div class="security-item-desc">We prioritize your privacy and don't collect unnecessary personal data.</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">⚙️</div>
+                    <div class="security-item-title">Transparent Operations</div>
+                    <div class="security-item-desc">All transactions are verifiable on-chain for complete transparency.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA SECTION -->
+        <section class="cta-section">
+            <h2 class="cta-title">Ready to Experience Lag-Free Trading?</h2>
+            <p class="cta-description">Join thousands of traders who have switched to VanSwap for the smoothest DEX experience on Vana Chain.</p>
+            <button class="cta-button" onclick="window.location.href='swap.html'">Start Trading Now</button>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-links">
+            <a class="footer-link" href="swap.html">Swap</a>
+            <a class="footer-link" href="liquidity.html">Liquidity</a>
+            <a class="footer-link" href="about.html">About</a>
+            <a class="footer-link" href="https://docs.vanswap.xyz">Docs</a>
+            <a class="footer-link" href="mailto:contact@vanswap.xyz">Contact</a>
+        </div>
+        <p>© 2025 VanSwap. Built on Vana Chain. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Simple wallet connection (placeholder)
+        document.querySelector('.connect-wallet').addEventListener('click', function() {
+            alert('Wallet connection would be implemented here');
+        });
+    </script>
+</body>
+</html>
