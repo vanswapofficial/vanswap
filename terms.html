@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - VanSwap | Vana Chain DEX</title>
+    <meta name="description" content="VanSwap Terms of Service - Learn about the terms and conditions for using our decentralized exchange on Vana Chain.">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --accent: #31d0aa;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.7);
+            --card-bg: rgba(14,42,33,0.85);
+            --card-border: rgba(26,127,94,0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1300;
+            border-bottom: 1px solid rgba(0,0,0,0.25);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .logo span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .connect-wallet {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .legal-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .legal-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .legal-subtitle {
+            font-size: 18px;
+            color: var(--muted);
+        }
+
+        .last-updated {
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 40px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+
+        .subsection {
+            margin-bottom: 32px;
+        }
+
+        .subsection-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--muted);
+        }
+
+        ul, ol {
+            margin: 16px 0;
+            padding-left: 24px;
+            color: var(--muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background: rgba(255,152,0,0.1);
+            border: 1px solid rgba(255,152,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-title {
+            color: #ff9800;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-box {
+            background: rgba(49, 208, 170, 0.1);
+            border: 1px solid rgba(49, 208, 170, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-title {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .contact-info {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 60px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .legal-title {
+                font-size: 32px;
+            }
+            
+            .content-card {
+                padding: 24px;
+            }
+            
+            .footer-links {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <a class="logo" href="index.html">
+                <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                <span>VanSwap</span>
+            </a>
+
+            <div class="nav-links">
+                <a class="nav-link" href="swap.html">Swap</a>
+                <a class="nav-link" href="liquidity.html">Liquidity</a>
+                <a class="nav-link" href="about.html">About</a>
+                <a class="nav-link" href="docs.html">Docs</a>
+            </div>
+
+            <button class="connect-wallet">Connect Wallet</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="legal-header">
+            <h1 class="legal-title">Terms of Service</h1>
+            <p class="legal-subtitle">Please read these terms carefully before using VanSwap</p>
+        </div>
+
+        <div class="last-updated">
+            Last updated: December 2024
+        </div>
+
+        <div class="content-card">
+            <div class="warning-box">
+                <div class="warning-title">
+                    <span>⚠️</span>
+                    <span>Important Legal Notice</span>
+                </div>
+                <p>VanSwap is a decentralized protocol on the Vana Chain. By using our services, you acknowledge that you understand the risks associated with decentralized finance and cryptocurrency transactions.</p>
+            </div>
+
+            <h2 class="section-title">1. Agreement to Terms</h2>
+            
+            <div class="subsection">
+                <p>By accessing or using VanSwap ("the Protocol"), you confirm that you are in agreement with and bound by the terms and conditions contained herein. These terms apply to the entire website and any email or other type of communication between you and VanSwap.</p>
+                
+                <p>Under no circumstances shall VanSwap team be liable for any direct, indirect, special, incidental, or consequential damages, including but not limited to loss of data or profit, arising out of the use or inability to use the materials on this site, even if VanSwap team or an authorized representative has been advised of the possibility of such damages.</p>
+            </div>
+
+            <h2 class="section-title">2. Eligibility</h2>
+            
+            <div class="subsection">
+                <p>To be eligible to use VanSwap, you must:</p>
+                <ul>
+                    <li>Be at least 18 years of age or the age of majority in your jurisdiction</li>
+                    <li>Not be subject to economic sanctions or reside in a restricted jurisdiction</li>
+                    <li>Not use VanSwap for any illegal activity or violate any laws in your jurisdiction</li>
+                    <li>Have the technical ability to understand and manage cryptocurrency transactions</li>
+                </ul>
+
+                <div class="warning-box">
+                    <div class="warning-title">
+                        <span>🔞</span>
+                        <span>Age Restriction</span>
+                    </div>
+                    <p>You must be at least 18 years old to use VanSwap. By using our services, you represent and warrant that you meet this eligibility requirement.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">3. Services Description</h2>
+            
+            <div class="subsection">
+                <p>VanSwap provides decentralized finance services including:</p>
+                <ul>
+                    <li><strong>Token Swapping:</strong> Automated market maker (AMM) based token exchanges</li>
+                    <li><strong>Liquidity Provision:</strong> Ability to provide liquidity to trading pairs</li>
+                    <li><strong>Yield Farming:</strong> Staking liquidity provider tokens to earn rewards</li>
+                    <li><strong>Token Creation:</strong> VRC-20 token deployment services</li>
+                </ul>
+
+                <div class="info-box">
+                    <div class="info-title">
+                        <span>💡</span>
+                        <span>Non-Custodial Nature</span>
+                    </div>
+                    <p>VanSwap is a non-custodial protocol. We never hold, control, or have access to your funds. You maintain full control of your assets through your personal wallet.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">4. User Responsibilities</h2>
+            
+            <div class="subsection">
+                <p>As a user of VanSwap, you are solely responsible for:</p>
+                <ul>
+                    <li>Maintaining the security of your wallet and private keys</li>
+                    <li>Understanding the risks of impermanent loss when providing liquidity</li>
+                    <li>Verifying all transaction details before confirmation</li>
+                    <li>Paying applicable gas fees and network costs</li>
+                    <li>Complying with all applicable laws and regulations</li>
+                    <li>Ensuring the accuracy of token contract addresses</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">5. Fees and Payments</h2>
+            
+            <div class="subsection">
+                <p>VanSwap charges the following fees:</p>
+                <ul>
+                    <li><strong>Trading Fee:</strong> 0.25% on all swaps (distributed to liquidity providers)</li>
+                    <li><strong>Token Listing Fee:</strong> 10 VANA for token listing consideration</li>
+                    <li><strong>Network Fees:</strong> Vana Chain gas fees for all transactions</li>
+                </ul>
+
+                <p>All fees are subject to change with proper notice to users. You acknowledge and agree to pay all applicable fees associated with your use of the Protocol.</p>
+            </div>
+
+            <h2 class="section-title">6. Intellectual Property</h2>
+            
+            <div class="subsection">
+                <p>The VanSwap protocol, including its smart contracts, website, documentation, and brand elements, are protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to access and use our services for personal, non-commercial purposes.</p>
+                
+                <p>You may not:</p>
+                <ul>
+                    <li>Copy, modify, or create derivative works of the Protocol</li>
+                    <li>Reverse engineer or attempt to extract source code</li>
+                    <li>Use VanSwap trademarks without permission</li>
+                    <li>Use our services to compete with VanSwap</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">7. Risk Disclosure</h2>
+            
+            <div class="subsection">
+                <div class="warning-box">
+                    <div class="warning-title">
+                        <span>🚨</span>
+                        <span>High Risk Warning</span>
+                    </div>
+                    <p>Cryptocurrency and decentralized finance involve substantial risk. You could lose all of your invested capital. Only invest what you can afford to lose.</p>
+                </div>
+
+                <p>Specific risks include but are not limited to:</p>
+                <ul>
+                    <li><strong>Impermanent Loss:</strong> Potential loss when providing liquidity compared to holding assets</li>
+                    <li><strong>Smart Contract Risk:</strong> Potential vulnerabilities in deployed smart contracts</li>
+                    <li><strong>Market Volatility:</strong> Extreme price fluctuations in cryptocurrency markets</li>
+                    <li><strong>Regulatory Risk:</strong> Changing regulations that may affect service availability</li>
+                    <li><strong>Technology Risk:</strong> Network congestion, bugs, or technical failures</li>
+                    <li><strong>Third-party Risk:</strong> Risks associated with wallet providers and other services</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">8. Limitation of Liability</h2>
+            
+            <div class="subsection">
+                <p>To the fullest extent permitted by law, VanSwap and its developers, contributors, and affiliates shall not be liable for:</p>
+                <ul>
+                    <li>Any direct, indirect, incidental, special, or consequential damages</li>
+                    <li>Loss of profits, data, or other intangible losses</li>
+                    <li>Damages resulting from unauthorized access to your wallet</li>
+                    <li>Market losses or investment decisions</li>
+                    <li>Actions or omissions of third-party service providers</li>
+                </ul>
+
+                <p>This limitation of liability applies regardless of the legal theory and even if VanSwap has been advised of the possibility of such damages.</p>
+            </div>
+
+            <h2 class="section-title">9. Indemnification</h2>
+            
+            <div class="subsection">
+                <p>You agree to indemnify and hold harmless VanSwap, its developers, contributors, and affiliates from any claim, demand, loss, damage, cost, or liability including reasonable attorneys' fees arising out of or relating to:</p>
+                <ul>
+                    <li>Your use of VanSwap services</li>
+                    <li>Your violation of these Terms of Service</li>
+                    <li>Your violation of any laws or regulations</li>
+                    <li>Your infringement of any third-party rights</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">10. Termination</h2>
+            
+            <div class="subsection">
+                <p>We may terminate or suspend your access to VanSwap immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
+                
+                <p>All provisions of the Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity, and limitations of liability.</p>
+            </div>
+
+            <h2 class="section-title">11. Governing Law</h2>
+            
+            <div class="subsection">
+                <p>These Terms shall be governed and construed in accordance with the laws of the Republic of Singapore, without regard to its conflict of law provisions.</p>
+                
+                <p>Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights. If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in effect.</p>
+            </div>
+
+            <h2 class="section-title">12. Changes to Terms</h2>
+            
+            <div class="subsection">
+                <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect.</p>
+                
+                <p>What constitutes a material change will be determined at our sole discretion. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.</p>
+            </div>
+
+            <h2 class="section-title">13. Contact Information</h2>
+            
+            <div class="subsection">
+                <div class="contact-info">
+                    <p>For questions about these Terms of Service, please contact us:</p>
+                    <ul>
+                        <li><strong>Website:</strong> https://vanswap.xyz</li>
+                        <li><strong>Twitter:</strong> https://x.com/vanswap_xyz</li>
+                        <li><strong>Telegram:</strong> https://t.me/vanswap_xyz</li>
+                        <li><strong>Documentation:</strong> https://vanswap.xyz/docs.html</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-title">
+                    <span>📝</span>
+                    <span>Acceptance of Terms</span>
+                </div>
+                <p>By using VanSwap, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you must not use our services.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a class="footer-link" href="index.html">Home</a>
+            <a class="footer-link" href="swap.html">Swap</a>
+            <a class="footer-link" href="liquidity.html">Liquidity</a>
+            <a class="footer-link" href="about.html">About</a>
+            <a class="footer-link" href="docs.html">Documentation</a>
+            <a class="footer-link" href="privacy.html">Privacy Policy</a>
+            <a class="footer-link" href="terms.html">Terms of Service</a>
+            <a class="footer-link" href="disclaimer.html">Risk Disclaimer</a>
+        </div>
+        
+        <div style="color: var(--muted); font-size: 14px;">
+            <p>© 2025 VanSwap. Built on Vana Chain. All rights reserved.</p>
+            <p style="margin-top: 8px; opacity: 0.7;">VanSwap - The lightest, fastest DEX on Vana Chain</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple wallet connection placeholder
+        document.querySelector('.connect-wallet').addEventListener('click', function() {
+            alert('Wallet connection would be implemented here');
+        });
+
+        // Update current year in footer
+        document.addEventListener('DOMContentLoaded', function() {
+            const yearElement = document.querySelector('footer p');
+            if (yearElement) {
+                yearElement.innerHTML = yearElement.innerHTML.replace('2025', new Date().getFullYear());
+            }
+        });
+    </script>
+</body>
+</html>
