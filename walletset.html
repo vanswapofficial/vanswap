@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETH Wallet Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        header p {
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .rpc-status {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-generate {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-next {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-vanity {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-copy {
+            background: #27ae60;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn-toggle {
+            background: #95a5a6;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn-clear {
+            background: #7f8c8d;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn-refresh {
+            background: #3498db;
+            color: white;
+            padding: 10px 15px;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .wallet-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            margin-bottom: 20px;
+        }
+
+        .wallet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .wallet-header h2 {
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .mnemonic-display {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed #3498db;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 2;
+            margin-bottom: 15px;
+            word-spacing: 10px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .address-display {
+            font-family: monospace;
+            font-size: 14px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .balance-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .private-key-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .private-key-display {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .wallet-counter {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #3498db;
+            background: #ebf5fb;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry.success {
+            color: #27ae60;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .log-entry.info {
+            color: #3498db;
+        }
+
+        .log-entry.warning {
+            color: #f39c12;
+        }
+
+        .vanity-search {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-top: 15px;
+        }
+
+        .vanity-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .vanity-input {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        .vanity-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .searching {
+            background: #fff3cd !important;
+            border-color: #ffc107 !important;
+        }
+
+        @media (max-width: 768px) {
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .wallet-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mnemonic-display {
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            .vanity-input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 ETH Wallet Generator</h1>
+            <p>Generate mnemonic 12 kata + Address + Cek Saldo Ethereum</p>
+            <div class="rpc-status">
+                🌐 Terhubung ke: <span id="rpcUrl">https://eth.llamarpc.com</span>
+            </div>
+        </header>
+
+        <div class="section">
+            <div class="button-group">
+                <button onclick="generateWallet()" class="btn btn-generate">
+                    🆕 Generate Wallet Baru
+                </button>
+                <button onclick="generateNext()" class="btn btn-next" id="nextBtn" disabled>
+                    ⏭️ Next Wallet
+                </button>
+            </div>
+
+            <!-- TAMBAHAN: VANITY ADDRESS SEARCH -->
+            <div class="vanity-search">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">🎯 Cari Address Custom</h3>
+                <div class="vanity-input-group">
+                    <input type="text" id="prefixInput" class="vanity-input" placeholder="Awalan (contoh: abc)" maxlength="6">
+                    <span>atau</span>
+                    <input type="text" id="suffixInput" class="vanity-input" placeholder="Akhiran (contoh: 123)" maxlength="6">
+                    <button onclick="startVanitySearch()" class="btn btn-vanity" id="vanityBtn">
+                        🔍 Cari Address
+                    </button>
+                    <button onclick="stopVanitySearch()" class="btn" id="stopBtn" style="display: none;">
+                        ⏹️ Stop
+                    </button>
+                </div>
+                <div class="vanity-stats">
+                    <span id="attemptCount">Attempts: 0</span>
+                    <span id="searchTime">Time: 0s</span>
+                    <span id="searchSpeed">Speed: 0/sec</span>
+                </div>
+                <small style="color: #666;">
+                    💡 Contoh: "abc" → 0xabc123..., "123" → 0x...123 (2-3 karakter: cepat, 4+ karakter: lama)
+                </small>
+            </div>
+        </div>
+
+        <div id="walletSection" class="section hidden">
+            <div class="wallet-card">
+                <div class="wallet-header">
+                    <h2>📋 Mnemonic Phrase (12 Kata)</h2>
+                    <button onclick="copyToClipboard('mnemonicDisplay')" class="btn btn-copy">
+                        📋 Copy Mnemonic
+                    </button>
+                </div>
+                <div id="mnemonicDisplay" class="mnemonic-display"></div>
+                <div class="warning">
+                    ⚠️ <strong>SIMPAN DI TEMPAT AMAN!</strong> Jangan share ke siapapun!
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>👤 Wallet Address</h3>
+                    <div class="address-display" id="walletAddress"></div>
+                    <button onclick="copyToClipboard('walletAddress')" class="btn btn-copy">
+                        📋 Copy Address
+                    </button>
+                </div>
+
+                <div class="info-card">
+                    <h3>💰 Saldo ETH</h3>
+                    <div class="balance-display" id="ethBalance">Loading...</div>
+                    <button onclick="refreshBalance()" class="btn btn-refresh">
+                        🔄 Refresh Saldo
+                    </button>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔑 Private Key</h3>
+                    <div class="private-key-container">
+                        <div id="privateKeyDisplay" class="private-key-display">••••••••••••••••••••••••••••••••</div>
+                        <button onclick="togglePrivateKey()" class="btn btn-toggle">
+                            <span id="toggleIcon">👁️</span> Tampilkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wallet-counter">
+                🎯 Wallet ke: <span id="walletCounter">1</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="log-header">
+                <h3>📝 Log Aktivitas</h3>
+                <button onclick="clearLog()" class="btn btn-clear">🗑️ Clear Log</button>
+            </div>
+            <div id="log" class="log-container">
+                <div class="log-entry">Klik "Generate Wallet Baru" untuk memulai...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+
+    <script>
+        let provider = null;
+        let currentWallet = null;
+        let walletCounter = 0;
+        let isPrivateKeyVisible = false;
+        
+        // Variabel untuk vanity address search
+        let isSearching = false;
+        let searchAttempts = 0;
+        let searchStartTime = 0;
+        let lastUpdateTime = 0;
+
+        function checkEthers() {
+            if (typeof ethers === 'undefined') {
+                addLog('❌ Error: ethers.js belum terload. Refresh halaman!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function initProvider() {
+            if (!checkEthers()) return;
+
+            try {
+                const LLAMAR_URL = "https://eth.llamarpc.com";
+                provider = new ethers.providers.JsonRpcProvider(LLAMAR_URL);
+                addLog('✅ Terhubung ke Ethereum Mainnet via LLAMAR', 'success');
+            } catch (error) {
+                addLog('❌ Gagal terhubung ke LAMMAR RPC: ' + error.message, 'error');
+            }
+        }
+
+        async function generateWallet() {
+            if (!checkEthers()) return;
+
+            try {
+                addLog('🔄 Generating wallet baru...', 'info');
+
+                currentWallet = ethers.Wallet.createRandom();
+                walletCounter++;
+
+                await displayWalletInfo();
+                document.getElementById('nextBtn').disabled = false;
+
+                addLog(`✅ Wallet ke-${walletCounter} berhasil digenerate`, 'success');
+                addLog(`📬 Address: ${currentWallet.address}`, 'info');
+
+            } catch (error) {
+                addLog('❌ Error generating wallet: ' + error.message, 'error');
+            }
+        }
+
+        async function generateNext() {
+            await generateWallet();
+        }
+
+        // FUNGSI VANITY ADDRESS SEARCH
+        function startVanitySearch() {
+            if (!checkEthers()) return;
+            if (isSearching) return;
+
+            const prefix = document.getElementById('prefixInput').value.trim().toLowerCase();
+            const suffix = document.getElementById('suffixInput').value.trim().toLowerCase();
+
+            if (!prefix && !suffix) {
+                alert('Masukkan awalan (prefix) atau akhiran (suffix) yang diinginkan!');
+                return;
+            }
+
+            if (prefix && !/^[0-9a-f]*$/.test(prefix)) {
+                alert('Prefix hanya boleh berisi angka 0-9 dan huruf a-f!');
+                return;
+            }
+
+            if (suffix && !/^[0-9a-f]*$/.test(suffix)) {
+                alert('Suffix hanya boleh berisi angka 0-9 dan huruf a-f!');
+                return;
+            }
+
+            isSearching = true;
+            searchAttempts = 0;
+            searchStartTime = Date.now();
+            lastUpdateTime = Date.now();
+
+            document.getElementById('vanityBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+            document.getElementById('vanityBtn').classList.add('searching');
+
+            addLog(`🔍 Mencari address dengan pattern: ${prefix ? '0x' + prefix + '...' : '...' + suffix}`, 'info');
+            if (prefix.length >= 4 || suffix.length >= 4) {
+                addLog('⚠️ Pencarian 4+ karakter mungkin membutuhkan waktu lama', 'warning');
+            }
+
+            searchVanityAddress(prefix, suffix);
+        }
+
+        function stopVanitySearch() {
+            isSearching = false;
+            document.getElementById('vanityBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('vanityBtn').classList.remove('searching');
+            addLog('⏹️ Pencarian dihentikan', 'info');
+        }
+
+        function searchVanityAddress(prefix, suffix) {
+            if (!isSearching) return;
+
+            const BATCH_SIZE = 1000;
+            let found = false;
+
+            for (let i = 0; i < BATCH_SIZE && !found; i++) {
+                searchAttempts++;
+                const wallet = ethers.Wallet.createRandom();
+                const address = wallet.address.toLowerCase();
+
+                const matchesPrefix = !prefix || address.startsWith('0x' + prefix);
+                const matchesSuffix = !suffix || address.endsWith(suffix);
+
+                if (matchesPrefix && matchesSuffix) {
+                    found = true;
+                    const timeTaken = (Date.now() - searchStartTime) / 1000;
+                    
+                    currentWallet = wallet;
+                    walletCounter++;
+                    displayWalletInfo();
+
+                    addLog(`✅ Ditemukan setelah ${searchAttempts} percobaan (${timeTaken.toFixed(1)}s)`, 'success');
+                    addLog(`🎯 Address: ${wallet.address}`, 'success');
+
+                    isSearching = false;
+                    document.getElementById('vanityBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                    document.getElementById('vanityBtn').classList.remove('searching');
+                    return;
+                }
+            }
+
+            // Update stats setiap detik
+            const now = Date.now();
+            if (now - lastUpdateTime >= 1000) {
+                const timeElapsed = (now - searchStartTime) / 1000;
+                const speed = Math.floor(searchAttempts / timeElapsed);
+                
+                document.getElementById('attemptCount').textContent = `Attempts: ${searchAttempts.toLocaleString()}`;
+                document.getElementById('searchTime').textContent = `Time: ${timeElapsed.toFixed(1)}s`;
+                document.getElementById('searchSpeed').textContent = `Speed: ${speed.toLocaleString()}/sec`;
+                
+                lastUpdateTime = now;
+
+                // Progress update setiap 10 detik
+                if (Math.floor(timeElapsed) % 10 === 0) {
+                    addLog(`⏳ ${searchAttempts.toLocaleString()} attempts... masih mencari`, 'info');
+                }
+            }
+
+            // Continue searching
+            setTimeout(() => searchVanityAddress(prefix, suffix), 0);
+        }
+
+        async function displayWalletInfo() {
+            if (!currentWallet || !checkEthers()) return;
+
+            document.getElementById('mnemonicDisplay').textContent = currentWallet.mnemonic.phrase;
+            document.getElementById('walletAddress').textContent = currentWallet.address;
+            document.getElementById('walletCounter').textContent = walletCounter;
+
+            isPrivateKeyVisible = false;
+            document.getElementById('privateKeyDisplay').textContent = '••••••••••••••••••••••••••••••••';
+            document.getElementById('toggleIcon').textContent = '👁️';
+            document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">👁️</span> Tampilkan';
+
+            document.getElementById('walletSection').classList.remove('hidden');
+
+            await getWalletBalance();
+        }
+
+        async function getWalletBalance() {
+            if (!currentWallet || !provider || !checkEthers()) return;
+
+            try {
+                document.getElementById('ethBalance').textContent = 'Loading...';
+
+                const balanceWei = await provider.getBalance(currentWallet.address);
+                const balanceEth = ethers.utils.formatEther(balanceWei);
+
+                document.getElementById('ethBalance').textContent = parseFloat(balanceEth).toFixed(6) + ' ETH';
+
+                addLog(`💰 Saldo: ${parseFloat(balanceEth).toFixed(6)} ETH`, 'success');
+
+            } catch (error) {
+                document.getElementById('ethBalance').textContent = 'Error';
+                addLog('❌ Error fetching balance: ' + error.message, 'error');
+            }
+        }
+
+        async function refreshBalance() {
+            if (!currentWallet) {
+                addLog('❌ Tidak ada wallet yang aktif', 'error');
+                return;
+            }
+
+            addLog('🔄 Refresh saldo...', 'info');
+            await getWalletBalance();
+        }
+
+        function togglePrivateKey() {
+            if (!currentWallet) return;
+
+            isPrivateKeyVisible = !isPrivateKeyVisible;
+
+            if (isPrivateKeyVisible) {
+                document.getElementById('privateKeyDisplay').textContent = currentWallet.privateKey;
+                document.getElementById('toggleIcon').textContent = '🙈';
+                document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">🙈</span> Sembunyikan';
+                addLog('🔑 Private key ditampilkan', 'info');
+            } else {
+                document.getElementById('privateKeyDisplay').textContent = '••••••••••••••••••••••••••••••••';
+                document.getElementById('toggleIcon').textContent = '👁️';
+                document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">👁️</span> Tampilkan';
+                addLog('🔑 Private key disembunyikan', 'info');
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                addLog('✅ Berhasil copy ke clipboard', 'success');
+            }).catch(err => {
+                addLog('❌ Gagal copy ke clipboard', 'error');
+            });
+        }
+
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div class="log-entry">Log cleared</div>';
+        }
+
+        window.onload = function() {
+            setTimeout(() => {
+                if (typeof ethers !== 'undefined') {
+                    initProvider();
+                    addLog('🚀 ETH Wallet Generator siap! Klik "Generate Wallet Baru" untuk mulai.', 'info');
+                    addLog('💡 Fitur baru: Cari address custom dengan awalan/akhiran tertentu!', 'info');
+                } else {
+                    addLog('❌ ERROR: ethers.js gagal load. Refresh halaman!', 'error');
+                }
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
