@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETH Wallet Generator</title>
+    <style>
+        /* CSS SAMA PERSIS SEPERTI SEBELUMNYA */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        header p {
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .rpc-status {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-generate {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-next {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-copy {
+            background: #27ae60;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn-toggle {
+            background: #95a5a6;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn-clear {
+            background: #7f8c8d;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .wallet-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            margin-bottom: 20px;
+        }
+
+        .wallet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .wallet-header h2 {
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .mnemonic-display {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed #3498db;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 2;
+            margin-bottom: 15px;
+            word-spacing: 10px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .address-display {
+            font-family: monospace;
+            font-size: 14px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .balance-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 5px;
+        }
+
+        .usd-balance {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .private-key-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .private-key-display {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .wallet-counter {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #3498db;
+            background: #ebf5fb;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry.success {
+            color: #27ae60;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .log-entry.info {
+            color: #3498db;
+        }
+
+        @media (max-width: 768px) {
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .wallet-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .mnemonic-display {
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 ETH Wallet Generator</h1>
+            <p>Generate mnemonic 12 kata + Address + Cek Saldo Ethereum</p>
+            <div class="rpc-status">
+                🌐 Terhubung ke: <span id="rpcUrl">https://eth-mainnet.g.alchemy.com/v2/MuLXFm60Tsz3ntyrSC1O4</span>
+            </div>
+        </header>
+
+        <div class="section">
+            <div class="button-group">
+                <button onclick="generateWallet()" class="btn btn-generate">
+                    🆕 Generate Wallet Baru
+                </button>
+                <button onclick="generateNext()" class="btn btn-next" id="nextBtn" disabled>
+                    ⏭️ Next Wallet
+                </button>
+            </div>
+        </div>
+
+        <div id="walletSection" class="section hidden">
+            <div class="wallet-card">
+                <div class="wallet-header">
+                    <h2>📋 Mnemonic Phrase (12 Kata)</h2>
+                    <button onclick="copyToClipboard('mnemonicDisplay')" class="btn btn-copy">
+                        📋 Copy Mnemonic
+                    </button>
+                </div>
+                <div id="mnemonicDisplay" class="mnemonic-display"></div>
+                <div class="warning">
+                    ⚠️ <strong>SIMPAN DI TEMPAT AMAN!</strong> Jangan share ke siapapun!
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>👤 Wallet Address</h3>
+                    <div class="address-display" id="walletAddress"></div>
+                    <button onclick="copyToClipboard('walletAddress')" class="btn btn-copy">
+                        📋 Copy Address
+                    </button>
+                </div>
+
+                <div class="info-card">
+                    <h3>💰 Saldo ETH</h3>
+                    <div class="balance-display">
+                        <span id="ethBalance">0.0000</span> ETH
+                    </div>
+                    <div class="usd-balance" id="usdBalance">$0.00</div>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔑 Private Key</h3>
+                    <div class="private-key-container">
+                        <div id="privateKeyDisplay" class="private-key-display">••••••••••••••••••••••••••••••••</div>
+                        <button onclick="togglePrivateKey()" class="btn btn-toggle">
+                            <span id="toggleIcon">👁️</span> Tampilkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wallet-counter">
+                🎯 Wallet ke: <span id="walletCounter">1</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="log-header">
+                <h3>📝 Log Aktivitas</h3>
+                <button onclick="clearLog()" class="btn btn-clear">🗑️ Clear Log</button>
+            </div>
+            <div id="log" class="log-container">
+                <div class="log-entry">Klik "Generate Wallet Baru" untuk memulai...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ETHERJS HARUS DILOAD SEBELUM SCRIPT KITA -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+    
+    <script>
+        // Tunggu sampai ethers.js selesai load
+        let provider = null;
+        let currentWallet = null;
+        let walletCounter = 0;
+        let isPrivateKeyVisible = false;
+
+        // Cek apakah ethers sudah terload
+        function checkEthers() {
+            if (typeof ethers === 'undefined') {
+                addLog('❌ Error: ethers.js belum terload. Refresh halaman!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Initialize provider dengan Alchemy RPC
+        function initProvider() {
+            if (!checkEthers()) return;
+            
+            try {
+                const ALCHEMY_URL = "https://eth-mainnet.g.alchemy.com/v2/MuLXFm60Tsz3ntyrSC1O4";
+                provider = new ethers.providers.JsonRpcProvider(ALCHEMY_URL);
+                addLog('✅ Terhubung ke Ethereum Mainnet via Alchemy', 'success');
+            } catch (error) {
+                addLog('❌ Gagal terhubung ke Alchemy RPC: ' + error.message, 'error');
+            }
+        }
+
+        // Generate new wallet
+        async function generateWallet() {
+            if (!checkEthers()) return;
+            
+            try {
+                addLog('🔄 Generating wallet baru...', 'info');
+                
+                // Generate random wallet dengan mnemonic 12 kata
+                currentWallet = ethers.Wallet.createRandom();
+                walletCounter++;
+                
+                // Update UI
+                await displayWalletInfo();
+                document.getElementById('nextBtn').disabled = false;
+                
+                addLog(`✅ Wallet ke-${walletCounter} berhasil digenerate`, 'success');
+                addLog(`📬 Address: ${currentWallet.address}`, 'info');
+                
+            } catch (error) {
+                addLog('❌ Error generating wallet: ' + error.message, 'error');
+            }
+        }
+
+        // Generate next wallet
+        async function generateNext() {
+            await generateWallet();
+        }
+
+        // Display wallet information
+        async function displayWalletInfo() {
+            if (!currentWallet || !checkEthers()) return;
+            
+            // Display mnemonic
+            document.getElementById('mnemonicDisplay').textContent = currentWallet.mnemonic.phrase;
+            
+            // Display address
+            document.getElementById('walletAddress').textContent = currentWallet.address;
+            
+            // Display wallet counter
+            document.getElementById('walletCounter').textContent = walletCounter;
+            
+            // Reset private key display
+            isPrivateKeyVisible = false;
+            document.getElementById('privateKeyDisplay').textContent = '••••••••••••••••••••••••••••••••';
+            document.getElementById('toggleIcon').textContent = '👁️';
+            document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">👁️</span> Tampilkan';
+            
+            // Show wallet section
+            document.getElementById('walletSection').classList.remove('hidden');
+            
+            // Get balance
+            await getWalletBalance();
+        }
+
+        // Get wallet balance from blockchain
+        async function getWalletBalance() {
+            if (!currentWallet || !provider || !checkEthers()) return;
+            
+            try {
+                addLog('🔄 Mengecek saldo...', 'info');
+                
+                // Get balance in wei
+                const balanceWei = await provider.getBalance(currentWallet.address);
+                
+                // Convert to ETH
+                const balanceEth = ethers.utils.formatEther(balanceWei);
+                
+                // Display ETH balance
+                document.getElementById('ethBalance').textContent = parseFloat(balanceEth).toFixed(6);
+                
+                // Get ETH price and calculate USD balance
+                const ethPrice = await getEthPrice();
+                const balanceUSD = (parseFloat(balanceEth) * ethPrice).toFixed(2);
+                
+                document.getElementById('usdBalance').textContent = `$${balanceUSD} USD`;
+                
+                addLog(`💰 Saldo: ${parseFloat(balanceEth).toFixed(6)} ETH ($${balanceUSD})`, 'success');
+                
+            } catch (error) {
+                document.getElementById('ethBalance').textContent = 'Error';
+                document.getElementById('usdBalance').textContent = 'Gagal memuat saldo';
+                addLog('❌ Error fetching balance: ' + error.message, 'error');
+            }
+        }
+
+        // Get ETH price
+        async function getEthPrice() {
+            try {
+                // Fixed price untuk demo
+                return 2500;
+            } catch (error) {
+                return 2500;
+            }
+        }
+
+        // Toggle private key visibility
+        function togglePrivateKey() {
+            if (!currentWallet) return;
+            
+            isPrivateKeyVisible = !isPrivateKeyVisible;
+            
+            if (isPrivateKeyVisible) {
+                document.getElementById('privateKeyDisplay').textContent = currentWallet.privateKey;
+                document.getElementById('toggleIcon').textContent = '🙈';
+                document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">🙈</span> Sembunyikan';
+                addLog('🔑 Private key ditampilkan', 'info');
+            } else {
+                document.getElementById('privateKeyDisplay').textContent = '••••••••••••••••••••••••••••••••';
+                document.getElementById('toggleIcon').textContent = '👁️';
+                document.querySelector('.btn-toggle').innerHTML = '<span id="toggleIcon">👁️</span> Tampilkan';
+                addLog('🔑 Private key disembunyikan', 'info');
+            }
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                addLog('✅ Berhasil copy ke clipboard', 'success');
+            }).catch(err => {
+                addLog('❌ Gagal copy ke clipboard', 'error');
+            });
+        }
+
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div class="log-entry">Log cleared</div>';
+        }
+
+        // Initialize when page loads
+        window.onload = function() {
+            // Tunggu sebentar untuk pastikan ethers.js loaded
+            setTimeout(() => {
+                if (typeof ethers !== 'undefined') {
+                    initProvider();
+                    addLog('🚀 ETH Wallet Generator siap! Klik "Generate Wallet Baru" untuk mulai.', 'info');
+                } else {
+                    addLog('❌ ERROR: ethers.js gagal load. Refresh halaman!', 'error');
+                }
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
