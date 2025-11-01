@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Disclaimer - VanSwap | Vana Chain DEX</title>
+    <meta name="description" content="VanSwap Risk Disclaimer - Important risks and disclosures for using our decentralized exchange.">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --accent: #31d0aa;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.7);
+            --card-bg: rgba(14,42,33,0.85);
+            --card-border: rgba(26,127,94,0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1300;
+            border-bottom: 1px solid rgba(0,0,0,0.25);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .logo span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .connect-wallet {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .legal-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .legal-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .legal-subtitle {
+            font-size: 18px;
+            color: var(--muted);
+        }
+
+        .last-updated {
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 40px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+
+        .subsection {
+            margin-bottom: 32px;
+        }
+
+        .subsection-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--muted);
+        }
+
+        ul, ol {
+            margin: 16px 0;
+            padding-left: 24px;
+            color: var(--muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .high-risk-box {
+            background: rgba(244, 67, 54, 0.1);
+            border: 2px solid rgba(244, 67, 54, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .high-risk-title {
+            color: #f44336;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+        }
+
+        .medium-risk-box {
+            background: rgba(255,152,0,0.1);
+            border: 1px solid rgba(255,152,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .medium-risk-title {
+            color: #ff9800;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-box {
+            background: rgba(49, 208, 170, 0.1);
+            border: 1px solid rgba(49, 208, 170, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-title {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .risk-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            border-left: 4px solid #f44336;
+        }
+
+        .risk-title {
+            color: #f44336;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .risk-level {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .risk-high {
+            background: #f44336;
+            color: white;
+        }
+
+        .risk-medium {
+            background: #ff9800;
+            color: white;
+        }
+
+        .risk-low {
+            background: #4caf50;
+            color: white;
+        }
+
+        .acceptance-box {
+            background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .acceptance-title {
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 12px;
+            font-size: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 60px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .legal-title {
+                font-size: 32px;
+            }
+            
+            .content-card {
+                padding: 24px;
+            }
+            
+            .footer-links {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <a class="logo" href="index.html">
+                <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                <span>VanSwap</span>
+            </a>
+
+            <div class="nav-links">
+                <a class="nav-link" href="swap.html">Swap</a>
+                <a class="nav-link" href="liquidity.html">Liquidity</a>
+                <a class="nav-link" href="about.html">About</a>
+                <a class="nav-link" href="docs.html">Docs</a>
+            </div>
+
+            <button class="connect-wallet">Connect Wallet</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="legal-header">
+            <h1 class="legal-title">Risk Disclaimer</h1>
+            <p class="legal-subtitle">Important risks and disclosures for decentralized finance</p>
+        </div>
+
+        <div class="last-updated">
+            Last updated: December 2024
+        </div>
+
+        <div class="content-card">
+            <div class="high-risk-box">
+                <div class="high-risk-title">
+                    <span>🚨</span>
+                    <span>EXTREMELY HIGH RISK WARNING</span>
+                </div>
+                <p><strong>CRYPTOCURRENCY AND DECENTRALIZED FINANCE INVOLVE EXTREME RISK. YOU COULD LOSE ALL OF YOUR INVESTED CAPITAL. ONLY INVEST MONEY YOU ARE WILLING TO LOSE COMPLETELY.</strong></p>
+                <p>VanSwap is a decentralized protocol on Vana Chain. By using our services, you acknowledge and accept all risks described in this disclaimer.</p>
+            </div>
+
+            <h2 class="section-title">1. No Investment Advice</h2>
+            
+            <div class="subsection">
+                <p>VanSwap does not provide investment advice, financial advice, or trading advice. All information provided by VanSwap is for educational and informational purposes only.</p>
+                
+                <div class="medium-risk-box">
+                    <div class="medium-risk-title">
+                        <span>📊</span>
+                        <span>Not Financial Advice</span>
+                    </div>
+                    <p>Nothing on VanSwap should be construed as investment or financial advice. You are solely responsible for your investment decisions and should consult with qualified financial advisors before making any investment.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">2. Comprehensive Risk Categories</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">2.1 Protocol Risks</h3>
+                
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🔧</span>
+                        <span>Smart Contract Risk</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>VanSwap smart contracts may contain vulnerabilities or bugs that could result in loss of funds. While we conduct security audits, no software is completely secure.</p>
+                    <ul>
+                        <li>Potential smart contract exploits</li>
+                        <li>Code vulnerabilities and bugs</li>
+                        <li>Upgrade and migration risks</li>
+                        <li>Oracle manipulation possibilities</li>
+                    </ul>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🌐</span>
+                        <span>Protocol Design Risk</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Automated Market Maker (AMM) design carries inherent risks that may result in financial losses.</p>
+                    <ul>
+                        <li>Impermanent loss when providing liquidity</li>
+                        <li>Price slippage during large trades</li>
+                        <li>Liquidity pool imbalances</li>
+                        <li>Flash loan attacks and arbitrage</li>
+                    </ul>
+                </div>
+
+                <h3 class="subsection-title">2.2 Market Risks</h3>
+                
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>📈</span>
+                        <span>Market Volatility Risk</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Cryptocurrency markets are extremely volatile and unpredictable.</p>
+                    <ul>
+                        <li>Extreme price fluctuations (90%+ drops possible)</li>
+                        <li>Market manipulation and whale activities</li>
+                        <li>Low liquidity for certain tokens</li>
+                        <li>24/7 market operation without circuit breakers</li>
+                    </ul>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>💧</span>
+                        <span>Liquidity Risk</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Low liquidity can significantly impact your trading experience and investment value.</p>
+                    <ul>
+                        <li>Inability to execute trades at desired prices</li>
+                        <li>High slippage on large orders</li>
+                        <li>Liquidity provider exit causing pool collapse</li>
+                        <li>New token liquidity risks</li>
+                    </ul>
+                </div>
+
+                <h3 class="subsection-title">2.3 Technology Risks</h3>
+                
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>⚡</span>
+                        <span>Blockchain Network Risk</span>
+                        <span class="risk-level risk-medium">MEDIUM RISK</span>
+                    </div>
+                    <p>Vana Chain and underlying blockchain technology carry inherent risks.</p>
+                    <ul>
+                        <li>Network congestion and high gas fees</li>
+                        <li>Chain reorganizations and consensus failures</li>
+                        <li>Node synchronization issues</li>
+                        <li>Protocol upgrades and hard forks</li>
+                    </ul>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🔐</span>
+                        <span>Wallet and Security Risk</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Your personal security practices are critical to protecting your assets.</p>
+                    <ul>
+                        <li>Private key loss or theft</li>
+                        <li>Phishing attacks and social engineering</li>
+                        <li>Malware and keylogger infections</li>
+                        <li>Smart contract approval exploits</li>
+                    </ul>
+                </div>
+
+                <h3 class="subsection-title">2.4 Regulatory Risks</h3>
+                
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>⚖️</span>
+                        <span>Regulatory Uncertainty</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Cryptocurrency regulations are evolving and vary by jurisdiction.</p>
+                    <ul>
+                        <li>Changing regulatory landscape</li>
+                        <li>Potential bans or restrictions in your jurisdiction</li>
+                        <li>Tax reporting requirements</li>
+                        <li>Legal classification uncertainties</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 class="section-title">3. Specific VanSwap Risks</h2>
+            
+            <div class="subsection">
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>💸</span>
+                        <span>Impermanent Loss</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p><strong>Impermanent loss is one of the most significant risks for liquidity providers.</strong></p>
+                    <p>When you provide liquidity to a pool, you may experience impermanent loss if the price ratio of the tokens changes compared to when you deposited them. This loss occurs because of the automated market maker formula and can result in receiving back less valuable assets than if you had simply held the tokens.</p>
+                    <ul>
+                        <li>Higher volatility = higher impermanent loss</li>
+                        <li>Loss can exceed earned trading fees</li>
+                        <li>Permanent if tokens are withdrawn during price divergence</li>
+                        <li>Affects all liquidity providers in AMM protocols</li>
+                    </ul>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🔄</span>
+                        <span>Slippage and Price Impact</span>
+                        <span class="risk-level risk-medium">MEDIUM RISK</span>
+                    </div>
+                    <p>Large trades can significantly move market prices on decentralized exchanges.</p>
+                    <ul>
+                        <li>Higher slippage on low-liquidity pools</li>
+                        <li>Price impact percentage shown before trading</li>
+                        <li>Front-running and MEV (Miner Extractable Value)</li>
+                        <li>Transaction ordering dependencies</li>
+                    </ul>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🏭</span>
+                        <span>Token Creation Risks</span>
+                        <span class="risk-level risk-high">HIGH RISK</span>
+                    </div>
+                    <p>Creating tokens through VanSwap carries additional risks.</p>
+                    <ul>
+                        <li>No vetting of created token projects</li>
+                        <li>Potential for scam tokens and rug pulls</li>
+                        <li>No guarantee of liquidity or trading volume</li>
+                        <li>Responsibility for token economics and security</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 class="section-title">4. Technical Understanding Requirements</h2>
+            
+            <div class="subsection">
+                <div class="medium-risk-box">
+                    <div class="medium-risk-title">
+                        <span>🎓</span>
+                        <span>Technical Proficiency Required</span>
+                    </div>
+                    <p>Using VanSwap requires understanding of several technical concepts:</p>
+                </div>
+
+                <ul>
+                    <li><strong>Blockchain Transactions:</strong> Understanding gas fees, transaction confirmation, and network states</li>
+                    <li><strong>Wallet Management:</strong> Private key security, seed phrase backup, and transaction signing</li>
+                    <li><strong>Smart Contracts:</strong> Contract interactions, approvals, and decentralized application usage</li>
+                    <li><strong>DeFi Concepts:</strong> Liquidity pools, yield farming, impermanent loss, and AMM mechanics</li>
+                    <li><strong>Token Standards:</strong> VRC-20 token functionality and contract addresses</li>
+                </ul>
+
+                <div class="info-box">
+                    <div class="info-title">
+                        <span>📚</span>
+                        <span>Educational Responsibility</span>
+                    </div>
+                    <p>You are responsible for educating yourself about these concepts before using VanSwap. Start with small amounts and understand each action before proceeding.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">5. No Insurance Protection</h2>
+            
+            <div class="subsection">
+                <div class="high-risk-box">
+                    <div class="high-risk-title">
+                        <span>🛡️</span>
+                        <span>NO INSURANCE COVERAGE</span>
+                    </div>
+                    <p><strong>Funds used on VanSwap are NOT insured by any government agency, insurance company, or third-party protection scheme.</strong></p>
+                    <p>Unlike traditional bank accounts or regulated financial institutions, cryptocurrency assets on decentralized protocols have no insurance protection. Losses due to hacking, smart contract failures, user error, or market conditions are not recoverable.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">6. User Responsibilities</h2>
+            
+            <div class="subsection">
+                <p>As a VanSwap user, you are solely responsible for:</p>
+                
+                <ul>
+                    <li><strong>Security Practices:</strong> Protecting your private keys, using hardware wallets, enabling 2FA</li>
+                    <li><strong>Due Diligence:</strong> Researching tokens, understanding risks, verifying contract addresses</li>
+                    <li><strong>Transaction Verification:</strong> Checking all transaction details before confirmation</li>
+                    <li><strong>Tax Compliance:</strong> Reporting and paying taxes according to your jurisdiction</li>
+                    <li><strong>Legal Compliance:</strong> Ensuring your activities comply with local laws and regulations</li>
+                    <li><strong>Risk Management:</strong> Only investing what you can afford to lose completely</li>
+                </ul>
+            </div>
+
+            <h2 class="section-title">7. No Warranty or Guarantee</h2>
+            
+            <div class="subsection">
+                <p>VanSwap is provided "as is" and "as available" without any warranties of any kind.</p>
+                
+                <div class="medium-risk-box">
+                    <div class="medium-risk-title">
+                        <span>❌</span>
+                        <span>No Guarantees Provided</span>
+                    </div>
+                    <p>We do not guarantee:</p>
+                    <ul>
+                        <li>Profitability of any trading strategy or liquidity provision</li>
+                        <li>Continuous availability or uptime of the protocol</li>
+                        <li>Accuracy of price information or market data</li>
+                        <li>Security against all possible attacks or exploits</li>
+                        <li>Recovery of lost or stolen funds</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 class="section-title">8. Assumption of Risk</h2>
+            
+            <div class="subsection">
+                <p>By using VanSwap, you expressly acknowledge and assume all risks, including but not limited to:</p>
+                
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>💰</span>
+                        <span>Financial Risk Assumption</span>
+                    </div>
+                    <p>You acknowledge that you may lose some or all of your invested capital and accept full responsibility for these potential losses.</p>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🔗</span>
+                        <span>Technical Risk Assumption</span>
+                    </div>
+                    <p>You accept risks related to blockchain technology, smart contracts, and decentralized systems.</p>
+                </div>
+
+                <div class="risk-item">
+                    <div class="risk-title">
+                        <span>🌍</span>
+                        <span>Regulatory Risk Assumption</span>
+                    </div>
+                    <p>You accept responsibility for understanding and complying with applicable laws in your jurisdiction.</p>
+                </div>
+            </div>
+
+            <div class="acceptance-box">
+                <div class="acceptance-title">
+                    <span>✅</span>
+                    <span>ACCEPTANCE OF RISKS</span>
+                </div>
+                <p><strong>BY USING VANSWAP, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND FULLY ACCEPT ALL RISKS DESCRIBED IN THIS DISCLAIMER.</strong></p>
+                <p>You confirm that you are solely responsible for your investment decisions and their outcomes. If you do not accept these risks, you must not use VanSwap.</p>
+            </div>
+
+            <div class="info-box">
+                <div class="info-title">
+                    <span>📞</span>
+                    <span>Need Help Understanding?</span>
+                </div>
+                <p>If you have questions about these risks or need clarification, please review our documentation or seek independent financial and legal advice before using VanSwap.</p>
+                <p><strong>Documentation:</strong> https://vanswap.xyz/docs.html</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a class="footer-link" href="index.html">Home</a>
+            <a class="footer-link" href="swap.html">Swap</a>
+            <a class="footer-link" href="liquidity.html">Liquidity</a>
+            <a class="footer-link" href="about.html">About</a>
+            <a class="footer-link" href="docs.html">Documentation</a>
+            <a class="footer-link" href="privacy.html">Privacy Policy</a>
+            <a class="footer-link" href="terms.html">Terms of Service</a>
+            <a class="footer-link" href="disclaimer.html">Risk Disclaimer</a>
+        </div>
+        
+        <div style="color: var(--muted); font-size: 14px;">
+            <p>© 2025 VanSwap. Built on Vana Chain. All rights reserved.</p>
+            <p style="margin-top: 8px; opacity: 0.7;">VanSwap - The lightest, fastest DEX on Vana Chain</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple wallet connection placeholder
+        document.querySelector('.connect-wallet').addEventListener('click', function() {
+            alert('Wallet connection would be implemented here');
+        });
+
+        // Update current year in footer
+        document.addEventListener('DOMContentLoaded', function() {
+            const yearElement = document.querySelector('footer p');
+            if (yearElement) {
+                yearElement.innerHTML = yearElement.innerHTML.replace('2025', new Date().getFullYear());
+            }
+        });
+    </script>
+</body>
+</html>
