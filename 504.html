@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading... | VanSwap</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a7f5e;
+            --primary-dark: #146c4d;
+            --accent: #31d0aa;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.7);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        /* Loading Screen */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(49, 208, 170, 0.3);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 400;
+        }
+        
+        /* Error Screen (Hidden Initially) */
+        .error-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            max-width: 400px;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .error-code {
+            font-size: 80px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .error-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .error-message {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .home-button {
+            background: var(--accent);
+            color: #052017;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .home-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(49, 208, 170, 0.3);
+        }
+        
+        .retry-button {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--accent);
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-button:hover {
+            background: var(--accent);
+            color: #052017;
+        }
+        
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-container" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Error Screen -->
+    <div class="error-container" id="errorScreen">
+        <div class="error-code">504</div>
+        <h1 class="error-title">Too Many Requests</h1>
+        <p class="error-message">
+            Please refresh and try again.
+        </p>
+        
+        <div class="action-buttons">
+            <a href="index.html" class="home-button">Home</a>
+            <button onclick="location.reload()" class="retry-button">Refresh</button>
+        </div>
+    </div>
+
+    <script>
+        // Show loading for 3 seconds, then show error
+        setTimeout(() => {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'flex';
+        }, 3000);
+    </script>
+</body>
+</html>
