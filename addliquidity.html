@@ -403,9 +403,74 @@
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 <!-- Script WalletConnect -->
-<script src="https://unpkg.com/@web3modal/html@2.7.1/dist/index.js"></script>
+<script type="module">
+      import {
+        createWeb3Modal,
+        defaultWagmiConfig
+      } from "https://esm.sh/@web3modal/wagmi?bundle";
 
-  <script src="https://unpkg.com/@walletconnect/sign-client@2.10.5/dist/umd/index.min.js"></script>
+      import {
+        getAccount,
+        getBalance,
+        watchAccount,
+        disconnect
+      } from "https://esm.sh/@wagmi/core@2.13.0";
+
+      import { mainnet } from "https://esm.sh/@wagmi/core@2.13.0/chains";
+      import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+
+      // WalletConnect Project ID
+      const projectId = "6af5ba798c7f845b37698f9d8b1380cb";
+
+      // Metadata domain
+      const metadata = {
+        name: "CozySwap HTML",
+        description: "WalletConnect v2 Pure HTML Demo",
+        url: "https://saputangan.edgeone.app", // sesuaikan domain
+        icons: ["https://avatars.githubusercontent.com/u/37784886"]
+      };
+
+      // Wagmi config
+      const chains = [mainnet];
+      const config = defaultWagmiConfig({ chains, projectId, metadata });
+
+      // Buat modal dulu baru panggil reconnect (ini penting)
+      const modal = createWeb3Modal({
+        wagmiConfig: config,
+        projectId,
+        chains,
+        enableAnalytics: false
+      });
+
+      reconnect(config);
+
+      const info = document.getElementById("info");
+
+      async function updateInfo() {
+        const account = getAccount(config);
+        if (account?.address) {
+          const balance = await getBalance(config, { address: account.address });
+          info.innerHTML = `
+            ✅ Terkoneksi ke:<br>
+            <b>${account.address}</b><br>
+            Saldo: <b>${parseFloat(balance.value) / 1e18} ETH</b><br>
+            <button onclick="disconnectWallet()">Disconnect</button>
+          `;
+        } else {
+          info.innerHTML = "Belum terkoneksi.";
+        }
+      }
+
+      watchAccount(config, updateInfo);
+
+      window.disconnectWallet = async () => {
+        await disconnect(config);
+        updateInfo();
+      };
+    </script>
+
+<script src="https://unpkg.com/@web3modal/html@2.7.1/dist/index.js"></script>
+   <script src="https://unpkg.com/@walletconnect/sign-client@2.10.5/dist/umd/index.min.js"></script>
   <script src="walletconnect.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
