@@ -500,7 +500,7 @@
       margin-bottom: 8px;
     }
 
-    /* Footer */
+        /* Footer - Updated */
     .footer {
       background: rgba(4, 20, 13, 0.9);
       padding: 60px 20px 30px;
@@ -541,6 +541,29 @@
       transform: translateY(-3px);
     }
 
+    /* TAMBAHKAN INI - Footer Links Section */
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .footer-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      padding: 8px 16px;
+      border-radius: 8px;
+    }
+
+    .footer-link:hover {
+      color: var(--accent);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .footer-text {
       text-align: center;
       color: var(--muted);
@@ -548,6 +571,19 @@
 
     .footer-text p {
       margin-bottom: 10px;
+    }
+
+    /* Mobile Responsive untuk Footer Links */
+    @media (max-width: 768px) {
+      .footer-links {
+        gap: 20px;
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .footer-link {
+        padding: 10px 20px;
+      }
     }
 
     /* Background Elements */
