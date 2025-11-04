@@ -62,12 +62,12 @@ contract VanSwapStaking {
     WithdrawalRecord[] public withdrawalRecords;
     mapping(uint256 => bool) public activeWithdrawals; // withdrawalId => active
     
-    // Events
+    // Events - PERBAIKAN: Syntax yang benar
     event Staked(address indexed user, uint256 amount, bool isVana, uint8 poolId, uint256 unlockTime);
     event Unstaked(address indexed user, uint256 amount, uint8 poolId);
     event RewardsClaimed(address indexed user, uint256 amount, uint8 poolId);
     event PoolUpdated(uint8 poolId, uint256 apy, uint256 minStake, uint256 lockPeriod);
-    emergencyWithdraw(address token, uint256 amount);
+    event EmergencyWithdraw(address token, uint256 amount); // PERBAIKAN: tanpa parameter names
     event RewardsAdded(uint256 amount);
     event NativeReceived(address from, uint256 amount);
     event ERC20Received(address token, address from, uint256 amount);
@@ -83,6 +83,227 @@ contract VanSwapStaking {
     
     fallback() external payable {
         emit NativeReceived(msg.sender, msg.value);
+    }
+    
+    // Modifiers
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+    
+    modifier nonReentrant() {
+        require(!_locked, "Reentrant call");
+        _locked = true;
+        _;
+        _locked = false;
+    }
+    
+    modifier validPool(uint8 poolId) {
+        require(poolId < 4, "Invalid pool");
+        require(pools[poolId].active, "Pool inactive");
+        _;
+    }
+
+    constructor(address _vansToken) {
+        owner = msg.sender;
+        vansToken = IERC20(_vansToken);
+        
+        // Initialize 4 pools dengan batasan max
+        // Pool 0: 1 Month
+        pools[0] = PoolConfig({
+            lockPeriod: 30 days,
+            apy: 1500,          // 15% APY
+            minVansStake: 10000 * 10**18,    // 10,000 VANS
+            minVanaStake: 1 * 10**18,        // 1 VANA
+            maxVansStake: 1000000 * 10**18,  // 1,000,000 VANS max
+            maxVanaStake: 1000 * 10**18,     // 1,000 VANA max
+            totalStaked: 0,
+            active: true
+        });
+        
+        // Pool 1: 3 Month  
+        pools[1] = PoolConfig({
+            lockPeriod: 90 days,
+            apy: 3500,          // 35% APY
+            minVansStake: 10000 * 10**18,
+            minVanaStake: 1 * 10**18,
+            maxVansStake: 1000000 * 10**18,
+            maxVanaStake: 1000 * 10**18,
+            totalStaked: 0,
+            active: true
+        });
+        
+        // Pool 2: 6 Month
+        pools[2] = PoolConfig({
+            lockPeriod: 180 days,
+            apy: 5500,          // 55% APY
+            minVansStake: 10000 * 10**18,
+            minVanaStake: 1 * 10**18,
+            maxVansStake: 1000000 * 10**18,
+            maxVanaStake: 1000 * 10**18,
+            totalStaked: 0,
+            active: true
+        });
+        
+        // Pool 3: 12 Month
+        pools[3] = PoolConfig({
+            lockPeriod: 365 days,
+            apy: 8500,          // 85% APY
+            minVansStake: 10000 * 10**18,
+            minVanaStake: 1 * 10**18,
+            maxVansStake: 1000000 * 10**18,
+            maxVanaStake: 1000 * 10**18,
+            totalStaked: 0,
+            active: true
+        });
+        
+        // Set reward pool (40% dari 120M = 48M VANS)
+        rewardPool = 48000000 * 10**18;
+    }
+    
+    // ========== STAKE FUNCTIONS ========== //
+    
+    // Stake VANA Native
+    function stakeVana(uint8 poolId) external payable nonReentrant validPool(poolId) {
+        PoolConfig memory pool = pools[poolId];
+        require(msg.value >= pool.minVanaStake, "Below minimum VANA stake");
+        require(msg.value <= pool.maxVanaStake, "Exceeds maximum VANA stake");
+        
+        uint256 unlockTime = block.timestamp + pool.lockPeriod;
+        uint256 reward = calculateReward(msg.value, pool.apy, pool.lockPeriod);
+        
+        // Cek apakah reward pool cukup
+        require(rewardPool >= reward, "Insufficient reward pool");
+        
+        userStakes[msg.sender].push(UserStake({
+            amount: msg.value,
+            stakeTime: block.timestamp,
+            unlockTime: unlockTime,
+            rewardDebt: reward,
+            isVana: true,
+            poolId: poolId,
+            unstaked: false,
+            rewardsClaimed: false
+        }));
+        
+        pools[poolId].totalStaked += msg.value;
+        poolTotalStaked[poolId] += msg.value;
+        totalStaked += msg.value;
+        
+        emit Staked(msg.sender, msg.value, true, poolId, unlockTime);
+    }
+    
+    // Stake VANS Tokens
+    function stakeVans(uint256 amount, uint8 poolId) external nonReentrant validPool(poolId) {
+        PoolConfig memory pool = pools[poolId];
+        require(amount >= pool.minVansStake, "Below minimum VANS stake");
+        require(amount <= pool.maxVansStake, "Exceeds maximum VANS stake");
+        
+        // Transfer VANS dari user
+        require(vansToken.transferFrom(msg.sender, address(this), amount), "VANS transfer failed");
+        
+        uint256 unlockTime = block.timestamp + pool.lockPeriod;
+        uint256 reward = calculateReward(amount, pool.apy, pool.lockPeriod);
+        
+        // Cek apakah reward pool cukup
+        require(rewardPool >= reward, "Insufficient reward pool");
+        
+        userStakes[msg.sender].push(UserStake({
+            amount: amount,
+            stakeTime: block.timestamp,
+            unlockTime: unlockTime,
+            rewardDebt: reward,
+            isVana: false,
+            poolId: poolId,
+            unstaked: false,
+            rewardsClaimed: false
+        }));
+        
+        pools[poolId].totalStaked += amount;
+        poolTotalStaked[poolId] += amount;
+        totalStaked += amount;
+        
+        emit Staked(msg.sender, amount, false, poolId, unlockTime);
+    }
+    
+    // ========== UNSTAKE & CLAIM FUNCTIONS ========== //
+    
+    function unstake(uint256 stakeIndex) external nonReentrant {
+        require(stakeIndex < userStakes[msg.sender].length, "Invalid stake index");
+        
+        UserStake storage stake = userStakes[msg.sender][stakeIndex];
+        require(!stake.unstaked, "Already unstaked");
+        require(block.timestamp >= stake.unlockTime, "Stake still locked");
+        
+        uint256 principal = stake.amount;
+        
+        // Transfer principal kembali
+        if(stake.isVana) {
+            payable(msg.sender).transfer(principal);
+        } else {
+            require(vansToken.transfer(msg.sender, principal), "VANS transfer failed");
+        }
+        
+        // Update totals
+        pools[stake.poolId].totalStaked -= principal;
+        poolTotalStaked[stake.poolId] -= principal;
+        totalStaked -= principal;
+        stake.unstaked = true;
+        
+        emit Unstaked(msg.sender, principal, stake.poolId);
+    }
+    
+    function claimRewards(uint256 stakeIndex) external nonReentrant {
+        require(stakeIndex < userStakes[msg.sender].length, "Invalid stake index");
+        
+        UserStake storage stake = userStakes[msg.sender][stakeIndex];
+        require(!stake.unstaked, "Already unstaked");
+        require(!stake.rewardsClaimed, "Rewards already claimed");
+        require(block.timestamp >= stake.unlockTime, "Stake still locked");
+        
+        uint256 reward = stake.rewardDebt;
+        require(reward > 0, "No rewards to claim");
+        require(rewardPool >= reward, "Insufficient reward pool");
+        
+        // Transfer rewards
+        require(vansToken.transfer(msg.sender, reward), "Reward transfer failed");
+        rewardPool -= reward;
+        totalRewardsDistributed += reward;
+        stake.rewardsClaimed = true;
+        
+        emit RewardsClaimed(msg.sender, reward, stake.poolId);
+    }
+    
+    function claimAllRewards() external nonReentrant {
+        uint256 totalReward;
+        
+        for(uint256 i = 0; i < userStakes[msg.sender].length; i++) {
+            UserStake storage stake = userStakes[msg.sender][i];
+            
+            if(!stake.unstaked && 
+               !stake.rewardsClaimed && 
+               block.timestamp >= stake.unlockTime && 
+               stake.rewardDebt > 0) {
+                totalReward += stake.rewardDebt;
+                stake.rewardsClaimed = true;
+            }
+        }
+        
+        require(totalReward > 0, "No rewards to claim");
+        require(rewardPool >= totalReward, "Insufficient reward pool");
+        
+        require(vansToken.transfer(msg.sender, totalReward), "Reward transfer failed");
+        rewardPool -= totalReward;
+        totalRewardsDistributed += totalReward;
+        
+        emit RewardsClaimed(msg.sender, totalReward, 99); // 99 = all pools
+    }
+    
+    // ========== REWARD CALCULATION ========== //
+    
+    function calculateReward(uint256 amount, uint256 apy, uint256 duration) public pure returns (uint256) {
+        uint256 base = (amount * apy) / 10000;
+        return (base * duration) / 365 days;
     }
     
     // ========== WITHDRAWAL TRACKING SYSTEM ========== //
@@ -322,11 +543,69 @@ contract VanSwapStaking {
         vanaBalance = address(this).balance;
         vansBalance = vansToken.balanceOf(address(this));
         availableRewardPool = rewardPool;
+        upcomingUnstakes = 0; // Bisa diimplementasi dengan user stake tracking
         
-        // Hitung berapa banyak unstake dalam 7 hari ke depan
-        upcomingUnstakes = 0;
-        // Implementasi bisa ditambahkan untuk tracking user stakes
+        return (totalVanaStaked, totalVansStaked, vanaBalance, vansBalance, availableRewardPool, upcomingUnstakes);
     }
-
-    // ... (Fungsi-fungsi lainnya tetap sama: stake, unstake, claim, dll)
+    
+    // ========== ADMIN FUNCTIONS ========== //
+    
+    function updatePoolConfig(
+        uint8 poolId, 
+        uint256 newApy, 
+        uint256 newMinVans, 
+        uint256 newMinVana,
+        uint256 newMaxVans,
+        uint256 newMaxVana,
+        uint256 newLockPeriod,
+        bool isActive
+    ) external onlyOwner {
+        require(poolId < 4, "Invalid pool");
+        require(newApy <= 10000, "APY too high");
+        
+        pools[poolId].apy = newApy;
+        pools[poolId].minVansStake = newMinVans;
+        pools[poolId].minVanaStake = newMinVana;
+        pools[poolId].maxVansStake = newMaxVans;
+        pools[poolId].maxVanaStake = newMaxVana;
+        pools[poolId].lockPeriod = newLockPeriod;
+        pools[poolId].active = isActive;
+        
+        emit PoolUpdated(poolId, newApy, newMinVans, newLockPeriod);
+    }
+    
+    // Add more rewards to pool
+    function addRewards(uint256 amount) external onlyOwner {
+        require(vansToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        rewardPool += amount;
+        emit RewardsAdded(amount);
+    }
+    
+    // ========== VIEW FUNCTIONS ========== //
+    
+    function getUserStakes(address user) external view returns (UserStake[] memory) {
+        return userStakes[user];
+    }
+    
+    function getClaimableRewards(address user) external view returns (uint256 totalRewards) {
+        UserStake[] memory stakes = userStakes[user];
+        for(uint i = 0; i < stakes.length; i++) {
+            if(!stakes[i].unstaked && 
+               !stakes[i].rewardsClaimed && 
+               block.timestamp >= stakes[i].unlockTime) {
+                totalRewards += stakes[i].rewardDebt;
+            }
+        }
+    }
+    
+    function getPoolInfo(uint8 poolId) external view returns (PoolConfig memory) {
+        require(poolId < 4, "Invalid pool");
+        return pools[poolId];
+    }
+    
+    function getContractBalance() external view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool) {
+        vansBalance = vansToken.balanceOf(address(this));
+        vanaBalance = address(this).balance;
+        availableRewardPool = rewardPool;
+    }
 }
