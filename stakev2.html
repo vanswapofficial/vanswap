@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap - Stake Tokens | Earn Rewards</title>
+  <meta name="description" content="Stake your VANA and VANS tokens to earn attractive APY rewards on VanSwap DEX">
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.12);
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --glass: rgba(255,255,255,0.03);
+      --warning: #ff9800;
+      --danger: #f44336;
+      --success: #4caf50;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+
+    /* Header */
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    .logo span{font-weight:700;font-size:18px}
+    .connect-wallet{background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative}
+    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
+    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.5);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
+    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
+    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
+    .menu-item:hover{background:rgba(255,255,255,0.02)}
+    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
+
+    /* Main Content */
+    .main{max-width:1200px;margin:32px auto;padding:0 20px}
+    .stake-container{display:flex;gap:24px;align-items:flex-start}
+    @media (max-width:980px){.stake-container{flex-direction:column}}
+
+    /* Cards */
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px;flex:1;max-width:540px;box-shadow:0 10px 30px rgba(0,0,0,0.55)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title{font-size:20px;font-weight:700}
+
+    /* Pool Cards */
+    .pool-card{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid transparent;transition:all 0.2s ease}
+    .pool-card:hover{border-color:var(--primary)}
+    .pool-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .pool-tokens{display:flex;align-items:center;gap:8px}
+    .token-logo{width:32px;height:32px;border-radius:8px}
+    .token-symbol{font-weight:700;font-size:16px}
+    .pool-apy{background:var(--primary);padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700}
+
+    /* Stats Grid */
+    .pool-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .stat-item{display:flex;flex-direction:column;gap:4px}
+    .stat-label{color:var(--muted);font-size:12px}
+    .stat-value{font-weight:600;font-size:14px}
+
+    /* Input Groups */
+    .stake-input-group{margin-bottom:12px}
+    .input-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .label{color:#cfece0;font-size:13px}
+    .balance{color:var(--muted);font-size:13px;cursor:pointer}
+
+    .amount-input{width:100%;padding:12px;border-radius:10px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:16px;font-weight:600}
+    .amount-input:focus{outline:none;border-color:var(--primary)}
+
+    .input-actions{display:flex;gap:8px;margin-top:8px}
+    .btn-percent{flex:1;padding:6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:12px;font-weight:600}
+    .btn-percent:hover{background:rgba(255,255,255,0.05)}
+    .btn-percent.active{background:var(--primary);color:white}
+
+    /* Action Buttons */
+    .action-buttons{display:flex;gap:8px;margin-top:16px}
+    .btn-primary{flex:1;background:var(--primary);border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;color:white}
+    .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+    .btn-secondary{flex:1;background:transparent;border:1px solid var(--primary);padding:12px;border-radius:10px;font-weight:700;cursor:pointer;color:var(--primary)}
+
+    /* My Stakes Panel */
+    .stakes-panel{flex:1;min-width:300px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px}
+    .stakes-list{display:flex;flex-direction:column;gap:12px}
+    .stake-item{background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.05)}
+    .stake-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .stake-amount{font-weight:700}
+    .stake-rewards{color:var(--accent);font-size:12px}
+    .stake-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+
+    /* Rewards Summary */
+    .rewards-summary{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05)}
+
+    /* Spinner */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Status */
+    .status{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+    .tx-link{margin-top:6px;font-size:12px;word-break:break-all}
+
+    /* Token Selection */
+    .token-selection{display:flex;gap:8px;margin-bottom:12px}
+    .token-btn{flex:1;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;text-align:center}
+    .token-btn.active{background:var(--primary);color:white}
+
+    /* Estimated Rewards */
+    .estimated-rewards{margin-top:12px;padding:8px;background:rgba(255,255,255,0.02);border-radius:6px;text-align:center}
+
+    /* Network Alert */
+    .network-alert{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
+    .network-alert-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:700;margin-bottom:6px}
+    .network-alert-content{color:var(--warning);font-size:13px}
+    .network-alert .btn{display:inline-block;margin-top:8px;padding:6px 12px;font-size:12px}
+
+    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
+
+    @media (max-width:520px){
+      .pool-stats{grid-template-columns:1fr}
+      .action-buttons{flex-direction:column}
+      .token-selection{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="nav-container">
+      <a class="logo" href="swap.html">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VanSwap</span>
+      </a>
+
+      <div style="display:flex;align-items:center;gap:8px;position:relative;">
+        <button id="menuBtn" class="menu-dot-btn" title="Menu">⋮</button>
+        <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
+          <div class="menu-item" data-href="swap.html">Swap</div>
+          <div class="menu-item" data-href="liquidity.html">Liquidity</div>
+          <div class="menu-item" data-href="tokencreator.html">Create Token</div>
+          <div class="menu-item" data-href="staking.html" style="color:var(--accent)">Stake</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-href="docs.html">Docs</div>
+        </div>
+
+        <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- Network Alert -->
+    <div id="networkAlert" class="network-alert">
+      <div class="network-alert-header">
+        <span>⚠️</span>
+        <span>WRONG NETWORK</span>
+      </div>
+      <div class="network-alert-content">
+        Please switch to Vana Chain to use staking features.
+        <button id="switchNetworkBtn" class="btn-primary">Switch to Vana Chain</button>
+      </div>
+    </div>
+
+    <div class="stake-container">
+
+      <!-- STAKE CARD -->
+      <section class="card" aria-label="Stake tokens">
+        <div class="card-head">
+          <div class="title">Stake & Earn VANS</div>
+        </div>
+
+        <!-- 1 MONTH POOL -->
+        <div class="pool-card" data-pool="0">
+          <div class="pool-header">
+            <div class="pool-tokens">
+              <img src="https://vanswap.xyz/assets/vans.png" class="token-logo" alt="VANS">
+              <img src="https://vanswap.xyz/assets/vana.png" class="token-logo" alt="VANA">
+              <div class="token-symbol">1 Month Lock</div>
+            </div>
+            <div class="pool-apy">15% APY</div>
+          </div>
+
+          <div class="pool-stats">
+            <div class="stat-item">
+              <div class="stat-label">Min Stake</div>
+              <div class="stat-value">10,000 VANS / 1 VANA</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Lock Period</div>
+              <div class="stat-value">30 Days</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Staked</div>
+              <div class="stat-value" id="pool0Total">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Your Stake</div>
+              <div class="stat-value" id="yourPool0">0</div>
+            </div>
+          </div>
+
+          <!-- Token Selection -->
+          <div class="token-selection">
+            <button class="token-btn active" data-token="vans" data-pool="0">Stake VANS</button>
+            <button class="token-btn" data-token="vana" data-pool="0">Stake VANA</button>
+          </div>
+
+          <!-- Stake Input -->
+          <div class="stake-input-group">
+            <div class="input-head">
+              <div class="label">Stake Amount</div>
+              <div class="balance">
+                <span id="pool0Balance">Balance: —</span>
+              </div>
+            </div>
+
+            <input type="number" id="pool0Amount" class="amount-input" placeholder="0.0" min="0" step="0.1">
+
+            <div class="input-actions">
+              <button class="btn-percent" data-percent="25">25%</button>
+              <button class="btn-percent" data-percent="50">50%</button>
+              <button class="btn-percent" data-percent="75">75%</button>
+              <button class="btn-percent active" data-percent="100">MAX</button>
+            </div>
+          </div>
+
+          <button class="btn-primary stake-btn" data-pool="0" disabled>
+            Stake for 30 Days (15% APY)
+          </button>
+
+          <!-- Estimated Rewards -->
+          <div class="estimated-rewards">
+            <div style="color:var(--muted);font-size:12px">Estimated Rewards</div>
+            <div style="font-weight:600;color:var(--accent)" id="pool0Rewards">0 VANS</div>
+          </div>
+        </div>
+
+        <!-- 3 MONTH POOL -->
+        <div class="pool-card" data-pool="1">
+          <div class="pool-header">
+            <div class="pool-tokens">
+              <img src="https://vanswap.xyz/assets/vans.png" class="token-logo" alt="VANS">
+              <img src="https://vanswap.xyz/assets/vana.png" class="token-logo" alt="VANA">
+              <div class="token-symbol">3 Month Lock</div>
+            </div>
+            <div class="pool-apy">35% APY</div>
+          </div>
+
+          <div class="pool-stats">
+            <div class="stat-item">
+              <div class="stat-label">Min Stake</div>
+              <div class="stat-value">10,000 VANS / 1 VANA</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Lock Period</div>
+              <div class="stat-value">90 Days</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Staked</div>
+              <div class="stat-value" id="pool1Total">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Your Stake</div>
+              <div class="stat-value" id="yourPool1">0</div>
+            </div>
+          </div>
+
+          <!-- Token Selection -->
+          <div class="token-selection">
+            <button class="token-btn active" data-token="vans" data-pool="1">Stake VANS</button>
+            <button class="token-btn" data-token="vana" data-pool="1">Stake VANA</button>
+          </div>
+
+          <!-- Stake Input -->
+          <div class="stake-input-group">
+            <div class="input-head">
+              <div class="label">Stake Amount</div>
+              <div class="balance">
+                <span id="pool1Balance">Balance: —</span>
+              </div>
+            </div>
+
+            <input type="number" id="pool1Amount" class="amount-input" placeholder="0.0" min="0" step="0.1">
+
+            <div class="input-actions">
+              <button class="btn-percent" data-percent="25">25%</button>
+              <button class="btn-percent" data-percent="50">50%</button>
+              <button class="btn-percent" data-percent="75">75%</button>
+              <button class="btn-percent active" data-percent="100">MAX</button>
+            </div>
+          </div>
+
+          <button class="btn-primary stake-btn" data-pool="1" disabled>
+            Stake for 90 Days (35% APY)
+          </button>
+
+          <!-- Estimated Rewards -->
+          <div class="estimated-rewards">
+            <div style="color:var(--muted);font-size:12px">Estimated Rewards</div>
+            <div style="font-weight:600;color:var(--accent)" id="pool1Rewards">0 VANS</div>
+          </div>
+        </div>
+
+        <!-- 6 MONTH POOL -->
+        <div class="pool-card" data-pool="2">
+          <div class="pool-header">
+            <div class="pool-tokens">
+              <img src="https://vanswap.xyz/assets/vans.png" class="token-logo" alt="VANS">
+              <img src="https://vanswap.xyz/assets/vana.png" class="token-logo" alt="VANA">
+              <div class="token-symbol">6 Month Lock</div>
+            </div>
+            <div class="pool-apy">55% APY</div>
+          </div>
+
+          <div class="pool-stats">
+            <div class="stat-item">
+              <div class="stat-label">Min Stake</div>
+              <div class="stat-value">10,000 VANS / 1 VANA</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Lock Period</div>
+              <div class="stat-value">180 Days</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Staked</div>
+              <div class="stat-value" id="pool2Total">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Your Stake</div>
+              <div class="stat-value" id="yourPool2">0</div>
+            </div>
+          </div>
+
+          <!-- Token Selection -->
+          <div class="token-selection">
+            <button class="token-btn active" data-token="vans" data-pool="2">Stake VANS</button>
+            <button class="token-btn" data-token="vana" data-pool="2">Stake VANA</button>
+          </div>
+
+          <!-- Stake Input -->
+          <div class="stake-input-group">
+            <div class="input-head">
+              <div class="label">Stake Amount</div>
+              <div class="balance">
+                <span id="pool2Balance">Balance: —</span>
+              </div>
+            </div>
+
+            <input type="number" id="pool2Amount" class="amount-input" placeholder="0.0" min="0" step="0.1">
+
+            <div class="input-actions">
+              <button class="btn-percent" data-percent="25">25%</button>
+              <button class="btn-percent" data-percent="50">50%</button>
+              <button class="btn-percent" data-percent="75">75%</button>
+              <button class="btn-percent active" data-percent="100">MAX</button>
+            </div>
+          </div>
+
+          <button class="btn-primary stake-btn" data-pool="2" disabled>
+            Stake for 180 Days (55% APY)
+          </button>
+
+          <!-- Estimated Rewards -->
+          <div class="estimated-rewards">
+            <div style="color:var(--muted);font-size:12px">Estimated Rewards</div>
+            <div style="font-weight:600;color:var(--accent)" id="pool2Rewards">0 VANS</div>
+          </div>
+        </div>
+
+        <!-- 12 MONTH POOL -->
+        <div class="pool-card" data-pool="3">
+          <div class="pool-header">
+            <div class="pool-tokens">
+              <img src="https://vanswap.xyz/assets/vans.png" class="token-logo" alt="VANS">
+              <img src="https://vanswap.xyz/assets/vana.png" class="token-logo" alt="VANA">
+              <div class="token-symbol">12 Month Lock</div>
+            </div>
+            <div class="pool-apy">85% APY</div>
+          </div>
+
+          <div class="pool-stats">
+            <div class="stat-item">
+              <div class="stat-label">Min Stake</div>
+              <div class="stat-value">10,000 VANS / 1 VANA</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Lock Period</div>
+              <div class="stat-value">365 Days</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Staked</div>
+              <div class="stat-value" id="pool3Total">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Your Stake</div>
+              <div class="stat-value" id="yourPool3">0</div>
+            </div>
+          </div>
+
+          <!-- Token Selection -->
+          <div class="token-selection">
+            <button class="token-btn active" data-token="vans" data-pool="3">Stake VANS</button>
+            <button class="token-btn" data-token="vana" data-pool="3">Stake VANA</button>
+          </div>
+
+          <!-- Stake Input -->
+          <div class="stake-input-group">
+            <div class="input-head">
+              <div class="label">Stake Amount</div>
+              <div class="balance">
+                <span id="pool3Balance">Balance: —</span>
+              </div>
+            </div>
+
+            <input type="number" id="pool3Amount" class="amount-input" placeholder="0.0" min="0" step="0.1">
+
+            <div class="input-actions">
+              <button class="btn-percent" data-percent="25">25%</button>
+              <button class="btn-percent" data-percent="50">50%</button>
+              <button class="btn-percent" data-percent="75">75%</button>
+              <button class="btn-percent active" data-percent="100">MAX</button>
+            </div>
+          </div>
+
+          <button class="btn-primary stake-btn" data-pool="3" disabled>
+            Stake for 365 Days (85% APY)
+          </button>
+
+          <!-- Estimated Rewards -->
+          <div class="estimated-rewards">
+            <div style="color:var(--muted);font-size:12px">Estimated Rewards</div>
+            <div style="font-weight:600;color:var(--accent)" id="pool3Rewards">0 VANS</div>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status">
+          <div id="stakeStatus">Connect wallet to start staking</div>
+          <div id="txLink" class="tx-link"></div>
+        </div>
+      </section>
+
+      <!-- MY STAKES PANEL -->
+      <aside class="stakes-panel" aria-label="My staking positions">
+        <h4 style="font-size:18px;font-weight:700;margin-bottom:16px">My Staking Positions</h4>
+
+        <div id="noStakes" style="text-align:center;padding:40px 20px;color:var(--muted)">
+          <div style="font-size:48px;margin-bottom:12px">📊</div>
+          <div>No active staking positions</div>
+          <div style="font-size:12px;margin-top:8px">Stake tokens to start earning rewards</div>
+        </div>
+
+        <div id="stakesList" class="stakes-list" style="display:none">
+          <!-- Dynamic stake items will appear here -->
+        </div>
+
+        <!-- REWARDS SUMMARY -->
+        <div class="rewards-summary">
+          <h5 style="font-weight:600;margin-bottom:12px">Rewards Summary</h5>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div style="color:var(--muted);font-size:13px">Total Rewards Earned</div>
+            <div style="font-weight:700" id="totalRewards">0 VANS</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <div style="color:var(--muted);font-size:13px">Available to Claim</div>
+            <div style="color:var(--accent);font-weight:700" id="claimableRewards">0 VANS</div>
+          </div>
+          <button id="claimAllBtn" class="btn-primary" disabled>
+            Claim All Rewards
+          </button>
+        </div>
+
+        <!-- UNSTAKE ALL -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05)">
+          <button id="unstakeAllBtn" class="btn-secondary" style="width:100%" disabled>
+            Unstake All Available
+          </button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+    // CONFIGURATION - REAL CONTRACT ADDRESSES
+    const STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
+    const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+
+    // Vana Chain Configuration
+    const VANA_CHAIN = {
+      chainId: '0x5c8',
+      chainName: 'Vana Chain',
+      nativeCurrency: {
+        name: 'VANA',
+        symbol: 'VANA',
+        decimals: 18
+      },
+      rpcUrls: ['https://rpc.vana.org/'],
+      blockExplorerUrls: ['https://vanascan.io/']
+    };
+
+    // ABI - Real functions dari kontrak stake
+    const STAKING_ABI = [
+      'function stakeVana(uint8 poolId) payable',
+      'function stakeVans(uint256 amount, uint8 poolId)',
+      'function unstake(uint256 stakeIndex)',
+      'function claimRewards(uint256 stakeIndex)',
+      'function claimAllRewards()',
+      'function getUserStakes(address user) view returns (tuple(uint256 amount, uint256 stakeTime, uint256 unlockTime, uint256 rewardDebt, bool isVana, uint8 poolId, bool unstaked, bool rewardsClaimed)[])',
+      'function getClaimableRewards(address user) view returns (uint256)',
+      'function pools(uint256) view returns (uint256 lockPeriod, uint256 apy, uint256 minVansStake, uint256 minVanaStake, uint256 maxVansStake, uint256 maxVanaStake, uint256 totalStaked, bool active)',
+      'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)'
+    ];
+
+    const ERC20_ABI = [
+      'function balanceOf(address) view returns (uint256)',
+      'function transfer(address,uint256) returns (bool)',
+      'function approve(address,uint256) returns (bool)',
+      'function transferFrom(address,address,uint256) returns (bool)',
+      'function decimals() view returns (uint8)'
+    ];
+
+    // STATE
+    let provider = null;
+    let signer = null;
+    let account = null;
+    let stakingContract = null;
+    let vansToken = null;
+
+    // Pool configuration
+    const POOLS = [
+      { id: 0, name: '1 Month', apy: 15, lockDays: 30, minVans: 10000, minVana: 1 },
+      { id: 1, name: '3 Month', apy: 35, lockDays: 90, minVans: 10000, minVana: 1 },
+      { id: 2, name: '6 Month', apy: 55, lockDays: 180, minVans: 10000, minVana: 1 },
+      { id: 3, name: '12 Month', apy: 85, lockDays: 365, minVans: 10000, minVana: 1 }
+    ];
+
+    // Konstanta konversi VANA ke VANS
+    const VANA_TO_VANS_RATE = 10000; // 1 VANA = 10,000 VANS
+
+    const $ = id => document.getElementById(id);
+
+    // INITIALIZATION
+    async function init() {
+      setupEventListeners();
+      await checkNetwork();
+      await connectWallet();
+    }
+
+    // CHECK NETWORK - AUTO SWITCH TO VANA CHAIN
+    async function checkNetwork() {
+      if (typeof window.ethereum === 'undefined') {
+        return;
+      }
+
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        
+        if (chainId !== VANA_CHAIN.chainId) {
+          // Show network alert
+          $('networkAlert').style.display = 'block';
+          
+          // Try to switch network automatically
+          await switchToVanaChain();
+        } else {
+          $('networkAlert').style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Network check failed:', error);
+      }
+    }
+
+    // SWITCH TO VANA CHAIN
+    async function switchToVanaChain() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: VANA_CHAIN.chainId }],
+        });
+        $('networkAlert').style.display = 'none';
+        return true;
+      } catch (switchError) {
+        // This error code indicates that the chain has not been added to MetaMask
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [VANA_CHAIN],
+            });
+            $('networkAlert').style.display = 'none';
+            return true;
+          } catch (addError) {
+            console.error('Failed to add Vana Chain:', addError);
+            $('stakeStatus').textContent = 'Please add Vana Chain manually';
+            return false;
+          }
+        } else {
+          console.error('Failed to switch to Vana Chain:', switchError);
+          $('stakeStatus').textContent = 'Please switch to Vana Chain manually';
+          return false;
+        }
+      }
+    }
+
+    // WALLET CONNECTION
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask or another Web3 wallet!');
+        $('stakeStatus').textContent = 'Web3 wallet not found';
+        return;
+      }
+
+      try {
+        // Check network first
+        await checkNetwork();
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        // Cek apakah sudah ada koneksi
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          // Sudah terkoneksi, gunakan akun yang sudah ada
+          signer = provider.getSigner();
+          account = accounts[0];
+        } else {
+          // Minta koneksi wallet
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          account = await signer.getAddress();
+        }
+
+        stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
+        vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+
+        $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
+        $('stakeStatus').textContent = 'Connected - Loading data...';
+
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Connection failed:', error);
+        if (error.code === 4001) {
+          $('stakeStatus').textContent = 'Connection rejected by user';
+        } else {
+          $('stakeStatus').textContent = 'Connection failed: ' + error.message;
+        }
+      }
+    }
+
+    // LOAD USER DATA
+    async function loadUserData() {
+      try {
+        // Load balances
+        await loadBalances();
+
+        // Load user stakes
+        await loadUserStakes();
+
+        // Load pool totals
+        await loadPoolTotals();
+
+        $('stakeStatus').textContent = 'Ready to stake';
+
+      } catch (error) {
+        console.error('Load data failed:', error);
+        $('stakeStatus').textContent = 'Failed to load data: ' + error.message;
+      }
+    }
+
+    // LOAD BALANCES
+    async function loadBalances() {
+      try {
+        const vanaBalance = await provider.getBalance(account);
+        const vansBalance = await vansToken.balanceOf(account);
+
+        // Update balance displays for all pools
+        for (let i = 0; i < 4; i++) {
+          $(`pool${i}Balance`).textContent = `VANA: ${formatEther(vanaBalance)} | VANS: ${formatEther(vansBalance)}`;
+        }
+
+      } catch (error) {
+        console.error('Load balances failed:', error);
+      }
+    }
+
+    // LOAD USER STAKES
+    async function loadUserStakes() {
+      try {
+        const userStakes = await stakingContract.getUserStakes(account);
+
+        if (userStakes.length === 0) {
+          $('noStakes').style.display = 'block';
+          $('stakesList').style.display = 'none';
+          $('claimAllBtn').disabled = true;
+          $('unstakeAllBtn').disabled = true;
+          return;
+        }
+
+        $('noStakes').style.display = 'none';
+        $('stakesList').style.display = 'block';
+
+        let totalClaimable = 0;
+        const stakesList = $('stakesList');
+        stakesList.innerHTML = '';
+
+        userStakes.forEach((stake, index) => {
+          if (!stake.unstaked) {
+            const unlockDate = new Date(stake.unlockTime * 1000);
+            const now = new Date();
+            const isUnlocked = now >= unlockDate;
+
+            const stakeItem = document.createElement('div');
+            stakeItem.className = 'stake-item';
+            stakeItem.innerHTML = `
+              <div class="stake-header">
+                <div class="stake-amount">${formatEther(stake.amount)} ${stake.isVana ? 'VANA' : 'VANS'}</div>
+                <div class="stake-rewards">+${formatEther(stake.rewardDebt)} VANS</div>
+              </div>
+              <div class="stake-meta">
+                <div>Pool: ${POOLS[stake.poolId].name}</div>
+                <div>${isUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</div>
+              </div>
+              <div class="stake-meta">
+                <div>Unlock: ${unlockDate.toLocaleDateString()}</div>
+                <div style="display:flex;gap:4px">
+                  ${isUnlocked ? `<button class="action-btn btn-primary" onclick="unstake(${index})">Unstake</button>` : ''}
+                  ${isUnlocked && !stake.rewardsClaimed ? `<button class="action-btn btn-secondary" onclick="claimRewards(${index})">Claim</button>` : ''}
+                </div>
+              </div>
+            `;
+            stakesList.appendChild(stakeItem);
+
+            if (isUnlocked && !stake.rewardsClaimed) {
+              totalClaimable += parseFloat(ethers.utils.formatEther(stake.rewardDebt));
+            }
+          }
+        });
+
+        // Update rewards summary
+        $('claimableRewards').textContent = totalClaimable.toFixed(4) + ' VANS';
+        $('claimAllBtn').disabled = totalClaimable === 0;
+
+        // Check if any stakes are unlocked for unstake all
+        const hasUnlocked = userStakes.some(stake => 
+          !stake.unstaked && (new Date()) >= (new Date(stake.unlockTime * 1000))
+        );
+        $('unstakeAllBtn').disabled = !hasUnlocked;
+
+        // Update "Your Stake" in pool cards
+        updateYourStakesDisplay(userStakes);
+
+      } catch (error) {
+        console.error('Load user stakes failed:', error);
+      }
+    }
+
+    // LOAD POOL TOTALS
+    async function loadPoolTotals() {
+      try {
+        for (let i = 0; i < 4; i++) {
+          const poolInfo = await stakingContract.pools(i);
+          $(`pool${i}Total`).textContent = formatEther(poolInfo.totalStaked);
+        }
+      } catch (error) {
+        console.error('Load pool totals failed:', error);
+      }
+    }
+
+    // UPDATE YOUR STAKES DISPLAY
+    function updateYourStakesDisplay(userStakes) {
+      const yourStakes = [0, 0, 0, 0];
+
+      userStakes.forEach(stake => {
+        if (!stake.unstaked) {
+          yourStakes[stake.poolId] += parseFloat(ethers.utils.formatEther(stake.amount));
+        }
+      });
+
+      for (let i = 0; i < 4; i++) {
+        $(`yourPool${i}`).textContent = yourStakes[i].toFixed(4);
+      }
+    }
+
+    // STAKE TOKENS
+    async function stakeTokens(poolId) {
+      if (!account) {
+        await connectWallet();
+        return;
+      }
+
+      // Check network before staking
+      await checkNetwork();
+
+      const amountInput = $(`pool${poolId}Amount`);
+      const amount = amountInput.value;
+      const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${poolId}"]`);
+      const tokenType = tokenBtn.dataset.token;
+
+      if (!amount || parseFloat(amount) <= 0) {
+        alert('Please enter amount to stake');
+        return;
+      }
+
+      const pool = POOLS[poolId];
+      const minStake = tokenType === 'vans' ? pool.minVans : pool.minVana;
+
+      if (parseFloat(amount) < minStake) {
+        alert(`Minimum stake for ${pool.name} is ${minStake} ${tokenType.toUpperCase()}`);
+        return;
+      }
+
+      try {
+        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+        stakeBtn.disabled = true;
+        stakeBtn.innerHTML = '<span class="spinner"></span>Staking...';
+        $('stakeStatus').textContent = 'Processing stake...';
+
+        const amountWei = ethers.utils.parseEther(amount);
+        let tx;
+
+        if (tokenType === 'vana') {
+          tx = await stakingContract.stakeVana(poolId, { value: amountWei });
+        } else {
+          // Approve VANS first if needed
+          const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+          if (allowance.lt(amountWei)) {
+            $('stakeStatus').textContent = 'Approving VANS...';
+            const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+            await approveTx.wait();
+          }
+
+          tx = await stakingContract.stakeVans(amountWei, poolId);
+        }
+
+        $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+        $('stakeStatus').textContent = 'Transaction submitted...';
+
+        await tx.wait();
+
+        $('stakeStatus').textContent = 'Stake successful!';
+        amountInput.value = '';
+
+        // Reload data
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Stake failed:', error);
+        $('stakeStatus').textContent = 'Stake failed: ' + (error.reason || error.message);
+      } finally {
+        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+        stakeBtn.disabled = false;
+        stakeBtn.textContent = `Stake for ${POOLS[poolId].lockDays} Days (${POOLS[poolId].apy}% APY)`;
+      }
+    }
+
+    // UNSTAKE
+    async function unstake(stakeIndex) {
+      try {
+        $('stakeStatus').innerHTML = '<span class="spinner"></span>Unstaking...';
+
+        const tx = await stakingContract.unstake(stakeIndex);
+
+        $('stakeStatus').textContent = 'Unstaking...';
+        await tx.wait();
+
+        $('stakeStatus').textContent = 'Unstake successful!';
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Unstake failed:', error);
+        $('stakeStatus').textContent = 'Unstake failed: ' + error.message;
+      }
+    }
+
+    // CLAIM REWARDS
+    async function claimRewards(stakeIndex) {
+      try {
+        $('stakeStatus').innerHTML = '<span class="spinner"></span>Claiming rewards...';
+
+        const tx = await stakingContract.claimRewards(stakeIndex);
+
+        $('stakeStatus').textContent = 'Claiming rewards...';
+        await tx.wait();
+
+        $('stakeStatus').textContent = 'Rewards claimed successfully!';
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Claim rewards failed:', error);
+        $('stakeStatus').textContent = 'Claim failed: ' + error.message;
+      }
+    }
+
+    // CLAIM ALL REWARDS
+    async function claimAllRewards() {
+      try {
+        $('claimAllBtn').disabled = true;
+        $('claimAllBtn').innerHTML = '<span class="spinner"></span>Claiming All...';
+        $('stakeStatus').textContent = 'Claiming all rewards...';
+
+        const tx = await stakingContract.claimAllRewards();
+
+        $('stakeStatus').textContent = 'Claiming all rewards...';
+        await tx.wait();
+
+        $('stakeStatus').textContent = 'All rewards claimed successfully!';
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Claim all rewards failed:', error);
+        $('stakeStatus').textContent = 'Claim all failed: ' + error.message;
+      } finally {
+        $('claimAllBtn').disabled = false;
+        $('claimAllBtn').textContent = 'Claim All Rewards';
+      }
+    }
+
+    // UNSTAKE ALL AVAILABLE
+    async function unstakeAllAvailable() {
+      try {
+        $('unstakeAllBtn').disabled = true;
+        $('unstakeAllBtn').innerHTML = '<span class="spinner"></span>Unstaking All...';
+        $('stakeStatus').textContent = 'Unstaking all available...';
+
+        // Get user stakes to find unlocked ones
+        const userStakes = await stakingContract.getUserStakes(account);
+        const now = Math.floor(Date.now() / 1000);
+
+        // Unstake all unlocked positions
+        for (let i = 0; i < userStakes.length; i++) {
+          if (!userStakes[i].unstaked && userStakes[i].unlockTime <= now) {
+            const tx = await stakingContract.unstake(i);
+            await tx.wait();
+          }
+        }
+
+        $('stakeStatus').textContent = 'All available positions unstaked!';
+        await loadUserData();
+
+      } catch (error) {
+        console.error('Unstake all failed:', error);
+        $('stakeStatus').textContent = 'Unstake all failed: ' + error.message;
+      } finally {
+        $('unstakeAllBtn').disabled = false;
+        $('unstakeAllBtn').textContent = 'Unstake All Available';
+      }
+    }
+
+    // CALCULATE ESTIMATED REWARDS - PERBAIKAN DI SINI
+    function calculateEstimatedRewards(amount, poolId, tokenType) {
+      if (!amount || amount <= 0) return 0;
+
+      const pool = POOLS[poolId];
+      
+      // Konversi VANA ke VANS untuk perhitungan reward
+      let amountInVans = amount;
+      if (tokenType === 'vana') {
+        amountInVans = amount * VANA_TO_VANS_RATE; // 1 VANA = 10,000 VANS
+      }
+      
+      const annualReward = amountInVans * (pool.apy / 100);
+      const lockReward = annualReward * (pool.lockDays / 365);
+
+      return lockReward.toFixed(6);
+    }
+
+    // UPDATE ESTIMATED REWARDS DISPLAY - PERBAIKAN DI SINI
+    function updateEstimatedRewards() {
+      for (let i = 0; i < 4; i++) {
+        const amount = $(`pool${i}Amount`).value;
+        const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${i}"]`);
+        const tokenType = tokenBtn ? tokenBtn.dataset.token : 'vans';
+
+        if (amount && parseFloat(amount) > 0) {
+          const estimated = calculateEstimatedRewards(parseFloat(amount), i, tokenType);
+          $(`pool${i}Rewards`).textContent = estimated + ' VANS';
+        } else {
+          $(`pool${i}Rewards`).textContent = '0 VANS';
+        }
+      }
+    }
+
+    // SET MAX AMOUNT
+    async function setMaxAmount(poolId, percent = 1) {
+      if (!account) return;
+
+      try {
+        const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${poolId}"]`);
+        const tokenType = tokenBtn.dataset.token;
+
+        let balance;
+        if (tokenType === 'vana') {
+          balance = await provider.getBalance(account);
+        } else {
+          balance = await vansToken.balanceOf(account);
+        }
+
+        const balanceFormatted = parseFloat(ethers.utils.formatEther(balance));
+        const maxAmount = balanceFormatted * percent;
+        $(`pool${poolId}Amount`).value = maxAmount.toFixed(6);
+
+        updateEstimatedRewards();
+        updateStakeButtonState(poolId);
+
+      } catch (error) {
+        console.error('Set max amount failed:', error);
+      }
+    }
+
+    // UPDATE STAKE BUTTON STATE
+    function updateStakeButtonState(poolId) {
+      const amount = $(`pool${poolId}Amount`).value;
+
+      if (amount && parseFloat(amount) > 0) {
+        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+        stakeBtn.disabled = false;
+      } else {
+        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+        stakeBtn.disabled = true;
+      }
+    }
+
+    // UTILITY FUNCTIONS
+    function formatEther(wei) {
+      return parseFloat(ethers.utils.formatEther(wei)).toFixed(4);
+    }
+
+    // EVENT LISTENERS SETUP
+    function setupEventListeners() {
+      // Menu
+      const menuBtn = $('menuBtn');
+      const menuDropdown = $('menuDropdown');
+      menuBtn.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        menuDropdown.classList.toggle('show'); 
+      });
+      menuDropdown.querySelectorAll('.menu-item').forEach(it => { 
+        it.addEventListener('click', () => { 
+          const href = it.getAttribute('data-href');
+          if (href) window.location.href = href;
+        }); 
+      });
+      document.addEventListener('click', () => menuDropdown.classList.remove('show'));
+
+      // Connect button
+      $('connectBtn').addEventListener('click', connectWallet);
+
+      // Switch network button
+      $('switchNetworkBtn').addEventListener('click', switchToVanaChain);
+
+      // Token selection buttons
+      document.querySelectorAll('.token-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const poolId = this.dataset.pool;
+          // Remove active class from all buttons in this pool
+          document.querySelectorAll(`.token-btn[data-pool="${poolId}"]`).forEach(b => b.classList.remove('active'));
+          // Add active class to clicked button
+          this.classList.add('active');
+          updateEstimatedRewards();
+        });
+      });
+
+      // Percentage buttons
+      document.querySelectorAll('.btn-percent').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const poolCard = this.closest('.pool-card');
+          const poolId = poolCard.dataset.pool;
+          const percent = parseFloat(this.dataset.percent) / 100;
+
+          // Remove active class from all percentage buttons in this pool
+          this.closest('.input-actions').querySelectorAll('.btn-percent').forEach(b => b.classList.remove('active'));
+          // Add active class to clicked button
+          this.classList.add('active');
+
+          setMaxAmount(parseInt(poolId), percent);
+        });
+      });
+
+      // Amount input events
+      for (let i = 0; i < 4; i++) {
+        $(`pool${i}Amount`).addEventListener('input', () => {
+          updateEstimatedRewards();
+          updateStakeButtonState(i);
+        });
+      }
+
+      // Balance click to set max
+      for (let i = 0; i < 4; i++) {
+        $(`pool${i}Balance`).addEventListener('click', () => setMaxAmount(i));
+      }
+
+      // Stake buttons
+      document.querySelectorAll('.stake-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const poolId = this.dataset.pool;
+          stakeTokens(parseInt(poolId));
+        });
+      });
+
+      // Claim all button
+      $('claimAllBtn').addEventListener('click', claimAllRewards);
+
+      // Unstake all button
+      $('unstakeAllBtn').addEventListener('click', unstakeAllAvailable);
+
+      // Handle wallet changes
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            // User disconnected wallet
+            location.reload();
+          } else {
+            // User switched accounts
+            location.reload();
+          }
+        });
+
+        window.ethereum.on('chainChanged', () => {
+          location.reload();
+        });
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
