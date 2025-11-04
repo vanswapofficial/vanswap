@@ -9,6 +9,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract VANSPresale is ReentrancyGuard, Ownable {
     using SafeMath for uint256;
 
+    // Hardcoded addresses
+    address public constant VANS_TOKEN = 0x82741ff5937933244eb562A4b396f8079F1de914;
+    address public constant WALLET_OWNER = 0xDa70b3F5427dFFb363Fe43e24e452b18C819a651;
+
     // Token information
     IERC20 public vansToken;
     uint256 public constant TOTAL_SUPPLY = 120_000_000 * 10**18; // 120 juta VANS
@@ -32,6 +36,7 @@ contract VANSPresale is ReentrancyGuard, Ownable {
     bool public presaleFinalized;
     bool public softCapReached;
     bool public presaleStarted;
+    bool public hardCapReached;
 
     // Vesting configuration
     uint256 public constant CLIFF_DURATION = 2 weeks;
@@ -59,10 +64,11 @@ contract VANSPresale is ReentrancyGuard, Ownable {
     event RefundClaimed(address indexed refundee, uint256 amount);
     event PresaleFinalized(bool success, uint256 totalRaised);
     event FundsWithdrawn(address indexed owner, uint256 amount);
+    event HardCapReached(uint256 totalRaised, uint256 timestamp);
+    event PresaleEndedEarly(uint256 totalRaised, uint256 timestamp);
 
-    constructor(address _vansToken) {
-        require(_vansToken != address(0), "Invalid token address");
-        vansToken = IERC20(_vansToken);
+    constructor() Ownable(WALLET_OWNER) {
+        vansToken = IERC20(VANS_TOKEN);
     }
 
     // Modifiers
@@ -71,12 +77,13 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         require(block.timestamp >= startTime, "Presale not started yet");
         require(block.timestamp <= endTime, "Presale ended");
         require(!presaleFinalized, "Presale finalized");
+        require(!hardCapReached, "Hard cap reached");
         _;
     }
 
     modifier presaleEnded() {
         require(presaleStarted, "Presale not started");
-        require(block.timestamp > endTime || presaleFinalized, "Presale not ended");
+        require(block.timestamp > endTime || presaleFinalized || hardCapReached, "Presale not ended");
         _;
     }
 
@@ -89,18 +96,19 @@ contract VANSPresale is ReentrancyGuard, Ownable {
     function startPresale() external onlyOwner {
         require(!presaleStarted, "Presale already started");
         
-        // Check if contract has enough VANS tokens
-        uint256 ownerBalance = vansToken.balanceOf(owner());
+        // Check if owner has enough VANS tokens
+        uint256 ownerBalance = vansToken.balanceOf(WALLET_OWNER);
         require(ownerBalance >= PRESALE_TOKENS, "Owner doesn't have enough VANS tokens");
         
         presaleStarted = true;
         startTime = block.timestamp;
         endTime = block.timestamp + PRESALE_DURATION;
+        hardCapReached = false;
 
         emit PresaleStarted(startTime, endTime);
     }
 
-    // Buy tokens with VANA
+    // Buy tokens with VANA - with auto-end when hardcap reached
     function buyTokens() external payable presaleActive nonReentrant {
         require(msg.value >= MIN_CONTRIBUTION, "Contribution too low");
         require(msg.value <= MAX_CONTRIBUTION, "Contribution too high");
@@ -131,6 +139,14 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         // Check if soft cap is reached
         if (!softCapReached && totalRaised >= SOFT_CAP_VANA) {
             softCapReached = true;
+        }
+
+        // Check if hard cap is reached - AUTO END PRESALE
+        if (totalRaised >= HARD_CAP_VANA) {
+            hardCapReached = true;
+            endTime = block.timestamp; // End presale immediately
+            emit HardCapReached(totalRaised, block.timestamp);
+            emit PresaleEndedEarly(totalRaised, block.timestamp);
         }
 
         emit TokensPurchased(msg.sender, msg.value, tokensToAllocate);
@@ -188,33 +204,44 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         emit RefundClaimed(msg.sender, refundAmount);
     }
 
-    // Finalize presale - only owner
+    // Finalize presale - only owner (with auto VANA withdrawal to owner)
     function finalizePresale() external onlyOwner presaleEnded {
         require(!presaleFinalized, "Presale already finalized");
 
         presaleFinalized = true;
 
+        // Auto withdraw VANA to owner wallet if soft cap reached
         if (softCapReached) {
-            // Transfer raised funds to owner
             uint256 raisedAmount = address(this).balance;
             if (raisedAmount > 0) {
-                (bool success, ) = payable(owner()).call{value: raisedAmount}("");
-                require(success, "Funds transfer failed");
+                (bool success, ) = payable(WALLET_OWNER).call{value: raisedAmount}("");
+                require(success, "Funds transfer to owner failed");
             }
 
             // Transfer VANS tokens to contract for distribution
             uint256 tokensToTransfer = PRESALE_TOKENS;
-            bool tokenSuccess = vansToken.transferFrom(owner(), address(this), tokensToTransfer);
+            bool tokenSuccess = vansToken.transferFrom(WALLET_OWNER, address(this), tokensToTransfer);
             require(tokenSuccess, "Token transfer to contract failed");
         }
 
         emit PresaleFinalized(softCapReached, totalRaised);
     }
 
+    // Manual VANA withdrawal to owner (if needed)
+    function withdrawToOwner() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        
+        (bool success, ) = payable(WALLET_OWNER).call{value: balance}("");
+        require(success, "Withdrawal to owner failed");
+        
+        emit FundsWithdrawn(WALLET_OWNER, balance);
+    }
+
     // Add VANS tokens to contract manually (if needed)
     function addTokensToContract(uint256 amount) external onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
-        bool success = vansToken.transferFrom(owner(), address(this), amount);
+        bool success = vansToken.transferFrom(WALLET_OWNER, address(this), amount);
         require(success, "Token transfer failed");
     }
 
@@ -225,14 +252,14 @@ contract VANSPresale is ReentrancyGuard, Ownable {
 
         uint256 balance = address(this).balance;
         if (balance > 0) {
-            (bool success, ) = payable(owner()).call{value: balance}("");
+            (bool success, ) = payable(WALLET_OWNER).call{value: balance}("");
             require(success, "Emergency withdraw failed");
         }
 
         // Return any VANS tokens to owner
         uint256 tokenBalance = vansToken.balanceOf(address(this));
         if (tokenBalance > 0) {
-            vansToken.transfer(owner(), tokenBalance);
+            vansToken.transfer(WALLET_OWNER, tokenBalance);
         }
     }
 
@@ -336,16 +363,18 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         bool _isFinalized,
         bool _softCapReached,
         bool _isStarted,
+        bool _hardCapReached,
         uint256 _timeRemaining,
         uint256 _contractTokenBalance
     ) {
         _totalRaised = totalRaised;
         _participants = participantAddresses.length;
         _isStarted = presaleStarted;
-        _isActive = (presaleStarted && block.timestamp >= startTime && block.timestamp <= endTime && !presaleFinalized);
+        _isActive = (presaleStarted && block.timestamp >= startTime && block.timestamp <= endTime && !presaleFinalized && !hardCapReached);
         _isFinalized = presaleFinalized;
         _softCapReached = softCapReached;
-        _timeRemaining = presaleStarted && block.timestamp < endTime ? endTime - block.timestamp : 0;
+        _hardCapReached = hardCapReached;
+        _timeRemaining = presaleStarted && block.timestamp < endTime && !hardCapReached ? endTime - block.timestamp : 0;
         _contractTokenBalance = vansToken.balanceOf(address(this));
     }
 
