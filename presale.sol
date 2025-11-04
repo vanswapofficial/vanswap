@@ -23,7 +23,7 @@ contract VANSPresale is ReentrancyGuard, Ownable {
     uint256 public constant PRESALE_DURATION = 90 days; // 3 BULAN
 
     // Price calculation: 1 VANA = ? VANS
-    uint256 public constant TOKENS_PER_VANA = PRESALE_TOKENS / HARD_CAP_VANA; // ~10,000 VANS per VANA
+    uint256 public constant TOKENS_PER_VANA = PRESALE_TOKENS / HARD_CAP_VANA; // 10,000 VANS per VANA
 
     // Presale state
     uint256 public totalRaised;
@@ -61,25 +61,38 @@ contract VANSPresale is ReentrancyGuard, Ownable {
     event FundsWithdrawn(address indexed owner, uint256 amount);
 
     constructor(address _vansToken) {
+        require(_vansToken != address(0), "Invalid token address");
         vansToken = IERC20(_vansToken);
     }
 
     // Modifiers
     modifier presaleActive() {
         require(presaleStarted, "Presale not started");
-        require(block.timestamp >= startTime && block.timestamp <= endTime, "Presale not active");
-        require(!presaleFinalized, "Presale already finalized");
+        require(block.timestamp >= startTime, "Presale not started yet");
+        require(block.timestamp <= endTime, "Presale ended");
+        require(!presaleFinalized, "Presale finalized");
         _;
     }
 
     modifier presaleEnded() {
-        require(presaleStarted && (block.timestamp > endTime || presaleFinalized), "Presale not ended");
+        require(presaleStarted, "Presale not started");
+        require(block.timestamp > endTime || presaleFinalized, "Presale not ended");
+        _;
+    }
+
+    modifier onlyParticipant() {
+        require(participants[msg.sender].contributed > 0, "Not a participant");
         _;
     }
 
     // Start presale function - only owner
     function startPresale() external onlyOwner {
         require(!presaleStarted, "Presale already started");
+        
+        // Check if contract has enough VANS tokens
+        uint256 ownerBalance = vansToken.balanceOf(owner());
+        require(ownerBalance >= PRESALE_TOKENS, "Owner doesn't have enough VANS tokens");
+        
         presaleStarted = true;
         startTime = block.timestamp;
         endTime = block.timestamp + PRESALE_DURATION;
@@ -95,17 +108,21 @@ contract VANSPresale is ReentrancyGuard, Ownable {
 
         Participant storage participant = participants[msg.sender];
         
-        // Check if address is contributing for the first time
+        // Check total contribution per address
+        uint256 newContribution = participant.contributed + msg.value;
+        require(newContribution <= MAX_CONTRIBUTION, "Max contribution per address exceeded");
+
+        // Calculate tokens to allocate
+        uint256 tokensToAllocate = calculateTokens(msg.value);
+        require(tokensToAllocate > 0, "Token calculation error");
+
+        // First time contributor
         if (participant.contributed == 0) {
             participantAddresses.push(msg.sender);
         }
 
         // Update participant info
-        participant.contributed += msg.value;
-        require(participant.contributed <= MAX_CONTRIBUTION, "Max contribution per address exceeded");
-
-        // Calculate tokens to allocate
-        uint256 tokensToAllocate = msg.value * TOKENS_PER_VANA;
+        participant.contributed = newContribution;
         participant.tokensBought += tokensToAllocate;
 
         // Update total raised
@@ -119,43 +136,51 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         emit TokensPurchased(msg.sender, msg.value, tokensToAllocate);
     }
 
-    // Receive function to accept VANA - HARUS DIBAWAH buyTokens()
-    receive() external payable {
-        buyTokens();
+    // Calculate tokens based on VANA amount
+    function calculateTokens(uint256 vanaAmount) public pure returns (uint256) {
+        return vanaAmount * TOKENS_PER_VANA;
     }
 
     // Claim tokens after presale
-    function claimTokens() external presaleEnded nonReentrant {
+    function claimTokens() external presaleEnded nonReentrant onlyParticipant {
         require(presaleFinalized, "Presale not finalized");
         require(softCapReached, "Soft cap not reached - use refund instead");
-        require(!participants[msg.sender].refunded, "Already refunded");
-
+        
         Participant storage participant = participants[msg.sender];
+        require(!participant.refunded, "Already refunded");
         require(participant.tokensBought > 0, "No tokens to claim");
         require(participant.tokensClaimed < participant.tokensBought, "All tokens already claimed");
 
         uint256 claimableTokens = getClaimableTokens(msg.sender);
         require(claimableTokens > 0, "No tokens claimable at this time");
 
+        // Check contract token balance
+        uint256 contractBalance = vansToken.balanceOf(address(this));
+        require(contractBalance >= claimableTokens, "Insufficient tokens in contract");
+
         participant.tokensClaimed += claimableTokens;
         participant.lastClaimTime = block.timestamp;
 
-        require(vansToken.transfer(msg.sender, claimableTokens), "Token transfer failed");
+        bool success = vansToken.transfer(msg.sender, claimableTokens);
+        require(success, "Token transfer failed");
 
         emit TokensClaimed(msg.sender, claimableTokens);
     }
 
     // Claim refund if soft cap not reached
-    function claimRefund() external presaleEnded nonReentrant {
+    function claimRefund() external presaleEnded nonReentrant onlyParticipant {
         require(presaleFinalized, "Presale not finalized");
         require(!softCapReached, "Soft cap reached - claim tokens instead");
-        require(!participants[msg.sender].refunded, "Already refunded");
-
+        
         Participant storage participant = participants[msg.sender];
+        require(!participant.refunded, "Already refunded");
         require(participant.contributed > 0, "No contribution to refund");
 
         uint256 refundAmount = participant.contributed;
         participant.refunded = true;
+
+        // Check contract balance
+        require(address(this).balance >= refundAmount, "Insufficient contract balance");
 
         (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
         require(success, "Refund transfer failed");
@@ -172,14 +197,25 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         if (softCapReached) {
             // Transfer raised funds to owner
             uint256 raisedAmount = address(this).balance;
-            (bool success, ) = payable(owner()).call{value: raisedAmount}("");
-            require(success, "Funds transfer failed");
+            if (raisedAmount > 0) {
+                (bool success, ) = payable(owner()).call{value: raisedAmount}("");
+                require(success, "Funds transfer failed");
+            }
 
             // Transfer VANS tokens to contract for distribution
-            require(vansToken.transferFrom(owner(), address(this), PRESALE_TOKENS), "Token transfer failed");
+            uint256 tokensToTransfer = PRESALE_TOKENS;
+            bool tokenSuccess = vansToken.transferFrom(owner(), address(this), tokensToTransfer);
+            require(tokenSuccess, "Token transfer to contract failed");
         }
 
         emit PresaleFinalized(softCapReached, totalRaised);
+    }
+
+    // Add VANS tokens to contract manually (if needed)
+    function addTokensToContract(uint256 amount) external onlyOwner {
+        require(amount > 0, "Amount must be greater than 0");
+        bool success = vansToken.transferFrom(owner(), address(this), amount);
+        require(success, "Token transfer failed");
     }
 
     // Emergency withdraw if something goes wrong - only owner
@@ -188,8 +224,10 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         require(!presaleFinalized, "Presale already finalized");
 
         uint256 balance = address(this).balance;
-        (bool success, ) = payable(owner()).call{value: balance}("");
-        require(success, "Emergency withdraw failed");
+        if (balance > 0) {
+            (bool success, ) = payable(owner()).call{value: balance}("");
+            require(success, "Emergency withdraw failed");
+        }
 
         // Return any VANS tokens to owner
         uint256 tokenBalance = vansToken.balanceOf(address(this));
@@ -217,50 +255,44 @@ contract VANSPresale is ReentrancyGuard, Ownable {
             return 0;
         }
 
-        // Calculate cliff release (20%)
-        uint256 cliffTokens = participant.tokensBought * CLIFF_PERCENTAGE / 100;
+        // Calculate total claimable amount
+        uint256 totalClaimable = calculateTotalClaimable(participant);
+        uint256 alreadyClaimed = participant.tokensClaimed;
         
-        // If never claimed before, start with cliff tokens
-        if (participant.lastClaimTime == 0) {
-            uint256 vestingTokens = calculateVestingTokens(_participant, cliffEndTime);
-            return cliffTokens + vestingTokens;
+        if (totalClaimable <= alreadyClaimed) {
+            return 0;
         }
 
-        // Calculate vesting tokens since last claim
-        return calculateVestingTokens(_participant, participant.lastClaimTime);
+        return totalClaimable - alreadyClaimed;
     }
 
-    // Calculate vesting tokens
-    function calculateVestingTokens(address _participant, uint256 _fromTime) internal view returns (uint256) {
-        Participant memory participant = participants[_participant];
-        uint256 vestingStartTime = endTime + CLIFF_DURATION;
-        uint256 vestingEndTime = vestingStartTime + VESTING_DURATION;
+    // Calculate total claimable tokens (cliff + vesting)
+    function calculateTotalClaimable(Participant memory participant) internal view returns (uint256) {
+        uint256 cliffEndTime = endTime + CLIFF_DURATION;
+        uint256 vestingEndTime = cliffEndTime + VESTING_DURATION;
 
-        if (_fromTime < vestingStartTime) {
-            _fromTime = vestingStartTime;
-        }
-
-        if (block.timestamp <= _fromTime) {
+        // Before cliff, no tokens
+        if (block.timestamp < cliffEndTime) {
             return 0;
         }
 
+        // Calculate cliff tokens (20%)
+        uint256 cliffTokens = participant.tokensBought * CLIFF_PERCENTAGE / 100;
+
+        // After vesting period, all tokens are claimable
         if (block.timestamp >= vestingEndTime) {
-            // Return all remaining vesting tokens
-            uint256 totalVestingTokens = participant.tokensBought * VESTING_PERCENTAGE / 100;
-            return totalVestingTokens - (participant.tokensClaimed - (participant.tokensBought * CLIFF_PERCENTAGE / 100));
+            return participant.tokensBought;
         }
 
-        // Calculate based on time passed
-        uint256 timePassed = block.timestamp - _fromTime;
-        uint256 totalIntervals = VESTING_DURATION / RELEASE_INTERVAL;
-        uint256 intervalsPassed = timePassed / RELEASE_INTERVAL;
+        // During vesting period
+        uint256 timeInVesting = block.timestamp - cliffEndTime;
+        uint256 totalVestingIntervals = VESTING_DURATION / RELEASE_INTERVAL;
+        uint256 intervalsPassed = timeInVesting / RELEASE_INTERVAL;
         
-        if (intervalsPassed == 0) {
-            return 0;
-        }
+        uint256 vestingTokensPerInterval = (participant.tokensBought * VESTING_PERCENTAGE / 100) / totalVestingIntervals;
+        uint256 vestingTokensClaimable = intervalsPassed * vestingTokensPerInterval;
 
-        uint256 tokensPerInterval = (participant.tokensBought * VESTING_PERCENTAGE / 100) / totalIntervals;
-        return intervalsPassed * tokensPerInterval;
+        return cliffTokens + vestingTokensClaimable;
     }
 
     // Get participant count
@@ -278,6 +310,24 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         return vansToken.balanceOf(address(this));
     }
 
+    // Get participant info
+    function getParticipantInfo(address _participant) external view returns (
+        uint256 contributed,
+        uint256 tokensBought,
+        uint256 tokensClaimed,
+        uint256 lastClaimTime,
+        bool refunded,
+        uint256 claimableTokens
+    ) {
+        Participant memory p = participants[_participant];
+        contributed = p.contributed;
+        tokensBought = p.tokensBought;
+        tokensClaimed = p.tokensClaimed;
+        lastClaimTime = p.lastClaimTime;
+        refunded = p.refunded;
+        claimableTokens = getClaimableTokens(_participant);
+    }
+
     // Get presale status
     function getPresaleStatus() external view returns (
         uint256 _totalRaised,
@@ -286,7 +336,8 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         bool _isFinalized,
         bool _softCapReached,
         bool _isStarted,
-        uint256 _timeRemaining
+        uint256 _timeRemaining,
+        uint256 _contractTokenBalance
     ) {
         _totalRaised = totalRaised;
         _participants = participantAddresses.length;
@@ -295,5 +346,16 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         _isFinalized = presaleFinalized;
         _softCapReached = softCapReached;
         _timeRemaining = presaleStarted && block.timestamp < endTime ? endTime - block.timestamp : 0;
+        _contractTokenBalance = vansToken.balanceOf(address(this));
+    }
+
+    // Receive function - prevent direct transfers
+    receive() external payable {
+        revert("Please use buyTokens() function");
+    }
+
+    // Fallback function
+    fallback() external payable {
+        revert("Please use buyTokens() function");
     }
 }
