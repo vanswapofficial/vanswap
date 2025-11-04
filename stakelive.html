@@ -481,6 +481,19 @@
     const STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
     const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
 
+    // Vana Chain Configuration
+    const VANA_CHAIN = {
+      chainId: '0x5c8',
+      chainName: 'Vana Chain',
+      nativeCurrency: {
+        name: 'VANA',
+        symbol: 'VANA',
+        decimals: 18
+      },
+      rpcUrls: ['https://rpc.vana.org/'],
+      blockExplorerUrls: ['https://vanascan.io/']
+    };
+
     // ABI - Real functions dari kontrak stake
     const STAKING_ABI = [
       'function stakeVana(uint8 poolId) payable',
