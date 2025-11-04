@@ -119,10 +119,6 @@
     .network-alert-content{color:var(--warning);font-size:13px}
     .network-alert .btn{display:inline-block;margin-top:8px;padding:6px 12px;font-size:12px}
 
-    /* Admin Panel */
-    .admin-panel{background:rgba(255,255,255,0.02);border-radius:10px;padding:16px;margin-top:20px;border-left:4px solid var(--accent)}
-    .admin-title{font-weight:600;margin-bottom:12px;color:var(--accent)}
-
     /* Contract Info */
     .contract-info{background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;margin-top:12px;font-size:11px}
     .contract-address{word-break:break-all;font-family:monospace;color:var(--accent)}
@@ -267,17 +263,6 @@
       </div>
 
       <div class="status" id="buyStatus">Connect wallet to participate</div>
-
-      <!-- Admin Panel (Visible only to owner) -->
-      <div id="adminPanel" class="admin-panel" style="display:none">
-        <div class="admin-title">Admin Functions</div>
-        <div class="action-buttons">
-          <button id="startPresaleBtn" class="btn-primary">Start Presale</button>
-          <button id="finalizePresaleBtn" class="btn-accent">Finalize Presale</button>
-          <button id="withdrawToOwnerBtn" class="btn-warning">Withdraw VANA</button>
-        </div>
-        <div class="status" id="adminStatus">Ready for admin actions</div>
-      </div>
     </section>
 
     <!-- CLAIM/REFUND CARD -->
@@ -384,7 +369,6 @@
     // CONFIGURATION
     const PRESALE_CONTRACT = "0xeF2f2057a48268f275A59C18530287D5A4BaC0c0";
     const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
-    const WALLET_OWNER = "0xDa70b3F5427dFFb363Fe43e24e452b18C819a651";
 
     // Vana Chain Configuration
     const VANA_CHAIN = {
@@ -399,14 +383,11 @@
       blockExplorerUrls: ['https://vanascan.io/']
     };
 
-    // ABI Presale Contract
+    // ABI Presale Contract (hanya fungsi user)
     const PRESALE_ABI = [
       'function buyTokens() payable',
       'function claimTokens()',
       'function claimRefund()',
-      'function startPresale()',
-      'function finalizePresale()',
-      'function withdrawToOwner()',
       'function getPresaleStatus() view returns (uint256, uint256, bool, bool, bool, bool, bool, uint256, uint256)',
       'function getClaimableTokens(address) view returns (uint256)',
       'function getParticipantInfo(address) view returns (uint256, uint256, uint256, uint256, bool, uint256)',
@@ -418,8 +399,7 @@
       'function presaleFinalized() view returns (bool)',
       'function softCapReached() view returns (bool)',
       'function hardCapReached() view returns (bool)',
-      'function getParticipantCount() view returns (uint256)',
-      'function owner() view returns (address)'
+      'function getParticipantCount() view returns (uint256)'
     ];
 
     // STATE
@@ -427,7 +407,6 @@
     let signer = null;
     let account = null;
     let presaleContract = null;
-    let isOwner = false;
     let updateInterval = null;
 
     const $ = id => document.getElementById(id);
@@ -506,17 +485,8 @@
 
         presaleContract = new ethers.Contract(PRESALE_CONTRACT, PRESALE_ABI, signer);
 
-        // Check if connected wallet is owner
-        const contractOwner = await presaleContract.owner();
-        isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
-
         $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
         $('buyStatus').textContent = 'Loading presale data...';
-
-        // Show admin panel if owner
-        if (isOwner) {
-          $('adminPanel').style.display = 'block';
-        }
 
         await loadPresaleData();
         startAutoUpdate();
@@ -678,72 +648,6 @@
       }
     }
 
-    // START PRESALE (Admin only)
-    async function startPresale() {
-      try {
-        $('startPresaleBtn').disabled = true;
-        $('startPresaleBtn').innerHTML = '<span class="spinner"></span>Starting...';
-        $('adminStatus').textContent = 'Starting presale...';
-
-        const tx = await presaleContract.startPresale();
-        await tx.wait();
-
-        $('adminStatus').textContent = 'Presale started successfully!';
-        await loadPresaleData();
-
-      } catch (error) {
-        console.error('Start presale failed:', error);
-        $('adminStatus').textContent = 'Start failed: ' + error.message;
-      } finally {
-        $('startPresaleBtn').disabled = false;
-        $('startPresaleBtn').textContent = 'Start Presale';
-      }
-    }
-
-    // FINALIZE PRESALE (Admin only)
-    async function finalizePresale() {
-      try {
-        $('finalizePresaleBtn').disabled = true;
-        $('finalizePresaleBtn').innerHTML = '<span class="spinner"></span>Finalizing...';
-        $('adminStatus').textContent = 'Finalizing presale...';
-
-        const tx = await presaleContract.finalizePresale();
-        await tx.wait();
-
-        $('adminStatus').textContent = 'Presale finalized successfully!';
-        await loadPresaleData();
-
-      } catch (error) {
-        console.error('Finalize presale failed:', error);
-        $('adminStatus').textContent = 'Finalize failed: ' + error.message;
-      } finally {
-        $('finalizePresaleBtn').disabled = false;
-        $('finalizePresaleBtn').textContent = 'Finalize Presale';
-      }
-    }
-
-    // WITHDRAW TO OWNER (Admin only)
-    async function withdrawToOwner() {
-      try {
-        $('withdrawToOwnerBtn').disabled = true;
-        $('withdrawToOwnerBtn').innerHTML = '<span class="spinner"></span>Withdrawing...';
-        $('adminStatus').textContent = 'Withdrawing VANA to owner...';
-
-        const tx = await presaleContract.withdrawToOwner();
-        await tx.wait();
-
-        $('adminStatus').textContent = 'VANA withdrawn to owner successfully!';
-        await loadPresaleData();
-
-      } catch (error) {
-        console.error('Withdraw to owner failed:', error);
-        $('adminStatus').textContent = 'Withdraw failed: ' + error.message;
-      } finally {
-        $('withdrawToOwnerBtn').disabled = false;
-        $('withdrawToOwnerBtn').textContent = 'Withdraw VANA';
-      }
-    }
-
     // CLAIM TOKENS
     async function claimTokens() {
       try {
@@ -806,13 +710,6 @@
       } else {
         $('buyBtn').disabled = false;
         $('buyBtn').textContent = 'Buy VANS Tokens';
-      }
-
-      // Admin buttons
-      if (isOwner) {
-        $('startPresaleBtn').disabled = isStarted;
-        $('finalizePresaleBtn').disabled = isFinalized || !isStarted;
-        $('withdrawToOwnerBtn').disabled = !isStarted;
       }
     }
 
@@ -896,11 +793,6 @@
       // Buy section
       $('contributionAmount').addEventListener('input', calculateTokens);
       $('buyBtn').addEventListener('click', buyTokens);
-
-      // Admin section
-      $('startPresaleBtn').addEventListener('click', startPresale);
-      $('finalizePresaleBtn').addEventListener('click', finalizePresale);
-      $('withdrawToOwnerBtn').addEventListener('click', withdrawToOwner);
 
       // Claim section
       $('claimTokensBtn').addEventListener('click', claimTokens);
