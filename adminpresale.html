@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap - Presale Admin Panel</title>
+  <meta name="description" content="Admin Panel for VANS Token Presale Management">
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.12);
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --glass: rgba(255,255,255,0.03);
+      --warning: #ff9800;
+      --danger: #f44336;
+      --success: #4caf50;
+      --info: #2196f3;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+
+    /* Header */
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .nav-container{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    .logo span{font-weight:700;font-size:18px}
+    .connect-wallet{background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;position:relative}
+
+    /* Main Content */
+    .main{max-width:1400px;margin:32px auto;padding:0 20px}
+    
+    /* Admin Header */
+    .admin-header{text-align:center;margin-bottom:32px;padding:20px;background:var(--card-bg);border-radius:16px;border:1px solid var(--card-border)}
+    .admin-title{font-size:32px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,var(--accent),var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .admin-subtitle{color:var(--muted);font-size:16px}
+
+    /* Grid Layout */
+    .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+    @media (max-width:1200px){.admin-grid{grid-template-columns:1fr}}
+
+    /* Cards */
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.55)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .title{font-size:20px;font-weight:700}
+    .subtitle{color:var(--muted);font-size:14px}
+
+    /* Stats Grid */
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+    .stat-item{background:rgba(255,255,255,0.02);padding:16px;border-radius:10px;text-align:center}
+    .stat-label{color:var(--muted);font-size:12px;margin-bottom:6px}
+    .stat-value{font-weight:700;font-size:18px}
+    .stat-value.warning{color:var(--warning)}
+    .stat-value.danger{color:var(--danger)}
+    .stat-value.success{color:var(--success)}
+    .stat-value.info{color:var(--info)}
+    .stat-value.accent{color:var(--accent)}
+
+    /* Progress Bar */
+    .progress-container{margin:20px 0}
+    .progress-header{display:flex;justify-content:space-between;margin-bottom:8px}
+    .progress-label{color:var(--muted);font-size:12px}
+    .progress-bar{width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s ease}
+
+    /* Action Buttons */
+    .action-buttons{display:flex;gap:12px;margin-top:20px}
+    .action-buttons .btn{flex:1}
+
+    /* Buttons */
+    .btn{padding:12px 20px;border-radius:10px;font-weight:700;cursor:pointer;border:none;font-size:14px;text-align:center;transition:all 0.3s ease}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-success{background:var(--success);color:white}
+    .btn-warning{background:var(--warning);color:white}
+    .btn-danger{background:var(--danger);color:white}
+    .btn-info{background:var(--info);color:white}
+    .btn-accent{background:var(--accent);color:#052017}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3)}
+
+    /* Forms */
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+    .form-input{width:100%;padding:12px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:14px}
+    .form-input:focus{outline:none;border-color:var(--primary)}
+
+    /* Tables */
+    .table-container{max-height:400px;overflow-y:auto;margin-top:16px}
+    .table{width:100%;border-collapse:collapse}
+    .table th{text-align:left;padding:12px;background:rgba(255,255,255,0.02);color:var(--muted);font-weight:600;font-size:12px;position:sticky;top:0}
+    .table td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px}
+    .table tr:hover{background:rgba(255,255,255,0.02)}
+
+    /* Status Badges */
+    .status-badge{padding:4px 8px;border-radius:12px;font-size:11px;font-weight:600}
+    .status-active{background:var(--success);color:white}
+    .status-upcoming{background:var(--warning);color:white}
+    .status-ended{background:var(--danger);color:white}
+    .status-hardcap{background:var(--accent);color:#052017}
+
+    /* Spinner */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Status Messages */
+    .status{text-align:center;padding:12px;color:var(--muted);font-size:13px;margin-top:16px}
+    .status.success{color:var(--success)}
+    .status.error{color:var(--danger)}
+    .status.warning{color:var(--warning)}
+
+    /* Contract Info */
+    .contract-info{background:rgba(255,255,255,0.02);border-radius:10px;padding:16px;margin-top:20px}
+    .contract-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .contract-row:last-child{border-bottom:none}
+    .contract-label{color:var(--muted);font-size:12px}
+    .contract-value{font-family:monospace;font-size:12px;color:var(--accent);word-break:break-all}
+
+    /* Emergency Section */
+    .emergency-section{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:16px;padding:20px;margin-top:24px}
+    .emergency-header{display:flex;align-items:center;gap:8px;color:var(--danger);font-weight:700;margin-bottom:12px}
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="nav-container">
+      <a class="logo" href="index.html">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VanSwap Admin</span>
+      </a>
+      <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- Admin Header -->
+    <div class="admin-header">
+      <div class="admin-title">VANS Token Presale Admin Panel</div>
+      <div class="admin-subtitle">Manage and monitor the VANS token presale campaign</div>
+    </div>
+
+    <div class="admin-grid">
+      <!-- PRESALE OVERVIEW CARD -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Presale Overview</div>
+          <div id="presaleStatusBadge" class="status-badge status-upcoming">UPCOMING</div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Total Raised</div>
+            <div class="stat-value accent" id="totalRaised">0 VANA</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Participants</div>
+            <div class="stat-value info" id="participantCount">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Soft Cap Status</div>
+            <div class="stat-value warning" id="softCapStatus">Not Reached</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Hard Cap Status</div>
+            <div class="stat-value warning" id="hardCapStatus">Not Reached</div>
+          </div>
+        </div>
+
+        <!-- Progress Bars -->
+        <div class="progress-container">
+          <div class="progress-header">
+            <div class="progress-label">Soft Cap Progress (2,000 VANA)</div>
+            <div class="progress-label" id="softCapProgress">0%</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="softCapFill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-header">
+            <div class="progress-label">Hard Cap Progress (3,600 VANA)</div>
+            <div class="progress-label" id="hardCapProgress">0%</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="hardCapFill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Timer -->
+        <div style="text-align:center;margin:20px 0;padding:16px;background:rgba(255,255,255,0.02);border-radius:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="timerLabel">PRESALE STATUS</div>
+          <div style="font-weight:700;font-size:20px;font-family:monospace" id="timerValue">NOT STARTED</div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="startPresaleBtn" class="btn-success">Start Presale</button>
+          <button id="finalizePresaleBtn" class="btn-primary" disabled>Finalize Presale</button>
+        </div>
+
+        <div class="status" id="overviewStatus">Ready to manage presale</div>
+      </section>
+
+      <!-- FUNDS MANAGEMENT CARD -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Funds Management</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Contract VANA Balance</div>
+            <div class="stat-value accent" id="contractVanaBalance">0 VANA</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Contract VANS Balance</div>
+            <div class="stat-value info" id="contractVansBalance">0 VANS</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Owner VANS Balance</div>
+            <div class="stat-value" id="ownerVansBalance">0 VANS</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Required VANS</div>
+            <div class="stat-value warning" id="requiredVans">36,000,000 VANS</div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="withdrawVanaBtn" class="btn-accent">Withdraw VANA to Owner</button>
+          <button id="addTokensBtn" class="btn-info">Add VANS to Contract</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Add VANS Tokens to Contract</label>
+          <input type="number" id="addTokensAmount" class="form-input" placeholder="Amount in VANS" min="1">
+        </div>
+
+        <div class="status" id="fundsStatus">Funds management ready</div>
+      </section>
+
+      <!-- PARTICIPANTS MANAGEMENT CARD -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Participants Management</div>
+          <div class="subtitle" id="participantsCount">Total: 0 participants</div>
+        </div>
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Address</th>
+                <th>Contributed</th>
+                <th>Allocation</th>
+                <th>Claimed</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="participantsTable">
+              <tr>
+                <td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">No participants yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="action-buttons">
+          <button id="refreshParticipantsBtn" class="btn-info">Refresh List</button>
+          <button id="exportParticipantsBtn" class="btn-accent">Export CSV</button>
+        </div>
+
+        <div class="status" id="participantsStatus">Participants data loaded</div>
+      </section>
+
+      <!-- CONTRACT INFO CARD -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Contract Information</div>
+        </div>
+
+        <div class="contract-info">
+          <div class="contract-row">
+            <div class="contract-label">Presale Contract</div>
+            <div class="contract-value">0xeF2f2057a48268f275A59C18530287D5A4BaC0c0</div>
+          </div>
+          <div class="contract-row">
+            <div class="contract-label">VANS Token</div>
+            <div class="contract-value">0x82741ff5937933244eb562A4b396f8079F1de914</div>
+          </div>
+          <div class="contract-row">
+            <div class="contract-label">Owner Wallet</div>
+            <div class="contract-value">0xDa70b3F5427dFFb363Fe43e24e452b18C819a651</div>
+          </div>
+          <div class="contract-row">
+            <div class="contract-label">Presale Duration</div>
+            <div class="contract-value">90 Days (Auto-ends at hardcap)</div>
+          </div>
+          <div class="contract-row">
+            <div class="contract-label">Token Price</div>
+            <div class="contract-value">1 VANA = 10,000 VANS</div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="refreshAllBtn" class="btn-primary">Refresh All Data</button>
+          <button id="viewOnExplorerBtn" class="btn-info">View on Explorer</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- EMERGENCY SECTION -->
+    <section class="emergency-section">
+      <div class="emergency-header">
+        <span>🚨</span>
+        <span>EMERGENCY FUNCTIONS</span>
+      </div>
+      <div style="color:var(--muted);font-size:14px;margin-bottom:16px">
+        Use these functions only in case of emergency. Some functions have time locks for safety.
+      </div>
+      
+      <div class="action-buttons">
+        <button id="emergencyWithdrawBtn" class="btn-danger" disabled>Emergency Withdraw All</button>
+        <button id="forceFinalizeBtn" class="btn-warning">Force Finalize</button>
+      </div>
+      
+      <div class="status warning" id="emergencyStatus">
+        Emergency functions are time-locked for safety
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+    // CONFIGURATION
+    const PRESALE_CONTRACT = "0xeF2f2057a48268f275A59C18530287D5A4BaC0c0";
+    const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+    const WALLET_OWNER = "0xDa70b3F5427dFFb363Fe43e24e452b18C819a651";
+
+    // Vana Chain Configuration
+    const VANA_CHAIN = {
+      chainId: '0x5c8',
+      chainName: 'Vana Chain',
+      nativeCurrency: {
+        name: 'VANA',
+        symbol: 'VANA',
+        decimals: 18
+      },
+      rpcUrls: ['https://rpc.vana.org/'],
+      blockExplorerUrls: ['https://vanascan.io/']
+    };
+
+    // ABI Presale Contract
+    const PRESALE_ABI = [
+      'function startPresale()',
+      'function finalizePresale()',
+      'function withdrawToOwner()',
+      'function addTokensToContract(uint256 amount)',
+      'function emergencyWithdraw()',
+      'function getPresaleStatus() view returns (uint256, uint256, bool, bool, bool, bool, bool, uint256, uint256)',
+      'function getParticipantCount() view returns (uint256)',
+      'function participants(address) view returns (uint256 contributed, uint256 tokensBought, uint256 tokensClaimed, uint256 lastClaimTime, bool refunded)',
+      'function getContractBalance() view returns (uint256)',
+      'function getTokenBalance() view returns (uint256)',
+      'function totalRaised() view returns (uint256)',
+      'function startTime() view returns (uint256)',
+      'function endTime() view returns (uint256)',
+      'function presaleStarted() view returns (bool)',
+      'function presaleFinalized() view returns (bool)',
+      'function softCapReached() view returns (bool)',
+      'function hardCapReached() view returns (bool)',
+      'function owner() view returns (address)'
+    ];
+
+    const ERC20_ABI = [
+      'function balanceOf(address) view returns (uint256)',
+      'function transfer(address,uint256) returns (bool)',
+      'function approve(address,uint256) returns (bool)',
+      'function transferFrom(address,address,uint256) returns (bool)',
+      'function decimals() view returns (uint8)'
+    ];
+
+    // STATE
+    let provider = null;
+    let signer = null;
+    let account = null;
+    let presaleContract = null;
+    let vansToken = null;
+    let isOwner = false;
+    let updateInterval = null;
+    let allParticipants = [];
+
+    const $ = id => document.getElementById(id);
+
+    // INITIALIZATION
+    async function init() {
+      setupEventListeners();
+      await connectWallet();
+    }
+
+    // WALLET CONNECTION
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask!');
+        return;
+      }
+
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          signer = provider.getSigner();
+          account = accounts[0];
+        } else {
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          account = await signer.getAddress();
+        }
+
+        presaleContract = new ethers.Contract(PRESALE_CONTRACT, PRESALE_ABI, signer);
+        vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+
+        // Check if connected wallet is owner
+        const contractOwner = await presaleContract.owner();
+        isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
+
+        if (!isOwner) {
+          $('connectBtn').textContent = 'NOT OWNER!';
+          $('connectBtn').style.background = 'var(--danger)';
+          alert('Connected wallet is not the contract owner!');
+          return;
+        }
+
+        $('connectBtn').textContent = 'Owner: ' + account.substring(0, 6) + '...' + account.substring(38);
+        await loadAllData();
+        startAutoUpdate();
+
+      } catch (error) {
+        console.error('Connection failed:', error);
+        updateStatus('overviewStatus', 'Connection failed: ' + error.message, 'error');
+      }
+    }
+
+    // LOAD ALL DATA
+    async function loadAllData() {
+      try {
+        await loadPresaleOverview();
+        await loadFundsInfo();
+        await loadParticipants();
+        updateStatus('overviewStatus', 'All data loaded successfully', 'success');
+      } catch (error) {
+        console.error('Load data failed:', error);
+        updateStatus('overviewStatus', 'Failed to load data', 'error');
+      }
+    }
+
+    // LOAD PRESALE OVERVIEW
+    async function loadPresaleOverview() {
+      try {
+        const status = await presaleContract.getPresaleStatus();
+        const [
+          totalRaised, 
+          participantCount, 
+          isActive, 
+          isFinalized, 
+          softCapReached, 
+          isStarted, 
+          hardCapReached,
+          timeRemaining,
+          contractTokenBalance
+        ] = status;
+
+        // Update stats
+        $('totalRaised').textContent = formatEther(totalRaised) + ' VANA';
+        $('participantCount').textContent = participantCount.toString();
+        $('participantsCount').textContent = 'Total: ' + participantCount + ' participants';
+
+        // Update progress bars
+        const softCapProgress = (parseFloat(formatEther(totalRaised)) / 2000) * 100;
+        const hardCapProgress = (parseFloat(formatEther(totalRaised)) / 3600) * 100;
+        
+        $('softCapFill').style.width = Math.min(softCapProgress, 100) + '%';
+        $('hardCapFill').style.width = Math.min(hardCapProgress, 100) + '%';
+        $('softCapProgress').textContent = softCapProgress.toFixed(1) + '%';
+        $('hardCapProgress').textContent = hardCapProgress.toFixed(1) + '%';
+
+        // Update status badges
+        $('softCapStatus').textContent = softCapReached ? '✅ Reached' : '❌ Not Reached';
+        $('softCapStatus').className = softCapReached ? 'stat-value success' : 'stat-value warning';
+        
+        $('hardCapStatus').textContent = hardCapReached ? '✅ Reached' : '❌ Not Reached';
+        $('hardCapStatus').className = hardCapReached ? 'stat-value success' : 'stat-value warning';
+
+        // Update presale status
+        updatePresaleStatus(isStarted, isActive, isFinalized, hardCapReached, timeRemaining);
+
+        // Update button states
+        updateButtonStates(isStarted, isActive, isFinalized, hardCapReached);
+
+      } catch (error) {
+        console.error('Load overview failed:', error);
+      }
+    }
+
+    // LOAD FUNDS INFO
+    async function loadFundsInfo() {
+      try {
+        const contractVanaBalance = await presaleContract.getContractBalance();
+        const contractVansBalance = await presaleContract.getTokenBalance();
+        const ownerVansBalance = await vansToken.balanceOf(WALLET_OWNER);
+
+        $('contractVanaBalance').textContent = formatEther(contractVanaBalance) + ' VANA';
+        $('contractVansBalance').textContent = formatEther(contractVansBalance) + ' VANS';
+        $('ownerVansBalance').textContent = formatEther(ownerVansBalance) + ' VANS';
+
+        // Check if owner has enough VANS
+        const requiredVans = ethers.utils.parseEther('36000000'); // 36M VANS
+        const hasEnough = ownerVansBalance.gte(requiredVans);
+        $('requiredVans').className = hasEnough ? 'stat-value success' : 'stat-value danger';
+
+      } catch (error) {
+        console.error('Load funds info failed:', error);
+      }
+    }
+
+    // LOAD PARTICIPANTS
+    async function loadParticipants() {
+      try {
+        // Note: In a real implementation, you'd need to track participant addresses
+        // This is a simplified version
+        const participantCount = await presaleContract.getParticipantCount();
+        
+        if (participantCount === 0) {
+          $('participantsTable').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">No participants yet</td></tr>';
+          return;
+        }
+
+        // For demo purposes - in real implementation you'd fetch actual participant data
+        $('participantsTable').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Loading participants...</td></tr>';
+
+      } catch (error) {
+        console.error('Load participants failed:', error);
+      }
+    }
+
+    // UPDATE PRESALE STATUS DISPLAY
+    function updatePresaleStatus(isStarted, isActive, isFinalized, hardCapReached, timeRemaining) {
+      const statusBadge = $('presaleStatusBadge');
+      const timerLabel = $('timerLabel');
+      const timerValue = $('timerValue');
+
+      if (hardCapReached) {
+        statusBadge.textContent = 'HARDCAP REACHED';
+        statusBadge.className = 'status-badge status-hardcap';
+        timerLabel.textContent = 'PRESALE ENDED';
+        timerValue.textContent = 'HARDCAP ACHIEVED';
+      } else if (isFinalized) {
+        statusBadge.textContent = 'FINALIZED';
+        statusBadge.className = 'status-badge status-ended';
+        timerLabel.textContent = 'PRESALE ENDED';
+        timerValue.textContent = 'FINALIZED';
+      } else if (isActive) {
+        statusBadge.textContent = 'LIVE';
+        statusBadge.className = 'status-badge status-active';
+        timerLabel.textContent = 'TIME REMAINING';
+        updateTimer(timeRemaining);
+      } else if (isStarted) {
+        statusBadge.textContent = 'ENDED';
+        statusBadge.className = 'status-badge status-ended';
+        timerLabel.textContent = 'PRESALE ENDED';
+        timerValue.textContent = 'COMPLETED';
+      } else {
+        statusBadge.textContent = 'UPCOMING';
+        statusBadge.className = 'status-badge status-upcoming';
+        timerLabel.textContent = 'PRESALE STATUS';
+        timerValue.textContent = 'READY TO START';
+      }
+    }
+
+    // UPDATE BUTTON STATES
+    function updateButtonStates(isStarted, isActive, isFinalized, hardCapReached) {
+      // Start/Finalize buttons
+      $('startPresaleBtn').disabled = isStarted;
+      $('finalizePresaleBtn').disabled = isFinalized || !isStarted;
+
+      // Funds management buttons
+      $('withdrawVanaBtn').disabled = !isStarted;
+      $('addTokensBtn').disabled = !isStarted;
+
+      // Emergency buttons
+      $('emergencyWithdrawBtn').disabled = true; // Time-locked by contract
+    }
+
+    // ADMIN FUNCTIONS
+    async function startPresale() {
+      try {
+        $('startPresaleBtn').disabled = true;
+        $('startPresaleBtn').innerHTML = '<span class="spinner"></span>Starting...';
+        updateStatus('overviewStatus', 'Starting presale...', 'warning');
+
+        const tx = await presaleContract.startPresale();
+        updateStatus('overviewStatus', 'Transaction submitted...', 'warning');
+
+        await tx.wait();
+        updateStatus('overviewStatus', 'Presale started successfully!', 'success');
+        await loadAllData();
+
+      } catch (error) {
+        console.error('Start presale failed:', error);
+        updateStatus('overviewStatus', 'Start failed: ' + error.message, 'error');
+      } finally {
+        $('startPresaleBtn').disabled = false;
+        $('startPresaleBtn').textContent = 'Start Presale';
+      }
+    }
+
+    async function finalizePresale() {
+      try {
+        $('finalizePresaleBtn').disabled = true;
+        $('finalizePresaleBtn').innerHTML = '<span class="spinner"></span>Finalizing...';
+        updateStatus('overviewStatus', 'Finalizing presale...', 'warning');
+
+        const tx = await presaleContract.finalizePresale();
+        updateStatus('overviewStatus', 'Transaction submitted...', 'warning');
+
+        await tx.wait();
+        updateStatus('overviewStatus', 'Presale finalized successfully!', 'success');
+        await loadAllData();
+
+      } catch (error) {
+        console.error('Finalize presale failed:', error);
+        updateStatus('overviewStatus', 'Finalize failed: ' + error.message, 'error');
+      } finally {
+        $('finalizePresaleBtn').disabled = false;
+        $('finalizePresaleBtn').textContent = 'Finalize Presale';
+      }
+    }
+
+    async function withdrawVanaToOwner() {
+      try {
+        $('withdrawVanaBtn').disabled = true;
+        $('withdrawVanaBtn').innerHTML = '<span class="spinner"></span>Withdrawing...';
+        updateStatus('fundsStatus', 'Withdrawing VANA to owner...', 'warning');
+
+        const tx = await presaleContract.withdrawToOwner();
+        updateStatus('fundsStatus', 'Transaction submitted...', 'warning');
+
+        await tx.wait();
+        updateStatus('fundsStatus', 'VANA withdrawn to owner successfully!', 'success');
+        await loadFundsInfo();
+
+      } catch (error) {
+        console.error('Withdraw failed:', error);
+        updateStatus('fundsStatus', 'Withdraw failed: ' + error.message, 'error');
+      } finally {
+        $('withdrawVanaBtn').disabled = false;
+        $('withdrawVanaBtn').textContent = 'Withdraw VANA to Owner';
+      }
+    }
+
+    async function addTokensToContract() {
+      const amount = $('addTokensAmount').value;
+      if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+      }
+
+      try {
+        $('addTokensBtn').disabled = true;
+        $('addTokensBtn').innerHTML = '<span class="spinner"></span>Adding...';
+        updateStatus('fundsStatus', 'Adding VANS tokens to contract...', 'warning');
+
+        const amountWei = ethers.utils.parseEther(amount);
+        const tx = await presaleContract.addTokensToContract(amountWei);
+        updateStatus('fundsStatus', 'Transaction submitted...', 'warning');
+
+        await tx.wait();
+        updateStatus('fundsStatus', 'Tokens added to contract successfully!', 'success');
+        $('addTokensAmount').value = '';
+        await loadFundsInfo();
+
+      } catch (error) {
+        console.error('Add tokens failed:', error);
+        updateStatus('fundsStatus', 'Add tokens failed: ' + error.message, 'error');
+      } finally {
+        $('addTokensBtn').disabled = false;
+        $('addTokensBtn').textContent = 'Add VANS to Contract';
+      }
+    }
+
+    // UTILITY FUNCTIONS
+    function formatEther(wei) {
+      return parseFloat(ethers.utils.formatEther(wei)).toFixed(2);
+    }
+
+    function updateTimer(timeRemaining) {
+      if (timeRemaining === 0) {
+        $('timerValue').textContent = '00:00:00:00';
+        return;
+      }
+
+      const days = Math.floor(timeRemaining / 86400);
+      const hours = Math.floor((timeRemaining % 86400) / 3600);
+      const minutes = Math.floor((timeRemaining % 3600) / 60);
+      const seconds = timeRemaining % 60;
+
+      $('timerValue').textContent = 
+        `${days.toString().padStart(2, '0')}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+    }
+
+    function updateStatus(elementId, message, type = '') {
+      const element = $(elementId);
+      element.textContent = message;
+      element.className = 'status';
+      if (type) element.classList.add(type);
+    }
+
+    function startAutoUpdate() {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+      updateInterval = setInterval(loadAllData, 15000); // Update every 15 seconds
+    }
+
+    // EVENT LISTENERS
+    function setupEventListeners() {
+      // Wallet connection
+      $('connectBtn').addEventListener('click', connectWallet);
+
+      // Presale management
+      $('startPresaleBtn').addEventListener('click', startPresale);
+      $('finalizePresaleBtn').addEventListener('click', finalizePresale);
+
+      // Funds management
+      $('withdrawVanaBtn').addEventListener('click', withdrawVanaToOwner);
+      $('addTokensBtn').addEventListener('click', addTokensToContract);
+
+      // Participants management
+      $('refreshParticipantsBtn').addEventListener('click', loadParticipants);
+      $('exportParticipantsBtn').addEventListener('click', () => {
+        alert('Export feature would be implemented here');
+      });
+
+      // General actions
+      $('refreshAllBtn').addEventListener('click', loadAllData);
+      $('viewOnExplorerBtn').addEventListener('click', () => {
+        window.open('https://vanascan.io/address/' + PRESALE_CONTRACT, '_blank');
+      });
+
+      // Emergency functions
+      $('emergencyWithdrawBtn').addEventListener('click', () => {
+        alert('Emergency withdraw is time-locked for safety');
+      });
+      $('forceFinalizeBtn').addEventListener('click', finalizePresale);
+
+      // Wallet events
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', () => location.reload());
+        window.ethereum.on('chainChanged', () => location.reload());
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
