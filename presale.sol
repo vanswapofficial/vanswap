@@ -119,6 +119,11 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         emit TokensPurchased(msg.sender, msg.value, tokensToAllocate);
     }
 
+    // Receive function to accept VANA - HARUS DIBAWAH buyTokens()
+    receive() external payable {
+        buyTokens();
+    }
+
     // Claim tokens after presale
     function claimTokens() external presaleEnded nonReentrant {
         require(presaleFinalized, "Presale not finalized");
@@ -290,10 +295,5 @@ contract VANSPresale is ReentrancyGuard, Ownable {
         _isFinalized = presaleFinalized;
         _softCapReached = softCapReached;
         _timeRemaining = presaleStarted && block.timestamp < endTime ? endTime - block.timestamp : 0;
-    }
-
-    // Receive function to accept VANA
-    receive() external payable {
-        buyTokens();
     }
 }
