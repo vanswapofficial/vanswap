@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap Whitepaper - Decentralized Exchange on Vana Chain</title>
+  <meta name="description" content="VanSwap Whitepaper - Complete guide to Vana Chain's premier DEX with VANS token economics, roadmap, and technical architecture">
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.7);
+      --background: #04140d;
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --warning: #ff9800;
+      --success: #4caf50;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #04140d 0%, #07261b 50%, #0a2e21 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 0;
+      z-index: 1000;
+      background: rgba(4, 20, 13, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(26, 127, 94, 0.1);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .logo span {
+      font-weight: 800;
+      font-size: 20px;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 25px;
+    }
+
+    .nav-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+
+    .nav-link:hover {
+      color: var(--accent);
+    }
+
+    .launch-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+    }
+
+    .launch-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(49, 208, 170, 0.4);
+    }
+
+    /* Main Content */
+    .main {
+      max-width: 1000px;
+      margin: 100px auto 50px;
+      padding: 0 20px;
+    }
+
+    /* Hero Section */
+    .whitepaper-hero {
+      text-align: center;
+      margin-bottom: 60px;
+      padding: 40px 0;
+    }
+
+    .whitepaper-hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .whitepaper-hero .subtitle {
+      font-size: 1.3rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Content Sections */
+    .section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .section h2 {
+      color: var(--accent);
+      font-size: 2rem;
+      margin-bottom: 25px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+
+    .section h3 {
+      color: var(--accent);
+      font-size: 1.5rem;
+      margin: 30px 0 15px 0;
+    }
+
+    .section p {
+      margin-bottom: 15px;
+      color: var(--muted);
+    }
+
+    .section ul {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+
+    .section li {
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    /* Tokenomics */
+    .tokenomics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 25px 0;
+    }
+
+    .tokenomic-item {
+      background: rgba(255,255,255,0.05);
+      padding: 25px;
+      border-radius: 15px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .tokenomic-percentage {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .tokenomic-label {
+      font-size: 1.1rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .tokenomic-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* Roadmap */
+    .roadmap-timeline {
+      position: relative;
+      margin: 30px 0;
+    }
+
+    .roadmap-timeline::before {
+      content: '';
+      position: absolute;
+      left: 30px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+    }
+
+    .roadmap-phase {
+      position: relative;
+      margin-bottom: 40px;
+      padding-left: 80px;
+    }
+
+    .phase-number {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #052017;
+    }
+
+    .phase-content {
+      background: rgba(255,255,255,0.05);
+      padding: 25px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .phase-title {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 25px 0;
+    }
+
+    .feature-item {
+      background: rgba(255,255,255,0.05);
+      padding: 25px;
+      border-radius: 15px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .feature-item:hover {
+      transform: translateY(-5px);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+    }
+
+    .feature-title {
+      color: var(--accent);
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    /* Footer */
+    .footer {
+      background: rgba(4, 20, 13, 0.9);
+      padding: 40px 20px 20px;
+      border-top: 1px solid rgba(26, 127, 94, 0.1);
+      margin-top: 50px;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 15px;
+    }
+
+    .social-link {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .social-link:hover {
+      background: var(--accent);
+      color: #052017;
+    }
+
+    .footer-text {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .whitepaper-hero h1 {
+        font-size: 2.5rem;
+      }
+
+      .section {
+        padding: 25px;
+      }
+
+      .section h2 {
+        font-size: 1.7rem;
+      }
+
+      .tokenomics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .roadmap-phase {
+        padding-left: 60px;
+      }
+
+      .phase-number {
+        width: 50px;
+        height: 50px;
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .whitepaper-hero h1 {
+        font-size: 2rem;
+      }
+
+      .section {
+        padding: 20px;
+      }
+
+      .main {
+        margin: 80px auto 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VANSWAP</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="swap.html" class="nav-link">Swap</a>
+        <a href="liquidity.html" class="nav-link">Liquidity</a>
+        <a href="staking.html" class="nav-link">Staking</a>
+        <a href="tokencreator.html" class="nav-link">Create Token</a>
+        <a href="presale.html" class="nav-link">Presale</a>
+        <a href="whitepaper.html" class="nav-link" style="color: var(--accent)">Whitepaper</a>
+      </nav>
+
+      <a href="swap.html" class="launch-btn">Launch App</a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Hero Section -->
+    <section class="whitepaper-hero">
+      <h1>VanSwap Whitepaper</h1>
+      <p class="subtitle">Revolutionizing Decentralized Exchange on Vana Chain with Lightning-Fast Swaps and Advanced DeFi Features</p>
+    </section>
+
+    <!-- Introduction -->
+    <section class="section">
+      <h2>Introduction</h2>
+      <p>VanSwap is a next-generation decentralized exchange (DEX) built on Vana Chain, designed to provide users with lightning-fast token swaps, seamless liquidity provision, and advanced yield farming opportunities. Leveraging Vana Chain's high-throughput blockchain technology, VanSwap delivers sub-second transaction finality with minimal fees.</p>
+      
+      <p>Our mission is to create the most efficient, secure, and user-friendly decentralized exchange ecosystem on Vana Chain, empowering users to trade, earn, and grow their digital assets with confidence.</p>
+    </section>
+
+    <!-- Core Features -->
+    <section class="section">
+      <h2>Core Features</h2>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">🔄</div>
+          <div class="feature-title">Instant Swap</div>
+          <p>Trade tokens instantly with minimal slippage using our advanced V2 Uniswap-based protocol</p>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">💧</div>
+          <div class="feature-title">Add Liquidity</div>
+          <p>Provide liquidity to pools and earn trading fees from every swap</p>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">💰</div>
+          <div class="feature-title">Staking</div>
+          <p>Stake VANS tokens and earn rewards from platform revenue</p>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🪙</div>
+          <div class="feature-title">Create Token</div>
+          <p>Launch your own tokens easily with our token creation tool</p>
+        </div>
+      </div>
+
+      <h3>Technical Advantages</h3>
+      <ul>
+        <li><strong>No Lag Trading:</strong> Experience seamless trading with instant transaction confirmation</li>
+        <li><strong>Fast Trading:</strong> Sub-second transaction finality on Vana Chain</li>
+        <li><strong>V2 Uniswap Architecture:</strong> Battle-tested smart contract architecture</li>
+        <li><strong>Low Fees:</strong> Significantly lower transaction costs compared to other networks</li>
+        <li><strong>High Security:</strong> Audited smart contracts with multiple security layers</li>
+      </ul>
+    </section>
+
+    <!-- VANS Tokenomics -->
+    <section class="section">
+      <h2>VANS Token Economics</h2>
+      <p><strong>Token Name:</strong> VANS</p>
+      <p><strong>Total Supply:</strong> 120,000,000 VANS</p>
+      <p><strong>Blockchain:</strong> Vana Chain</p>
+
+      <h3>Token Distribution</h3>
+      <div class="tokenomics-grid">
+        <div class="tokenomic-item">
+          <div class="tokenomic-percentage">30%</div>
+          <div class="tokenomic-label">Presale</div>
+          <div class="tokenomic-desc">36,000,000 VANS</div>
+        </div>
+
+        <div class="tokenomic-item">
+          <div class="tokenomic-percentage">30%</div>
+          <div class="tokenomic-label">Initial Liquidity</div>
+          <div class="tokenomic-desc">36,000,000 VANS</div>
+        </div>
+
+        <div class="tokenomic-item">
+          <div class="tokenomic-percentage">40%</div>
+          <div class="tokenomic-label">Staking & Mining Rewards</div>
+          <div class="tokenomic-desc">48,000,000 VANS</div>
+        </div>
+      </div>
+
+      <h3>Token Utility</h3>
+      <ul>
+        <li><strong>Governance:</strong> VANS holders can participate in protocol governance</li>
+        <li><strong>Staking Rewards:</strong> Earn platform fees and rewards by staking VANS</li>
+        <li><strong>Fee Discounts:</strong> Reduced trading fees for VANS holders</li>
+        <li><strong>Liquidity Mining:</strong> Participate in liquidity mining programs</li>
+      </ul>
+    </section>
+
+    <!-- Roadmap -->
+    <section class="section">
+      <h2>Development Roadmap</h2>
+      <div class="roadmap-timeline">
+        <!-- Phase 1 -->
+        <div class="roadmap-phase">
+          <div class="phase-number">1</div>
+          <div class="phase-content">
+            <div class="phase-title">Phase 1: Foundation & Launch</div>
+            <ul>
+              <li>Build and develop VanSwap DEX platform</li>
+              <li>Deploy all smart contracts (Swap, Liquidity, Staking)</li>
+              <li>Complete comprehensive security audits</li>
+              <li>Launch VanSwap mainnet on Vana Chain</li>
+              <li>List on Gecko Terminal and major tracking platforms</li>
+              <li>Community building and initial marketing</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="roadmap-phase">
+          <div class="phase-number">2</div>
+          <div class="phase-content">
+            <div class="phase-title">Phase 2: VANS Token Presale & Liquidity</div>
+            <ul>
+              <li>Launch VANS token presale (30% of total supply)</li>
+              <li>Conduct fair and transparent token distribution</li>
+              <li>One week after presale completion: Add initial liquidity</li>
+              <li>List VANS/VANA trading pair on VanSwap</li>
+              <li>Implement initial staking and farming programs</li>
+              <li>Expand to additional trading pairs</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Phase 3 -->
+        <div class="roadmap-phase">
+          <div class="phase-number">3</div>
+          <div class="phase-content">
+            <div class="phase-title">Phase 3: Expansion & Ecosystem Growth</div>
+            <ul>
+              <li>Expand platform features and user base</li>
+              <li>Introduce advanced trading features</li>
+              <li>Launch mobile application</li>
+              <li>Partner with other projects on Vana Chain</li>
+              <li>Cross-chain integration planning</li>
+              <li>Community governance implementation</li>
+              <li>Continuous platform optimization and upgrades</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technical Architecture -->
+    <section class="section">
+      <h2>Technical Architecture</h2>
+      <h3>Smart Contract System</h3>
+      <ul>
+        <li><strong>Swap Router:</strong> Handles all token swap operations with optimal routing</li>
+        <li><strong>Liquidity Pools:</strong> Manages liquidity provision and fee distribution</li>
+        <li><strong>Staking Contracts:</strong> Handles VANS token staking and reward distribution</li>
+        <li><strong>Token Factory:</strong> Enables easy creation of new tokens</li>
+        <li><strong>Presale Contracts:</strong> Manages VANS token presale and distribution</li>
+      </ul>
+
+      <h3>Security Features</h3>
+      <ul>
+        <li>Multiple rounds of smart contract audits</li>
+        <li>Time-lock mechanisms for critical operations</li>
+        <li>Multi-signature wallet for treasury management</li>
+        <li>Emergency pause functionality</li>
+        <li>Regular security updates and monitoring</li>
+      </ul>
+    </section>
+
+    <!-- Conclusion -->
+    <section class="section">
+      <h2>Conclusion</h2>
+      <p>VanSwap represents a significant step forward in decentralized exchange technology on Vana Chain. With our focus on speed, security, and user experience, we are committed to building the premier DeFi ecosystem that empowers users to take control of their financial future.</p>
+      
+      <p>Through the strategic distribution of VANS tokens and our comprehensive roadmap, we aim to create sustainable value for our community while driving adoption of decentralized finance on Vana Chain.</p>
+
+      <p><strong>Join us in revolutionizing decentralized trading on Vana Chain!</strong></p>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="social-links">
+        <a href="https://x.com/vanswap_xyz" class="social-link" target="_blank" rel="noopener" title="Follow us on X">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </a>
+        <a href="https://t.me/vanswap_xyz" class="social-link" target="_blank" rel="noopener" title="Join our Telegram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.181c-.209 2.155-1.114 7.396-1.114 7.396s-.068.447-.31.601c-.243.154-.541.102-.675.064-.173-.049-2.905-1.177-3.871-1.722-.214-.121-.462-.363.048-.719 1.215-.846 2.646-1.844 3.512-2.41.325-.213.651-.709.065-.709-.358 0-1.008.121-1.715.243-1.203.243-2.13.364-2.878.364-1.065 0-1.357-.243-1.357-.243s-2.028-.728-2.15-2.15c-.024-.266.048-.532.217-.754.169-.222.435-.363.728-.363.266 0 .532.097.754.266.222.169 1.114.728 1.114.728s.435.266.754.266.266-.024.435-.097c.169-.073 3.369-1.454 3.783-1.698.435-.266.728-.169.824-.097.266.169.363.532.363.532z"/>
+          </svg>
+        </a>
+        <a href="https://github.com/vanswap" class="social-link" target="_blank" rel="noopener" title="Check our GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="footer-text">
+        <p>© 2025 VanSwap. Built on Vana Chain</p>
+        <p>Decentralized Exchange Revolutionizing DeFi</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
