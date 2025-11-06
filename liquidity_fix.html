@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VanSwap —Pools (Vana Chain)</title>
+  <title>VanSwap — Vana Swap Pools (Vana Chain)</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* CSS tetap sama seperti sebelumnya */
@@ -175,10 +175,10 @@
         <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
           <div class="menu-item" data-href="swap.html">Swap</div>
           <div class="menu-item" data-href="liquidity.html">Liquidity</div>
-          <div class="menu-item" data-href="/pools">Pools</div>
-          <div class="menu-item" data-href="/staking">Stake</div>
+          <div class="menu-item" data-href="tokencreator.html">Create Token</div>
+          <div class="menu-item" data-href="staking.html">Stake</div>
           <div class="menu-sep"></div>
-          <div class="menu-item" data-href="/about">About</div>
+          <div class="menu-item" data-href="docs.html">Docs</div>
         </div>
 
         <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
@@ -407,6 +407,7 @@
   const FACTORY = '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D';
   const VANS = '0x82741ff5937933244eb562A4b396f8079F1de914';
   const USDC = '0xF1815bd50389c46847f0Bda824eC8da914045D14';
+  const BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
   const RPC = 'https://rpc.vana.org';
   const CHAIN_ID_HEX = '0x5C8';
 
@@ -470,12 +471,17 @@
     { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true},
     { symbol: 'WVANA', address: WVANA, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true},
     { symbol: 'USDC', address: USDC, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true},
-    { symbol: 'VANS', address: VANS, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true}
+    { symbol: 'VANS', address: VANS, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true},
+    { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true}
   ];
 
   let tokens = DEFAULT_TOKENS.slice();
   let selectedFrom = tokens[0];
   let selectedTo = tokens[2];
+
+  // VARIABEL UNTUK MENCEGAH INFINITE LOOP
+  let isCalculatingA = false;
+  let isCalculatingB = false;
 
   const $ = id => document.getElementById(id);
 
@@ -491,43 +497,6 @@
   }
 
   function setStatus(s){ $('status').textContent = s }
-
-  // -----------------------
-  // Helper: ensure factory pair exists (creates if missing)
-  // -----------------------
-  async function ensurePairExists(tokenA, tokenB) {
-    try {
-      // use factory with signer for createPair
-      const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer || provider);
-      let pair = await factoryWithSigner.getPair(tokenA, tokenB);
-
-      if (!pair || pair === ethers.constants.AddressZero || pair === '0x0000000000000000000000000000000000000000') {
-        setStatus('Pair not found — creating pair...');
-        // createPair requires signer (a tx)
-        if (!signer) {
-          // try to obtain signer if possible
-          if (window.ethereum) {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-          } else {
-            throw new Error('No signer available to create pair');
-          }
-        }
-        const factorySigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
-        const tx = await factorySigner.createPair(tokenA, tokenB);
-        await tx.wait();
-        pair = await factorySigner.getPair(tokenA, tokenB);
-        console.log('Pair created:', pair);
-      } else {
-        console.log('Pair exists:', pair);
-      }
-
-      return pair;
-    } catch (err) {
-      console.error('ensurePairExists error:', err);
-      throw err;
-    }
-  }
 
   // -----------------------
   // Helper: ensure token approval for router
@@ -1075,13 +1044,20 @@
   $('btnMax').addEventListener('click', setMax);
   $('fromBalance').addEventListener('click', setMax);
 
+  // =============================================
+  // PERBAIKAN KRITIS: SISTEM PERHITUNGAN DUA ARAH
+  // =============================================
+
   // FUNGSI BARU: Calculate optimal amount for token B based on input A
   async function calculateOptimalAmountB() {
-    if (!provider || !account) return;
+    if (!provider || !account || isCalculatingB) return;
+    
+    isCalculatingB = true;
 
     const fromAmt = $('fromAmount').value;
     if (!fromAmt || parseFloat(fromAmt) <= 0) {
       $('toAmount').value = '';
+      isCalculatingB = false;
       return;
     }
 
@@ -1106,14 +1082,31 @@
           reserveB = reserve0;
         }
 
+        // Validasi reserves tidak nol
+        if (reserveA.isZero() || reserveB.isZero()) {
+          $('toAmount').value = '';
+          showToast('Pool reserves are zero - enter both amounts manually');
+          isCalculatingB = false;
+          return;
+        }
+
         const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
         const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
 
-        // Update toAmount field
-        $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
+        // Validasi amount tidak nol
+        if (amountBOptimal.isZero()) {
+          $('toAmount').value = '';
+          showToast('Calculated amount is zero - check input');
+          isCalculatingB = false;
+          return;
+        }
+
+        // Update toAmount field - HANYA jika user tidak sedang mengedit toAmount
+        if (!isCalculatingA) {
+          $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
+        }
       } else {
-        // New pool - keep toAmount empty or let user specify
-        // Don't auto-fill for new pools
+        // New pool - keep toAmount empty
         $('toAmount').value = '';
       }
 
@@ -1122,6 +1115,82 @@
     } catch (error) {
       console.error('Error calculating optimal amount B:', error);
       $('toAmount').value = '';
+      showToast('Error calculating optimal amount');
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  // FUNGSI BARU: Calculate optimal amount for token A based on input B
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+    
+    isCalculatingA = true;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      $('fromAmount').value = '';
+      isCalculatingA = false;
+      return;
+    }
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        // Pool exists - calculate amountA based on reserves
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        // Validasi reserves tidak nol
+        if (reserveA.isZero() || reserveB.isZero()) {
+          $('fromAmount').value = '';
+          showToast('Pool reserves are zero - enter both amounts manually');
+          isCalculatingA = false;
+          return;
+        }
+
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        // Validasi amount tidak nol
+        if (amountAOptimal.isZero()) {
+          $('fromAmount').value = '';
+          showToast('Calculated amount is zero - check input');
+          isCalculatingA = false;
+          return;
+        }
+
+        // Update fromAmount field - HANYA jika user tidak sedang mengedit fromAmount
+        if (!isCalculatingB) {
+          $('fromAmount').value = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals)).toFixed(6);
+        }
+      } else {
+        // New pool - keep fromAmount empty
+        $('fromAmount').value = '';
+      }
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+      $('fromAmount').value = '';
+      showToast('Error calculating optimal amount');
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
     }
   }
 
@@ -1365,7 +1434,7 @@
     }
   }
 
-  // ADD LIQUIDITY FUNCTION - replacement (no slippage)
+  // ADD LIQUIDITY FUNCTION - IMPROVED VERSION DENGAN VALIDASI RASIO
   async function addLiquidity() {
     if (!account || !signer) {
       await connectWallet();
@@ -1373,9 +1442,11 @@
     }
 
     const fromAmt = $('fromAmount').value;
-    const toAmtInput = $('toAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      showToast('Enter an amount');
+    const toAmt = $('toAmount').value;
+    
+    // PERBAIKAN: Validasi kedua amount harus terisi
+    if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) {
+      showToast('Please enter amounts for both tokens');
       return;
     }
 
@@ -1393,6 +1464,7 @@
 
       // parse amounts (amountADesired corresponds to "from" token input)
       const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+      const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
 
       // token addresses: use WVANA constant when native selected
       const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
@@ -1400,58 +1472,66 @@
 
       // contracts
       const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-      const factoryRead = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+      const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
-      // Ensure pair exists before attempting to read reserves (this will create pair if missing)
-      await ensurePairExists(addressA, addressB);
+      // PERBAIKAN: Validasi rasio untuk pool yang sudah ada
+      const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+      if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
+        try {
+          const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
 
-      // try to compute amountBDesired from reserves if pair exists
-      let amountBDesired;
-      try {
-        const pairAddr = await factoryRead.getPair(addressA, addressB);
-        if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
-          const pair = new ethers.Contract(pairAddr, PAIR_ABI, provider);
-          const [r0, r1] = await pair.getReserves();
-          const token0 = await pair.token0();
-          // determine reserves mapping
-          let reserveA = token0.toLowerCase() === addressA.toLowerCase() ? r0 : r1;
-          let reserveB = token0.toLowerCase() === addressA.toLowerCase() ? r1 : r0;
-          if (!reserveA || reserveA.isZero()) {
-            // fallback: require user input for to amount
-            if (!toAmtInput || parseFloat(toAmtInput) <= 0) {
-              showToast('Pool has zero reserves — enter amount for the second token');
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === addressA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+
+          // Validasi rasio dengan toleransi 5%
+          const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
+          const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB); // basis points
+          
+          if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
+            const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
+            if (!confirmRemove) {
+              btn.disabled = false;
+              btn.textContent = 'Add Liquidity';
               return;
             }
-            amountBDesired = ethers.utils.parseUnits(toAmtInput, selectedTo.decimals);
-          } else {
-            amountBDesired = amountADesired.mul(reserveB).div(reserveA);
           }
-        } else {
-          // no pair yet -> require toAmount input
-          if (!toAmtInput || parseFloat(toAmtInput) <= 0) {
-            showToast('Enter amount for both tokens for a new pool');
-            return;
-          }
-          amountBDesired = ethers.utils.parseUnits(toAmtInput, selectedTo.decimals);
+        } catch (error) {
+          console.error('Error validating ratio:', error);
         }
-      } catch (e) {
-        console.warn('Error while reading pair/reserves:', e);
-        if (!toAmtInput || parseFloat(toAmtInput) <= 0) {
-          showToast('Could not compute pair reserves — enter amount for the second token');
+      }
+
+      // Check pair exists and auto-create if missing
+      let finalPairAddr = pairAddr;
+      if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
+        showToast('Creating new pool...');
+        setStatus('Creating new pool...');
+        try {
+          const txCreate = await factoryWithSigner.createPair(addressA, addressB);
+          $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${txCreate.hash}" target="_blank" style="color:var(--accent)">Creating Pair...</a>`;
+          await txCreate.wait();
+          showToast('Pool created successfully!');
+          setStatus('Pool created successfully!');
+          // reload pair address
+          finalPairAddr = await factoryWithSigner.getPair(addressA, addressB);
+        } catch(e) {
+          console.error('Failed to create pair', e);
+          showToast('Failed to create pool: ' + (e.message || e));
+          setStatus('Create pool failed');
           return;
         }
-        amountBDesired = ethers.utils.parseUnits(toAmtInput, selectedTo.decimals);
       }
 
-      // sanity check: ensure BigNumbers and not zero
-      if (!amountBDesired || amountBDesired.isZero()) {
-        showToast('Computed token amount is zero — check input/reserves');
-        return;
-      }
-
-      // minimums (NO SLIPPAGE — set equal to desired amounts as requested)
-      const amountAMin = amountADesired;
-      const amountBMin = amountBDesired;
+      // minimums: add small tolerance (1%) to avoid rounding reverts
+      const amountAMin = amountADesired.mul(99).div(100);
+      const amountBMin = amountBDesired.mul(99).div(100);
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
       // Determine case and call appropriate router function
@@ -1466,7 +1546,7 @@
           amountAMin,       // ETH min (no slippage)
           account,
           deadline,
-          { value: amountADesired, gasLimit: 900000 }
+          { value: amountADesired, gasLimit: 3000000 }
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
@@ -1482,7 +1562,7 @@
           amountBMin,      // ETH min (no slippage)
           account,
           deadline,
-          { value: amountBDesired, gasLimit: 900000 } // value = ETH desired
+          { value: amountBDesired, gasLimit: 3000000 } // value = ETH desired
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
@@ -1501,14 +1581,14 @@
           amountBMin,
           account,
           deadline,
-          { gasLimit: 1000000 }
+          { gasLimit: 3000000 }
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
       }
 
       showToast('Liquidity added successfully');
-      setStatus('Liquidity added');
+      setStatus('Liquidity added successfully!');
 
       // refresh UI components
       if (typeof updateBalances === 'function') await updateBalances();
@@ -1523,6 +1603,7 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Add Liquidity';
+      setStatus('Ready');
     }
   }
 
@@ -1751,9 +1832,9 @@
       showToast('Failed to remove liquidity: ' + (error.message || error));
       setStatus('Remove liquidity failed');
     } finally {
-      const btn = $('confirmRemoveBtn');
       btn.disabled = false;
       btn.textContent = 'Remove Liquidity';
+      setStatus('Ready');
     }
   }
 
@@ -1877,8 +1958,11 @@
     }
 
     const fromAmt = parseFloat($('fromAmount').value);
-    if (!fromAmt || fromAmt <= 0) {
-      btn.textContent = 'Enter Amount';
+    const toAmt = parseFloat($('toAmount').value);
+    
+    // PERBAIKAN: Validasi kedua amount harus terisi
+    if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) {
+      btn.textContent = 'Enter Amounts';
       btn.disabled = true;
       return;
     }
@@ -1887,17 +1971,34 @@
     btn.disabled = false;
   }
 
-  // EVENT LISTENERS
-  $('actionBtn').addEventListener('click', addLiquidity);
-  $('fromAmount').addEventListener('input', updateLiquidityInfo);
-  $('toAmount').addEventListener('input', updateLiquidityInfo);
-  $('fromAmount').addEventListener('input', updateUSDValues);
-  $('toAmount').addEventListener('input', updateUSDValues);
-  $('fromAmount').addEventListener('input', updateActionBtn);
-  $('toAmount').addEventListener('input', updateActionBtn);
+  // =============================================
+  // PERBAIKAN: EVENT LISTENERS YANG AMAN
+  // =============================================
 
-  // PERBAIKAN: Tambahkan event listener untuk menghitung amount B otomatis
-  $('fromAmount').addEventListener('input', calculateOptimalAmountB);
+  $('actionBtn').addEventListener('click', addLiquidity);
+
+  // Event listeners dengan sistem pencegahan infinite loop
+  $('fromAmount').addEventListener('input', function() {
+    updateLiquidityInfo();
+    updateUSDValues();
+    updateActionBtn();
+    
+    // Hanya trigger calculate B jika tidak sedang calculate A
+    if (!isCalculatingA) {
+      calculateOptimalAmountB();
+    }
+  });
+
+  $('toAmount').addEventListener('input', function() {
+    updateLiquidityInfo();
+    updateUSDValues();
+    updateActionBtn();
+    
+    // Hanya trigger calculate A jika tidak sedang calculate B
+    if (!isCalculatingB) {
+      calculateOptimalAmountA();
+    }
+  });
 
   // Close modal when clicking outside
   window.addEventListener('click', (e) => {
