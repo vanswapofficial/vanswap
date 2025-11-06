@@ -467,6 +467,12 @@
   let currentRemovePercentage = 0;
   let tokenPrices = {};
 
+  // VARIABEL UNTUK MENGATASI DOUBLE CALCULATION
+  let isCalculating = false;
+  let lastInputField = null;
+  let fromInputTimeout;
+  let toInputTimeout;
+
   const DEFAULT_TOKENS = [
     { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true},
     { symbol: 'WVANA', address: WVANA, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true},
@@ -898,9 +904,30 @@
   $('toSelect').addEventListener('click', (e)=>{ e.stopPropagation(); const el = $('toList'); if(el.style.display === 'block'){ el.style.display = 'none'; } else { buildTokenListHtml('to'); el.style.display = 'block'; $('fromList').style.display = 'none'; } });
   document.addEventListener('click', (e)=>{ if(!e.target.closest('.select-wrap')){ $('fromList').style.display = 'none'; $('toList').style.display = 'none'; } });
 
+  // FUNGSI BARU: Reset calculation state when tokens are changed
+  function resetCalculationState() {
+    isCalculating = false;
+    lastInputField = null;
+    $('fromAmount').value = '';
+    $('toAmount').value = '';
+    updateUSDValues();
+    updateActionBtn();
+  }
+
   async function selectToken(type, token){
-    if(type==='from'){ selectedFrom = token; $('fromLogo').src = token.logo; $('fromSymbol').textContent = token.symbol; $('fromList').style.display = 'none'; }
-    else{ selectedTo = token; $('toLogo').src = token.logo; $('toSymbol').textContent = token.symbol; $('toList').style.display = 'none'; }
+    if(type==='from'){ 
+        selectedFrom = token; 
+        $('fromLogo').src = token.logo; 
+        $('fromSymbol').textContent = token.symbol; 
+        $('fromList').style.display = 'none'; 
+    } else { 
+        selectedTo = token; 
+        $('toLogo').src = token.logo; 
+        $('toSymbol').textContent = token.symbol; 
+        $('toList').style.display = 'none'; 
+    }
+    
+    resetCalculationState();
     updateBalances(); 
     updateLiquidityInfo();
     updateActionBtn(); 
@@ -1022,72 +1049,152 @@
   async function setMax(){ 
     if(!account || !provider){ await connectWallet(); return; } 
     try{ 
-      if(selectedFrom.address === 'VANA_NATIVE'){ 
-        const b = await provider.getBalance(account); 
-        const usable = b.mul(95).div(100); 
-        $('fromAmount').value = ethers.utils.formatEther(usable); 
-      } else { 
-        const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider); 
-        const b = await c.balanceOf(account); 
-        const d = selectedFrom.decimals || await c.decimals(); 
-        $('fromAmount').value = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(d > 6 ? 6 : d); 
-      } 
-      updateLiquidityInfo();
-      updateUSDValues();
-      calculateOptimalAmountB(); // Calculate optimal amount B when setting max
-    }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
+        if(selectedFrom.address === 'VANA_NATIVE'){ 
+            const b = await provider.getBalance(account); 
+            const usable = b.mul(95).div(100); 
+            $('fromAmount').value = ethers.utils.formatEther(usable); 
+        } else { 
+            const c = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider); 
+            const b = await c.balanceOf(account); 
+            const d = selectedFrom.decimals || await c.decimals(); 
+            $('fromAmount').value = parseFloat(ethers.utils.formatUnits(b,d)).toFixed(d > 6 ? 6 : d); 
+        } 
+        
+        lastInputField = 'from';
+        updateLiquidityInfo();
+        updateUSDValues();
+        calculateOptimalAmountB(); // Calculate optimal amount B when setting max
+    } catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
   }
   $('btnMax').addEventListener('click', setMax);
   $('fromBalance').addEventListener('click', setMax);
 
   // FUNGSI BARU: Calculate optimal amount for token B based on input A
   async function calculateOptimalAmountB() {
-    if (!provider || !account) return;
-
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      $('toAmount').value = '';
-      return;
-    }
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        // Pool exists - calculate amountB based on reserves
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-
-        // Update toAmount field
-        $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
-      } else {
-        // New pool - keep toAmount empty or let user specify
-        // Don't auto-fill for new pools
-        $('toAmount').value = '';
+      if (isCalculating || !provider || !account) return;
+      
+      const fromAmt = $('fromAmount').value;
+      if (!fromAmt || parseFloat(fromAmt) <= 0 || lastInputField === 'to') {
+          return;
       }
 
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount B:', error);
-      $('toAmount').value = '';
-    }
+      isCalculating = true;
+      lastInputField = 'from';
+
+      try {
+          const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+          const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+          const pairAddress = await factory.getPair(tokenA, tokenB);
+
+          if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+              // Pool exists - calculate amountB based on reserves
+              const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+              const [reserve0, reserve1] = await pairContract.getReserves();
+              const token0 = await pairContract.token0();
+
+              let reserveA, reserveB;
+              if (token0.toLowerCase() === tokenA.toLowerCase()) {
+                  reserveA = reserve0;
+                  reserveB = reserve1;
+              } else {
+                  reserveA = reserve1;
+                  reserveB = reserve0;
+              }
+
+              const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+              
+              // Only calculate if reserves are not zero
+              if (!reserveA.isZero() && !reserveB.isZero()) {
+                  const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+                  
+                  // Update toAmount field only if it's significantly different from current value
+                  const currentToAmt = $('toAmount').value;
+                  const newToAmt = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
+                  
+                  if (!currentToAmt || Math.abs(parseFloat(currentToAmt || 0) - parseFloat(newToAmt)) > 0.000001) {
+                      $('toAmount').value = newToAmt;
+                  }
+              }
+          } else {
+              // New pool - clear toAmount to avoid confusion
+              $('toAmount').value = '';
+          }
+
+          updateUSDValues();
+          updateActionBtn();
+      } catch (error) {
+          console.error('Error calculating optimal amount B:', error);
+          // Don't clear the field on error to avoid user frustration
+      } finally {
+          setTimeout(() => {
+              isCalculating = false;
+          }, 100);
+      }
+  }
+
+  // FUNGSI BARU: Calculate optimal amount for token A based on input B
+  async function calculateOptimalAmountA() {
+      if (isCalculating || !provider || !account) return;
+      
+      const toAmt = $('toAmount').value;
+      if (!toAmt || parseFloat(toAmt) <= 0 || lastInputField === 'from') {
+          return;
+      }
+
+      isCalculating = true;
+      lastInputField = 'to';
+
+      try {
+          const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+          const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+          const pairAddress = await factory.getPair(tokenA, tokenB);
+
+          if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+              // Pool exists - calculate amountA based on reserves
+              const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+              const [reserve0, reserve1] = await pairContract.getReserves();
+              const token0 = await pairContract.token0();
+
+              let reserveA, reserveB;
+              if (token0.toLowerCase() === tokenA.toLowerCase()) {
+                  reserveA = reserve0;
+                  reserveB = reserve1;
+              } else {
+                  reserveA = reserve1;
+                  reserveB = reserve0;
+              }
+
+              const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+              
+              // Only calculate if reserves are not zero
+              if (!reserveA.isZero() && !reserveB.isZero()) {
+                  const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+                  
+                  // Update fromAmount field only if it's significantly different from current value
+                  const currentFromAmt = $('fromAmount').value;
+                  const newFromAmt = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals)).toFixed(6);
+                  
+                  if (!currentFromAmt || Math.abs(parseFloat(currentFromAmt || 0) - parseFloat(newFromAmt)) > 0.000001) {
+                      $('fromAmount').value = newFromAmt;
+                  }
+              }
+          } else {
+              // New pool - clear fromAmount to avoid confusion
+              $('fromAmount').value = '';
+          }
+
+          updateUSDValues();
+          updateActionBtn();
+      } catch (error) {
+          console.error('Error calculating optimal amount A:', error);
+          // Don't clear the field on error to avoid user frustration
+      } finally {
+          setTimeout(() => {
+              isCalculating = false;
+          }, 100);
+      }
   }
 
   // LIQUIDITY INFO WITH REAL PRICES
@@ -1861,17 +1968,38 @@
     btn.disabled = false;
   }
 
-  // EVENT LISTENERS
+  // EVENT LISTENERS YANG DIPERBAIKI
   $('actionBtn').addEventListener('click', addLiquidity);
-  $('fromAmount').addEventListener('input', updateLiquidityInfo);
-  $('toAmount').addEventListener('input', updateLiquidityInfo);
-  $('fromAmount').addEventListener('input', updateUSDValues);
-  $('toAmount').addEventListener('input', updateUSDValues);
-  $('fromAmount').addEventListener('input', updateActionBtn);
-  $('toAmount').addEventListener('input', updateActionBtn);
 
-  // PERBAIKAN: Tambahkan event listener untuk menghitung amount B otomatis
-  $('fromAmount').addEventListener('input', calculateOptimalAmountB);
+  // Event listeners dengan debounce untuk menghindari double calculation
+  $('fromAmount').addEventListener('input', function() {
+    clearTimeout(fromInputTimeout);
+    fromInputTimeout = setTimeout(() => {
+        updateLiquidityInfo();
+        updateUSDValues();
+        updateActionBtn();
+        calculateOptimalAmountB(); // Calculate B when A changes
+    }, 300);
+  });
+
+  $('toAmount').addEventListener('input', function() {
+    clearTimeout(toInputTimeout);
+    toInputTimeout = setTimeout(() => {
+        updateLiquidityInfo();
+        updateUSDValues();
+        updateActionBtn();
+        calculateOptimalAmountA(); // Calculate A when B changes
+    }, 300);
+  });
+
+  // Event listeners untuk immediate feedback
+  $('fromAmount').addEventListener('focus', function() {
+    lastInputField = 'from';
+  });
+
+  $('toAmount').addEventListener('focus', function() {
+    lastInputField = 'to';
+  });
 
   // Close modal when clicking outside
   window.addEventListener('click', (e) => {
