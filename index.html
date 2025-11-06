@@ -79,6 +79,155 @@
 </script>
 
   <style>
+    .presale-banner-enhanced {
+      background: linear-gradient(135deg, #ff6b35, #ff8e53, #ff6b35);
+      background-size: 200% 200%;
+      animation: gradientShift 3s ease infinite;
+      color: white;
+      padding: 15px 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+      border-bottom: 2px solid #ff8e53;
+      z-index: 1001;
+      margin-bottom: 0;
+    }
+
+    .presale-banner-enhanced a {
+      color: white;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 25px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+
+    .presale-banner-enhanced a:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    /* Multiple flash effects */
+    .flash-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 10px;
+    }
+
+    .flash-dot-1, .flash-dot-2, .flash-dot-3 {
+      width: 8px;
+      height: 8px;
+      background: #00ff88;
+      border-radius: 50%;
+      animation: multiFlash 1.5s ease-in-out infinite;
+      box-shadow: 0 0 10px #00ff88;
+    }
+
+    .flash-dot-1 { animation-delay: 0s; }
+    .flash-dot-2 { animation-delay: 0.3s; }
+    .flash-dot-3 { animation-delay: 0.6s; }
+
+    .flash-text-intense {
+      color: #00ff88;
+      font-weight: 900;
+      text-shadow: 
+        0 0 10px #00ff88,
+        0 0 20px #00ff88,
+        0 0 30px #00ff88;
+      animation: intenseGlow 1s ease-in-out infinite;
+      padding: 2px 8px;
+      background: rgba(0, 255, 136, 0.1);
+      border-radius: 15px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes multiFlash {
+      0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+        box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+      }
+      50% { 
+        opacity: 0.2; 
+        transform: scale(0.7);
+        box-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88;
+      }
+    }
+
+    @keyframes intenseGlow {
+      0%, 100% { 
+        text-shadow: 
+          0 0 10px #00ff88,
+          0 0 20px #00ff88,
+          0 0 30px #00ff88;
+        transform: scale(1);
+      }
+      50% { 
+        text-shadow: 
+          0 0 15px #00ff88,
+          0 0 30px #00ff88,
+          0 0 45px #00ff88;
+        transform: scale(1.05);
+      }
+    }
+
+    .presale-banner-enhanced::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shine 2s ease-in-out infinite;
+    }
+
+    @keyframes shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .presale-banner-enhanced {
+        font-size: 14px;
+        padding: 12px 0;
+      }
+      
+      .presale-banner-enhanced a {
+        padding: 8px 15px;
+        font-size: 14px;
+      }
+      
+      .flash-container {
+        margin: 0 5px;
+        gap: 4px;
+      }
+      
+      .flash-dot-1, .flash-dot-2, .flash-dot-3 {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
     :root {
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
@@ -500,7 +649,7 @@
       margin-bottom: 8px;
     }
 
-        /* Footer - Updated */
+    /* Footer - Updated */
     .footer {
       background: rgba(4, 20, 13, 0.9);
       padding: 60px 20px 30px;
@@ -571,19 +720,6 @@
 
     .footer-text p {
       margin-bottom: 10px;
-    }
-
-    /* Mobile Responsive untuk Footer Links */
-    @media (max-width: 768px) {
-      .footer-links {
-        gap: 20px;
-        flex-direction: column;
-        align-items: center;
-      }
-      
-      .footer-link {
-        padding: 10px 20px;
-      }
     }
 
     /* Background Elements */
@@ -667,6 +803,16 @@
       .seo-content h2 {
         font-size: 2rem;
       }
+
+      .footer-links {
+        gap: 20px;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .footer-link {
+        padding: 10px 20px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -709,6 +855,8 @@
         <a href="swap.html" class="nav-link">Swap</a>
         <a href="liquidity.html" class="nav-link">Liquidity</a>
         <a href="tokencreator.html" class="nav-link">Create Token</a>
+        <a href="staking.html" class="nav-link">Staking</a>
+        <a href="presale.html" class="nav-link" style="color: var(--accent)">Presale</a>
         <a href="docs.html" class="nav-link">Docs</a>
       </nav>
 
@@ -725,6 +873,26 @@
     </div>
 
     <div class="hero-content">
+      <!-- Banner dengan multiple flash effects -->
+      <div class="presale-banner-enhanced" style="margin-bottom: 40px;">
+        <div class="flash-container">
+          <span class="flash-dot-1"></span>
+          <span class="flash-dot-2"></span>
+          <span class="flash-dot-3"></span>
+        </div>
+        <span class="flash-text-intense">LIVE NOW</span>
+        🚀 VANS TOKEN PRESALE 
+        <a href="https://vanswap.xyz/presalefix">
+          <span style="font-size: 18px;">🔥</span>
+          JOIN PRESALE →
+        </a>
+        <div class="flash-container">
+          <span class="flash-dot-1"></span>
+          <span class="flash-dot-2"></span>
+          <span class="flash-dot-3"></span>
+        </div>
+      </div>
+
       <h1>Trade, Earn, and Grow on Vana Chain</h1>
       <p class="tagline">
         Experience <span class="highlight">lightning-fast swaps</span>, 
@@ -732,7 +900,7 @@
         <span class="highlight">seamless liquidity provision</span> 
         on Vana Chain's premier decentralized exchange
       </p>
-      
+
       <!-- Feature Columns Section -->
       <div class="feature-columns">
         <div class="columns-grid">
@@ -740,28 +908,28 @@
             <div class="column-icon">🔄</div>
             <h3>Swap</h3>
             <p>Trade tokens instantly with minimal fees</p>
-            <a href="https://vanswap.xyz/swap" class="column-link">Start Swapping</a>
+            <a href="swap.html" class="column-link">Start Swapping</a>
           </div>
-          
+
           <div class="column-item" style="animation-delay: 0.4s">
             <div class="column-icon">💧</div>
             <h3>Add Liquidity</h3>
             <p>Provide liquidity and earn fees</p>
-            <a href="https://vanswap.xyz/liquidity" class="column-link">Add Liquidity</a>
+            <a href="liquidity.html" class="column-link">Add Liquidity</a>
           </div>
-          
+
           <div class="column-item" style="animation-delay: 0.6s">
             <div class="column-icon">💰</div>
             <h3>Staking</h3>
             <p>Stake tokens and earn rewards</p>
-            <a href="https://vanswap.xyz/staking" class="column-link">Start Staking</a>
+            <a href="staking.html" class="column-link">Start Staking</a>
           </div>
-          
+
           <div class="column-item" style="animation-delay: 0.8s">
             <div class="column-icon">🪙</div>
             <h3>Create Token</h3>
             <p>Launch your own token easily</p>
-            <a href="https://vanswap.xyz/tokencreator" class="column-link">Create Token</a>
+            <a href="tokencreator.html" class="column-link">Create Token</a>
           </div>
         </div>
       </div>
@@ -864,7 +1032,7 @@
       </a>
       <a href="https://t.me/vanswap_xyz" class="social-link" target="_blank" rel="noopener" title="Join our Telegram">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.181c-.209 2.155-1.114 7.396-1.114 7.396s-.068.447-.31.601c-.243.154-.541.102-.675.064-.173-.049-2.905-1.177-3.871-1.722-.214-.121-.462-.363.048-.719 1.215-.846 2.646-1.844 3.512-2.41.325-.213.651-.709.065-.709-.358 0-1.008.121-1.715.243-1.203.243-2.13.364-2.878.364-1.065 0-1.357-.243-1.357-.243s-2.028-.728-2.15-2.15c-.024-.266.048-.532.217-.754.169-.222.435-.363.728-.363.266 0 .532.097.754.266.222.169 1.114.728 1.114.728s.435.266.754.266c.121 0 .266-.024.435-.097.169-.073 3.369-1.454 3.783-1.698.435-.266.728-.169.824-.097.266.169.363.532.363.532z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.181c-.209 2.155-1.114 7.396-1.114 7.396s-.068.447-.31.601c-.243.154-.541.102-.675.064-.173-.049-2.905-1.177-3.871-1.722-.214-.121-.462-.363.048-.719 1.215-.846 2.646-1.844 3.512-2.41.325-.213.651-.709.065-.709-.358 0-1.008.121-1.715.243-1.203.243-2.13.364-2.878.364-1.065 0-1.357-.243-1.357-.243s-2.028-.728-2.15-2.15c-.024-.266.048-.532.217-.754.169-.222.435-.363.728-.363.266 0 .532.097.754.266.222.169 1.114.728 1.114.728s.435.266.754.266.266-.024.435-.097c.169-.073 3.369-1.454 3.783-1.698.435-.266.728-.169.824-.097.266.169.363.532.363.532z"/>
         </svg>
       </a>
       <a href="https://github.com/vanswap" class="social-link" target="_blank" rel="noopener" title="Check our GitHub">
@@ -948,7 +1116,7 @@
       card.style.animationPlayState = 'paused';
       featureObserver.observe(card);
     });
-    
+
     // Add floating animation to column items on scroll
     document.querySelectorAll('.column-item').forEach(card => {
       card.style.animationPlayState = 'paused';
