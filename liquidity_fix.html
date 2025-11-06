@@ -500,7 +500,6 @@
 
   // -----------------------
   // Helper: ensure token approval for router
-  // Skip only UI placeholder 'VANA_NATIVE'. WVANA should be approved (it's ERC20).
   // -----------------------
   async function ensureApproved(tokenAddress, neededAmount) {
     if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
@@ -575,6 +574,224 @@
       }
     } catch (error) {
       console.error('Error updating USD values:', error);
+    }
+  }
+
+  // =============================================
+  // PERBAIKAN KRITIS: FUNGSI PERHITUNGAN RASIO YANG BENAR
+  // =============================================
+
+  // FUNGSI BARU: Calculate optimal amount for token B based on input A dengan decimal adjustment
+  async function calculateOptimalAmountB() {
+    if (!provider || !account || isCalculatingB) return;
+    
+    isCalculatingB = true;
+
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+      $('toAmount').value = '';
+      isCalculatingB = false;
+      return;
+    }
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        // Pool exists - calculate amountB based on reserves dengan decimal adjustment
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+        let decimalsA, decimalsB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+          decimalsA = selectedFrom.decimals;
+          decimalsB = selectedTo.decimals;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+          decimalsA = selectedTo.decimals;
+          decimalsB = selectedFrom.decimals;
+        }
+
+        // PERBAIKAN: Validasi reserves tidak nol
+        if (reserveA.isZero() || reserveB.isZero()) {
+          $('toAmount').value = '';
+          showToast('Pool reserves are zero - enter both amounts manually');
+          isCalculatingB = false;
+          return;
+        }
+
+        // PERBAIKAN: Convert input amount dengan decimals yang benar
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        
+        // PERBAIKAN: Hitung dengan memperhitungkan perbedaan decimals
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+
+        // Validasi amount tidak nol
+        if (amountBOptimal.isZero()) {
+          $('toAmount').value = '';
+          showToast('Calculated amount is zero - check input');
+          isCalculatingB = false;
+          return;
+        }
+
+        // PERBAIKAN: Format output dengan decimals yang benar
+        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
+        
+        // Update toAmount field - HANYA jika user tidak sedang mengedit toAmount
+        if (!isCalculatingA) {
+          $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+        }
+
+        console.log('Calculate B:', {
+          fromAmt,
+          reserveA: reserveA.toString(),
+          reserveB: reserveB.toString(),
+          amountADesired: amountADesired.toString(),
+          amountBOptimal: amountBOptimal.toString(),
+          toAmountFormatted,
+          decimalsA: selectedFrom.decimals,
+          decimalsB: selectedTo.decimals
+        });
+
+      } else {
+        // New pool - keep toAmount empty atau gunakan price dari API
+        const fromPrice = await getTokenPrice(selectedFrom.symbol);
+        const toPrice = await getTokenPrice(selectedTo.symbol);
+        
+        if (fromPrice > 0 && toPrice > 0) {
+          const estimatedAmountB = (parseFloat(fromAmt) * fromPrice) / toPrice;
+          if (!isCalculatingA) {
+            $('toAmount').value = estimatedAmountB.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+          }
+        } else {
+          $('toAmount').value = '';
+        }
+      }
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount B:', error);
+      $('toAmount').value = '';
+      showToast('Error calculating optimal amount');
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  // FUNGSI BARU: Calculate optimal amount for token A based on input B dengan decimal adjustment
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+    
+    isCalculatingA = true;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      $('fromAmount').value = '';
+      isCalculatingA = false;
+      return;
+    }
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        // Pool exists - calculate amountA based on reserves dengan decimal adjustment
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+        let decimalsA, decimalsB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+          decimalsA = selectedFrom.decimals;
+          decimalsB = selectedTo.decimals;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+          decimalsA = selectedTo.decimals;
+          decimalsB = selectedFrom.decimals;
+        }
+
+        // Validasi reserves tidak nol
+        if (reserveA.isZero() || reserveB.isZero()) {
+          $('fromAmount').value = '';
+          showToast('Pool reserves are zero - enter both amounts manually');
+          isCalculatingA = false;
+          return;
+        }
+
+        // PERBAIKAN: Convert input amount dengan decimals yang benar
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        
+        // PERBAIKAN: Hitung dengan memperhitungkan perbedaan decimals
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        // Validasi amount tidak nol
+        if (amountAOptimal.isZero()) {
+          $('fromAmount').value = '';
+          showToast('Calculated amount is zero - check input');
+          isCalculatingA = false;
+          return;
+        }
+
+        // PERBAIKAN: Format output dengan decimals yang benar
+        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
+        
+        // Update fromAmount field - HANYA jika user tidak sedang mengedit fromAmount
+        if (!isCalculatingB) {
+          $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+        }
+
+        console.log('Calculate A:', {
+          toAmt,
+          reserveA: reserveA.toString(),
+          reserveB: reserveB.toString(),
+          amountBDesired: amountBDesired.toString(),
+          amountAOptimal: amountAOptimal.toString(),
+          fromAmountFormatted,
+          decimalsA: selectedFrom.decimals,
+          decimalsB: selectedTo.decimals
+        });
+
+      } else {
+        // New pool - keep fromAmount empty atau gunakan price dari API
+        const fromPrice = await getTokenPrice(selectedFrom.symbol);
+        const toPrice = await getTokenPrice(selectedTo.symbol);
+        
+        if (fromPrice > 0 && toPrice > 0) {
+          const estimatedAmountA = (parseFloat(toAmt) * toPrice) / fromPrice;
+          if (!isCalculatingB) {
+            $('fromAmount').value = estimatedAmountA.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+          }
+        } else {
+          $('fromAmount').value = '';
+        }
+      }
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+      $('fromAmount').value = '';
+      showToast('Error calculating optimal amount');
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
     }
   }
 
@@ -1044,156 +1261,6 @@
   $('btnMax').addEventListener('click', setMax);
   $('fromBalance').addEventListener('click', setMax);
 
-  // =============================================
-  // PERBAIKAN KRITIS: SISTEM PERHITUNGAN DUA ARAH
-  // =============================================
-
-  // FUNGSI BARU: Calculate optimal amount for token B based on input A
-  async function calculateOptimalAmountB() {
-    if (!provider || !account || isCalculatingB) return;
-    
-    isCalculatingB = true;
-
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      $('toAmount').value = '';
-      isCalculatingB = false;
-      return;
-    }
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        // Pool exists - calculate amountB based on reserves
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        // Validasi reserves tidak nol
-        if (reserveA.isZero() || reserveB.isZero()) {
-          $('toAmount').value = '';
-          showToast('Pool reserves are zero - enter both amounts manually');
-          isCalculatingB = false;
-          return;
-        }
-
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-
-        // Validasi amount tidak nol
-        if (amountBOptimal.isZero()) {
-          $('toAmount').value = '';
-          showToast('Calculated amount is zero - check input');
-          isCalculatingB = false;
-          return;
-        }
-
-        // Update toAmount field - HANYA jika user tidak sedang mengedit toAmount
-        if (!isCalculatingA) {
-          $('toAmount').value = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals)).toFixed(6);
-        }
-      } else {
-        // New pool - keep toAmount empty
-        $('toAmount').value = '';
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount B:', error);
-      $('toAmount').value = '';
-      showToast('Error calculating optimal amount');
-    } finally {
-      setTimeout(() => { isCalculatingB = false; }, 100);
-    }
-  }
-
-  // FUNGSI BARU: Calculate optimal amount for token A based on input B
-  async function calculateOptimalAmountA() {
-    if (!provider || !account || isCalculatingA) return;
-    
-    isCalculatingA = true;
-
-    const toAmt = $('toAmount').value;
-    if (!toAmt || parseFloat(toAmt) <= 0) {
-      $('fromAmount').value = '';
-      isCalculatingA = false;
-      return;
-    }
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        // Pool exists - calculate amountA based on reserves
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        // Validasi reserves tidak nol
-        if (reserveA.isZero() || reserveB.isZero()) {
-          $('fromAmount').value = '';
-          showToast('Pool reserves are zero - enter both amounts manually');
-          isCalculatingA = false;
-          return;
-        }
-
-        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
-
-        // Validasi amount tidak nol
-        if (amountAOptimal.isZero()) {
-          $('fromAmount').value = '';
-          showToast('Calculated amount is zero - check input');
-          isCalculatingA = false;
-          return;
-        }
-
-        // Update fromAmount field - HANYA jika user tidak sedang mengedit fromAmount
-        if (!isCalculatingB) {
-          $('fromAmount').value = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals)).toFixed(6);
-        }
-      } else {
-        // New pool - keep fromAmount empty
-        $('fromAmount').value = '';
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount A:', error);
-      $('fromAmount').value = '';
-      showToast('Error calculating optimal amount');
-    } finally {
-      setTimeout(() => { isCalculatingA = false; }, 100);
-    }
-  }
-
   // LIQUIDITY INFO WITH REAL PRICES
   async function updateLiquidityInfo() {
     if (!provider) return;
@@ -1223,24 +1290,30 @@
         const totalSupply = await pairContract.totalSupply();
 
         let reserveA, reserveB;
+        let decimalsA, decimalsB;
+
         if (token0.toLowerCase() === tokenA.toLowerCase()) {
           reserveA = reserve0;
           reserveB = reserve1;
+          decimalsA = selectedFrom.decimals;
+          decimalsB = selectedTo.decimals;
         } else {
           reserveA = reserve1;
           reserveB = reserve0;
+          decimalsA = selectedTo.decimals;
+          decimalsB = selectedFrom.decimals;
         }
 
-        const decA = selectedFrom.decimals;
-        const decB = selectedTo.decimals;
-        const reserveAFormatted = parseFloat(ethers.utils.formatUnits(reserveA, decA));
-        const reserveBFormatted = parseFloat(ethers.utils.formatUnits(reserveB, decB));
+        const reserveAFormatted = parseFloat(ethers.utils.formatUnits(reserveA, decimalsA));
+        const reserveBFormatted = parseFloat(ethers.utils.formatUnits(reserveB, decimalsB));
 
         $('pooledTokenA').textContent = reserveAFormatted.toFixed(4);
         $('pooledTokenB').textContent = reserveBFormatted.toFixed(4);
 
-        const priceA = reserveBFormatted / reserveAFormatted;
-        const priceB = reserveAFormatted / reserveBFormatted;
+        // PERBAIKAN: Hitung price dengan memperhitungkan decimals
+        const priceA = (reserveBFormatted / reserveAFormatted) * (Math.pow(10, decimalsA - decimalsB));
+        const priceB = (reserveAFormatted / reserveBFormatted) * (Math.pow(10, decimalsB - decimalsA));
+        
         $('priceA').textContent = priceA.toFixed(6);
         $('priceB').textContent = priceB.toFixed(6);
 
@@ -1444,7 +1517,7 @@
     const fromAmt = $('fromAmount').value;
     const toAmt = $('toAmount').value;
     
-    // PERBAIKAN: Validasi kedua amount harus terisi
+    // Validasi kedua amount harus terisi
     if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) {
       showToast('Please enter amounts for both tokens');
       return;
@@ -1474,7 +1547,7 @@
       const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
       const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
-      // PERBAIKAN: Validasi rasio untuk pool yang sudah ada
+      // Validasi rasio untuk pool yang sudah ada
       const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
       if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
         try {
@@ -1960,7 +2033,7 @@
     const fromAmt = parseFloat($('fromAmount').value);
     const toAmt = parseFloat($('toAmount').value);
     
-    // PERBAIKAN: Validasi kedua amount harus terisi
+    // Validasi kedua amount harus terisi
     if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) {
       btn.textContent = 'Enter Amounts';
       btn.disabled = true;
