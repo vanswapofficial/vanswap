@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VanSwap - VANS Token Presale</title>
+  <meta name="description" content="Participate in VANS Token Presale - 30% of 120M total supply">
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.12);
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --glass: rgba(255,255,255,0.03);
+      --warning: #ff9800;
+      --danger: #f44336;
+      --success: #4caf50;
+      --info: #2196f3;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+
+    /* Header */
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    .logo span{font-weight:700;font-size:18px}
+    .connect-wallet{background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative}
+    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
+    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.5);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
+    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
+    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
+    .menu-item:hover{background:rgba(255,255,255,0.02)}
+    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
+
+    /* Main Content */
+    .main{max-width:800px;margin:32px auto;padding:0 20px}
+    
+    /* Cards */
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.55);margin-bottom:24px}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .title{font-size:24px;font-weight:700}
+    .subtitle{color:var(--muted);font-size:14px;margin-bottom:20px}
+
+    /* Status Badge */
+    .status-badge{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600}
+    .status-upcoming{background:var(--warning);color:white}
+    .status-active{background:var(--success);color:white}
+    .status-ended{background:var(--danger);color:white}
+
+    /* Stats Grid */
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+    .stat-item{background:rgba(255,255,255,0.02);padding:16px;border-radius:10px;text-align:center}
+    .stat-label{color:var(--muted);font-size:12px;margin-bottom:6px}
+    .stat-value{font-weight:700;font-size:18px}
+    .stat-value.warning{color:var(--warning)}
+    .stat-value.danger{color:var(--danger)}
+    .stat-value.success{color:var(--success)}
+    .stat-value.info{color:var(--info)}
+
+    /* Progress Bar */
+    .progress-container{margin:20px 0}
+    .progress-header{display:flex;justify-content:space-between;margin-bottom:8px}
+    .progress-label{color:var(--muted);font-size:12px}
+    .progress-bar{width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s ease}
+
+    /* Forms */
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+    .form-input{width:100%;padding:14px;border-radius:10px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:16px;font-weight:600}
+    .form-input:focus{outline:none;border-color:var(--primary)}
+    .input-actions{display:flex;gap:8px;margin-top:8px}
+    .btn-percent{flex:1;padding:8px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:12px;font-weight:600}
+    .btn-percent:hover{background:rgba(255,255,255,0.05)}
+    .btn-percent.active{background:var(--primary);color:white}
+
+    /* Buttons */
+    .btn{flex:1;padding:14px;border-radius:10px;font-weight:700;cursor:pointer;border:none;font-size:16px;text-align:center}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text)}
+    .btn-warning{background:var(--warning);color:white}
+    .btn-danger{background:var(--danger);color:white}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+
+    /* Action Buttons */
+    .action-buttons{display:flex;gap:12px;margin-top:20px}
+    .action-buttons .btn{flex:1}
+
+    /* Spinner */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Status */
+    .status{text-align:center;padding:12px;color:var(--muted);font-size:13px;margin-top:16px}
+
+    /* Vesting Info */
+    .vesting-info{background:rgba(255,255,255,0.02);border-radius:10px;padding:16px;margin-top:20px}
+    .vesting-title{font-weight:600;margin-bottom:12px;color:var(--accent)}
+    .vesting-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .vesting-item:last-child{border-bottom:none}
+
+    /* Network Alert */
+    .network-alert{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
+    .network-alert-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:700;margin-bottom:6px}
+    .network-alert-content{color:var(--warning);font-size:13px}
+    .network-alert .btn{display:inline-block;margin-top:8px;padding:6px 12px;font-size:12px}
+
+    /* Admin Panel */
+    .admin-panel{background:rgba(255,255,255,0.02);border-radius:10px;padding:16px;margin-top:20px;border-left:4px solid var(--accent)}
+    .admin-title{font-weight:600;margin-bottom:12px;color:var(--accent)}
+
+    /* Price Comparison */
+    .price-comparison{background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:12px;padding:16px;margin:20px 0}
+    .price-title{font-weight:700;margin-bottom:12px;text-align:center}
+    .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .price-item{text-align:center;padding:12px;background:rgba(255,255,255,0.1);border-radius:8px}
+    .price-label{font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:4px}
+    .price-value{font-weight:700;font-size:16px}
+    .price-save{background:var(--accent);color:#052017;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:4px}
+
+    /* Claim Section */
+    .claim-section{background:rgba(255,255,255,0.02);border-radius:12px;padding:20px;margin-top:20px;border-left:4px solid var(--accent)}
+    .claim-title{font-weight:600;margin-bottom:16px;color:var(--accent);font-size:18px}
+    .claim-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .claim-item{text-align:center;padding:12px;background:rgba(255,255,255,0.05);border-radius:8px}
+    .claim-label{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .claim-value{font-weight:700;font-size:16px}
+
+    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
+
+    @media (max-width:520px){
+      .stats-grid{grid-template-columns:1fr}
+      .action-buttons{flex-direction:column}
+      .price-grid{grid-template-columns:1fr}
+      .claim-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="nav-container">
+      <a class="logo" href="swap.html">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+        <span>VanSwap</span>
+      </a>
+
+      <div style="display:flex;align-items:center;gap:8px;position:relative;">
+        <button id="menuBtn" class="menu-dot-btn" title="Menu">⋮</button>
+        <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
+          <div class="menu-item" data-href="swap.html">Swap</div>
+          <div class="menu-item" data-href="liquidity.html">Liquidity</div>
+          <div class="menu-item" data-href="tokencreator.html">Create Token</div>
+          <div class="menu-item" data-href="staking.html">Stake</div>
+          <div class="menu-item" data-href="presale.html" style="color:var(--accent)">Presale</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-href="docs.html">Docs</div>
+        </div>
+
+        <button id="connectBtn" class="connect-wallet">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- Network Alert -->
+    <div id="networkAlert" class="network-alert">
+      <div class="network-alert-header">
+        <span>⚠️</span>
+        <span>WRONG NETWORK</span>
+      </div>
+      <div class="network-alert-content">
+        Please switch to Vana Chain to participate in presale.
+        <button id="switchNetworkBtn" class="btn-primary">Switch to Vana Chain</button>
+      </div>
+    </div>
+
+    <!-- PRICE COMPARISON -->
+    <div class="price-comparison">
+      <div class="price-title">🎯 LIMITED TIME PRESALE DISCOUNT</div>
+      <div class="price-grid">
+        <div class="price-item">
+          <div class="price-label">PRESALE PRICE</div>
+          <div class="price-value">1 VANA = 10,000 VANS</div>
+          <div class="price-save">$0.0001 per VANS</div>
+        </div>
+        <div class="price-item">
+          <div class="price-label">LAUNCH PRICE</div>
+          <div class="price-value">1 VANA = 3,333 VANS</div>
+          <div class="price-save">$0.0003 per VANS</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.8)">
+        🔥 <strong>67% DISCOUNT</strong> for presale participants!
+      </div>
+    </div>
+
+    <!-- PRESALE CARD -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="title">VANS Token Presale</div>
+          <div class="subtitle">30% of 120M Total Supply • 3 Months Duration • Soft Cap: 2,000 VANA • Hard Cap: 3,600 VANA</div>
+        </div>
+        <div id="presaleStatusBadge" class="status-badge status-upcoming">UPCOMING</div>
+      </div>
+
+      <!-- Timer -->
+      <div style="text-align:center;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:10px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="timerLabel">PRESALE STARTS IN</div>
+        <div style="font-weight:700;font-size:24px;font-family:monospace" id="timerValue">--:--:--:--</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Days : Hours : Minutes : Seconds</div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">Total Raised</div>
+          <div class="stat-value" id="totalRaised">0 VANA</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Participants</div>
+          <div class="stat-value" id="participantCount">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Your Contribution</div>
+          <div class="stat-value" id="yourContribution">0 VANA</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Your Allocation</div>
+          <div class="stat-value" id="yourAllocation">0 VANS</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-container">
+        <div class="progress-header">
+          <div class="progress-label">Progress</div>
+          <div class="progress-label" id="progressText">0%</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <div style="font-size:11px;color:var(--muted)">Soft Cap: 2,000 VANA</div>
+          <div style="font-size:11px;color:var(--muted)">Hard Cap: 3,600 VANA</div>
+        </div>
+      </div>
+
+      <!-- Buy Section -->
+      <div class="form-group">
+        <div class="form-label">Amount to Contribute (VANA)</div>
+        <input type="number" id="contributionAmount" class="form-input" placeholder="0.0" min="0.1" max="1000" step="0.1">
+        
+        <div class="input-actions">
+          <button class="btn-percent" data-percent="25">25%</button>
+          <button class="btn-percent" data-percent="50">50%</button>
+          <button class="btn-percent" data-percent="75">75%</button>
+          <button class="btn-percent active" data-percent="100">MAX</button>
+        </div>
+
+        <div style="margin-top:12px;padding:12px;background:rgba(255,255,255,0.02);border-radius:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <div style="color:var(--muted)">You will receive:</div>
+            <div style="font-weight:600;color:var(--accent)" id="tokensToReceive">0 VANS</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+            <div style="color:var(--muted)">Price:</div>
+            <div style="font-weight:600">1 VANA = 10,000 VANS ($0.0001/VANS)</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+            <div style="color:var(--muted)">Launch Price:</div>
+            <div style="font-weight:600;color:var(--warning)">1 VANA = 3,333 VANS ($0.0003/VANS)</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+            <div style="color:var(--muted)">Your Discount:</div>
+            <div style="font-weight:600;color:var(--success)">67% SAVINGS</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+            <div style="color:var(--muted)">Contribution Limits:</div>
+            <div style="font-weight:600;color:var(--info)">0.1 - 1,000 VANA per wallet</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="buyBtn" class="btn-primary" disabled>
+          Buy VANS Tokens
+        </button>
+      </div>
+
+      <div class="status" id="buyStatus">Connect wallet to participate</div>
+
+      <!-- Admin Panel (Visible only to owner) -->
+      <div id="adminPanel" class="admin-panel" style="display:none">
+        <div class="admin-title">Admin Functions</div>
+        <div class="action-buttons">
+          <button id="startPresaleBtn" class="btn-primary">Start Presale</button>
+          <button id="finalizePresaleBtn" class="btn-warning">Finalize Presale</button>
+        </div>
+        <div class="status" id="adminStatus">Ready for admin actions</div>
+      </div>
+    </section>
+
+    <!-- CLAIM SECTION - ALWAYS VISIBLE BUT CONTENT DYNAMIC -->
+    <section class="card">
+      <div class="card-head">
+        <div class="title">Claim Your Tokens</div>
+      </div>
+
+      <div id="claimNotConnected" style="text-align:center;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:16px">🔒</div>
+        <div style="color:var(--muted);margin-bottom:16px">Connect your wallet to view your claimable tokens</div>
+        <button id="connectForClaimBtn" class="btn-primary">Connect Wallet</button>
+      </div>
+
+      <div id="claimContent" style="display:none">
+        <!-- Claim Stats -->
+        <div class="claim-grid">
+          <div class="claim-item">
+            <div class="claim-label">Total Purchased</div>
+            <div class="claim-value" id="totalPurchased">0 VANS</div>
+          </div>
+          <div class="claim-item">
+            <div class="claim-label">Already Claimed</div>
+            <div class="claim-value" id="alreadyClaimed">0 VANS</div>
+          </div>
+          <div class="claim-item">
+            <div class="claim-label">Currently Claimable</div>
+            <div class="claim-value" id="currentlyClaimable">0 VANS</div>
+          </div>
+          <div class="claim-item">
+            <div class="claim-label">Remaining to Claim</div>
+            <div class="claim-value" id="remainingToClaim">0 VANS</div>
+          </div>
+        </div>
+
+        <!-- Next Claim Info -->
+        <div style="background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <div style="color:var(--muted)">Next Claim Available:</div>
+            <div style="font-weight:600;color:var(--accent)" id="nextClaimDate">-</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+            <div style="color:var(--muted)">Claim Progress:</div>
+            <div style="font-weight:600" id="claimProgress">0%</div>
+          </div>
+        </div>
+
+        <!-- Claim Buttons -->
+        <div class="action-buttons">
+          <button id="claimTokensBtn" class="btn-primary" disabled>
+            Claim Tokens Now
+          </button>
+          <button id="claimRefundBtn" class="btn-warning" disabled>
+            Claim Refund
+          </button>
+        </div>
+
+        <div class="status" id="claimStatus">Connect wallet to see your claim status</div>
+
+        <!-- Vesting Information -->
+        <div class="vesting-info">
+          <div class="vesting-title">📅 Vesting Schedule</div>
+          <div class="vesting-item">
+            <div>Presale Duration</div>
+            <div>3 Months</div>
+          </div>
+          <div class="vesting-item">
+            <div>Cliff Period</div>
+            <div>2 weeks after presale ends</div>
+          </div>
+          <div class="vesting-item">
+            <div>Cliff Release</div>
+            <div>20% of purchased tokens</div>
+          </div>
+          <div class="vesting-item">
+            <div>Vesting Period</div>
+            <div>3 months linear vesting</div>
+          </div>
+          <div class="vesting-item">
+            <div>Vesting Release</div>
+            <div>80% of tokens (weekly claims)</div>
+          </div>
+          <div class="vesting-item">
+            <div>Total Vesting Duration</div>
+            <div>3 months + 2 weeks cliff</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INFO CARD -->
+    <section class="card">
+      <div class="card-head">
+        <div class="title">Presale Information</div>
+      </div>
+
+      <div style="display:grid;gap:12px">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Total Supply</div>
+          <div style="font-weight:600">120,000,000 VANS</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Presale Allocation</div>
+          <div style="font-weight:600">36,000,000 VANS (30%)</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Presale Duration</div>
+          <div style="font-weight:600">3 Months</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Presale Price</div>
+          <div style="font-weight:600">1 VANA = 10,000 VANS ($0.0001)</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Launch Price</div>
+          <div style="font-weight:600;color:var(--warning)">1 VANA = 3,333 VANS ($0.0003)</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Presale Discount</div>
+          <div style="font-weight:600;color:var(--success)">67% SAVINGS</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="color:var(--muted)">Minimum Contribution</div>
+          <div style="font-weight:600">0.1 VANA</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0">
+          <div style="color:var(--muted)">Maximum Contribution</div>
+          <div style="font-weight:600">1,000 VANA per wallet</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+    // CONFIGURATION - REAL CONTRACT ADDRESSES
+    const PRESALE_CONTRACT = "0xeF2f2057a48268f275A59C18530287D5A4BaC0c0";
+    const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+
+    // PRICING & LIMITS CONFIGURATION
+    const CONFIG = {
+      pricing: {
+        presale: {
+          vanaToVans: 10000,      // 1 VANA = 10,000 VANS
+          vansPrice: 0.0001,      // $0.0001 per VANS
+        },
+        launch: {
+          vanaToVans: 3333,       // 1 VANA = 3,333 VANS  
+          vansPrice: 0.0003,      // $0.0003 per VANS
+        }
+      },
+      limits: {
+        minContribution: 0.1,     // Minimum 0.1 VANA
+        maxContribution: 1000,    // Maximum 1,000 VANA per wallet
+        maxPerWallet: 1000        // Maximum 1,000 VANA per wallet
+      }
+    };
+
+    // Vana Chain Configuration
+    const VANA_CHAIN = {
+      chainId: '0x5c8',
+      chainName: 'Vana Chain',
+      nativeCurrency: {
+        name: 'VANA',
+        symbol: 'VANA',
+        decimals: 18
+      },
+      rpcUrls: ['https://rpc.vana.org/'],
+      blockExplorerUrls: ['https://vanascan.io/']
+    };
+
+    // ABI Presale Contract
+    const PRESALE_ABI = [
+      'function buyTokens() payable',
+      'function claimTokens()',
+      'function claimRefund()',
+      'function startPresale()',
+      'function finalizePresale()',
+      'function getPresaleStatus() view returns (uint256, uint256, bool, bool, bool, bool, uint256)',
+      'function getClaimableTokens(address) view returns (uint256)',
+      'function participants(address) view returns (uint256 contributed, uint256 tokensBought, uint256 tokensClaimed, uint256 lastClaimTime, bool refunded)',
+      'function totalRaised() view returns (uint256)',
+      'function startTime() view returns (uint256)',
+      'function endTime() view returns (uint256)',
+      'function presaleStarted() view returns (bool)',
+      'function presaleFinalized() view returns (bool)',
+      'function softCapReached() view returns (bool)',
+      'function getParticipantCount() view returns (uint256)',
+      'function owner() view returns (address)',
+      'function getVestingInfo(address) view returns (uint256 total, uint256 claimed, uint256 claimable, uint256 nextClaim)'
+    ];
+
+    // STATE
+    let provider = null;
+    let signer = null;
+    let account = null;
+    let presaleContract = null;
+    let isOwner = false;
+    let updateInterval = null;
+    let countdownInterval = null;
+
+    const $ = id => document.getElementById(id);
+
+    // ANTI-BOT PROTECTION
+    const RATE_LIMIT = {
+      lastTx: {},
+      check: function(address) {
+        const now = Date.now();
+        if (this.lastTx[address] && (now - this.lastTx[address] < 30000)) {
+          throw new Error("Please wait 30 seconds between transactions");
+        }
+        this.lastTx[address] = now;
+        return true;
+      }
+    };
+
+    // INITIALIZATION
+    async function init() {
+      setupEventListeners();
+      await checkNetwork();
+      await connectWallet();
+      updatePricingDisplay();
+    }
+
+    // UPDATE PRICING DISPLAY
+    function updatePricingDisplay() {
+      const discount = ((CONFIG.pricing.launch.vansPrice - CONFIG.pricing.presale.vansPrice) / CONFIG.pricing.launch.vansPrice * 100).toFixed(0);
+      document.querySelector('.price-comparison .price-save').textContent = `$${CONFIG.pricing.presale.vansPrice.toFixed(4)} per VANS`;
+      document.querySelectorAll('.price-save')[1].textContent = `$${CONFIG.pricing.launch.vansPrice.toFixed(4)} per VANS`;
+      document.querySelector('.price-comparison div:last-child strong').textContent = `${discount}% DISCOUNT`;
+    }
+
+    // CHECK NETWORK
+    async function checkNetwork() {
+      if (typeof window.ethereum === 'undefined') return;
+
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== VANA_CHAIN.chainId) {
+          $('networkAlert').style.display = 'block';
+        } else {
+          $('networkAlert').style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Network check failed:', error);
+      }
+    }
+
+    // SWITCH TO VANA CHAIN
+    async function switchToVanaChain() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: VANA_CHAIN.chainId }],
+        });
+        $('networkAlert').style.display = 'none';
+        return true;
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [VANA_CHAIN],
+            });
+            $('networkAlert').style.display = 'none';
+            return true;
+          } catch (addError) {
+            console.error('Failed to add Vana Chain:', addError);
+            showError('Failed to add Vana Chain to your wallet');
+            return false;
+          }
+        }
+        console.error('Failed to switch to Vana Chain:', switchError);
+        showError('Failed to switch to Vana Chain');
+        return false;
+      }
+    }
+
+    // WALLET CONNECTION
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        showError('Please install MetaMask to participate in the presale!');
+        return;
+      }
+
+      try {
+        await checkNetwork();
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          signer = provider.getSigner();
+          account = accounts[0];
+        } else {
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          account = await signer.getAddress();
+        }
+
+        presaleContract = new ethers.Contract(PRESALE_CONTRACT, PRESALE_ABI, signer);
+
+        // Check if connected wallet is owner
+        const contractOwner = await presaleContract.owner();
+        isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
+
+        $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
+        $('buyStatus').textContent = 'Loading presale data...';
+
+        // Show admin panel if owner
+        if (isOwner) {
+          $('adminPanel').style.display = 'block';
+        }
+
+        // Update claim section
+        updateClaimSection();
+
+        await loadPresaleData();
+        startAutoUpdate();
+
+      } catch (error) {
+        console.error('Connection failed:', error);
+        showError('Wallet connection failed: ' + error.message);
+      }
+    }
+
+    // UPDATE CLAIM SECTION VISIBILITY
+    function updateClaimSection() {
+      if (account) {
+        $('claimNotConnected').style.display = 'none';
+        $('claimContent').style.display = 'block';
+        loadClaimData();
+      } else {
+        $('claimNotConnected').style.display = 'block';
+        $('claimContent').style.display = 'none';
+      }
+    }
+
+    // LOAD CLAIM DATA
+    async function loadClaimData() {
+      try {
+        const participant = await presaleContract.participants(account);
+        const claimableTokens = await presaleContract.getClaimableTokens(account);
+        
+        // Update claim stats
+        $('totalPurchased').textContent = formatEther(participant.tokensBought) + ' VANS';
+        $('alreadyClaimed').textContent = formatEther(participant.tokensClaimed) + ' VANS';
+        $('currentlyClaimable').textContent = formatEther(claimableTokens) + ' VANS';
+        
+        const remaining = participant.tokensBought.sub(participant.tokensClaimed);
+        $('remainingToClaim').textContent = formatEther(remaining) + ' VANS';
+
+        // Calculate claim progress
+        const progress = participant.tokensBought.gt(0) ? 
+          (parseFloat(participant.tokensClaimed) / parseFloat(participant.tokensBought)) * 100 : 0;
+        $('claimProgress').textContent = progress.toFixed(1) + '%';
+
+        // Update next claim date
+        updateNextClaimDate(participant.lastClaimTime);
+
+        // Update button states
+        $('claimTokensBtn').disabled = claimableTokens.eq(0);
+        $('claimRefundBtn').disabled = participant.refunded || participant.contributed.eq(0);
+
+        // Show claim status
+        if (participant.contributed.gt(0)) {
+          if (participant.refunded) {
+            $('claimStatus').textContent = 'You have already claimed your refund';
+            $('claimStatus').style.color = 'var(--warning)';
+          } else if (claimableTokens.gt(0)) {
+            $('claimStatus').textContent = 'You have tokens available to claim!';
+            $('claimStatus').style.color = 'var(--success)';
+          } else {
+            $('claimStatus').textContent = 'No tokens available to claim at the moment';
+            $('claimStatus').style.color = 'var(--muted)';
+          }
+        } else {
+          $('claimStatus').textContent = 'You have not participated in the presale yet';
+          $('claimStatus').style.color = 'var(--muted)';
+        }
+
+      } catch (error) {
+        console.error('Load claim data failed:', error);
+        $('claimStatus').textContent = 'Error loading claim data';
+        $('claimStatus').style.color = 'var(--danger)';
+      }
+    }
+
+    // UPDATE NEXT CLAIM DATE
+    function updateNextClaimDate(lastClaimTime) {
+      if (lastClaimTime.eq(0)) {
+        $('nextClaimDate').textContent = 'After presale ends + 2 weeks cliff';
+        return;
+      }
+
+      const nextClaim = parseInt(lastClaimTime) + (7 * 24 * 60 * 60); // 7 days later
+      const now = Math.floor(Date.now() / 1000);
+      
+      if (nextClaim > now) {
+        const nextClaimDate = new Date(nextClaim * 1000);
+        $('nextClaimDate').textContent = nextClaimDate.toLocaleDateString();
+      } else {
+        $('nextClaimDate').textContent = 'Available now!';
+      }
+    }
+
+    // LOAD PRESALE DATA
+    async function loadPresaleData() {
+      try {
+        const [totalRaised, participantCount, isActive, isFinalized, softCapReached, isStarted, endTime] = 
+          await presaleContract.getPresaleStatus();
+
+        // Update stats
+        $('totalRaised').textContent = formatEther(totalRaised) + ' VANA';
+        $('participantCount').textContent = participantCount.toString();
+
+        // Update progress
+        const progress = (parseFloat(formatEther(totalRaised)) / 3600) * 100;
+        $('progressFill').style.width = Math.min(progress, 100) + '%';
+        $('progressText').textContent = progress.toFixed(1) + '%';
+
+        // Update status badge and timer
+        updatePresaleStatus(isStarted, isActive, isFinalized, endTime);
+
+        // Load user data if connected
+        if (account) {
+          await loadUserData();
+          await loadClaimData();
+        }
+
+        // Update button states
+        updateButtonStates(isStarted, isActive, isFinalized, softCapReached);
+
+      } catch (error) {
+        console.error('Load presale data failed:', error);
+        showError('Failed to load presale data');
+      }
+    }
+
+    // UPDATE PRESALE STATUS DISPLAY
+    function updatePresaleStatus(isStarted, isActive, isFinalized, endTime) {
+      const statusBadge = $('presaleStatusBadge');
+      const timerLabel = $('timerLabel');
+      const timerValue = $('timerValue');
+
+      // Clear existing countdown
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      if (isFinalized) {
+        statusBadge.textContent = 'ENDED';
+        statusBadge.className = 'status-badge status-ended';
+        timerLabel.textContent = 'PRESALE ENDED';
+        timerValue.textContent = '00:00:00:00';
+      } else if (isActive) {
+        statusBadge.textContent = 'LIVE';
+        statusBadge.className = 'status-badge status-active';
+        timerLabel.textContent = 'PRESALE ENDS IN';
+        startCountdown(endTime);
+      } else if (isStarted) {
+        statusBadge.textContent = 'ENDED';
+        statusBadge.className = 'status-badge status-ended';
+        timerLabel.textContent = 'PRESALE ENDED';
+        timerValue.textContent = '00:00:00:00';
+      } else {
+        statusBadge.textContent = 'UPCOMING';
+        statusBadge.className = 'status-badge status-upcoming';
+        timerLabel.textContent = 'PRESALE NOT STARTED';
+        timerValue.textContent = '--:--:--:--';
+      }
+    }
+
+    // START COUNTDOWN TIMER
+    function startCountdown(endTime) {
+      function update() {
+        const now = Math.floor(Date.now() / 1000);
+        const timeRemaining = endTime - now;
+        
+        if (timeRemaining <= 0) {
+          clearInterval(countdownInterval);
+          $('timerValue').textContent = '00:00:00:00';
+          loadPresaleData(); // Reload status
+          return;
+        }
+
+        const days = Math.floor(timeRemaining / 86400);
+        const hours = Math.floor((timeRemaining % 86400) / 3600);
+        const minutes = Math.floor((timeRemaining % 3600) / 60);
+        const seconds = timeRemaining % 60;
+
+        $('timerValue').textContent = 
+          `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+
+      update(); // Initial update
+      countdownInterval = setInterval(update, 1000);
+    }
+
+    // LOAD USER DATA
+    async function loadUserData() {
+      try {
+        const participant = await presaleContract.participants(account);
+
+        $('yourContribution').textContent = formatEther(participant.contributed) + ' VANA';
+        $('yourAllocation').textContent = formatEther(participant.tokensBought) + ' VANS';
+
+      } catch (error) {
+        console.error('Load user data failed:', error);
+      }
+    }
+
+    // BUY TOKENS
+    async function buyTokens() {
+      const amount = $('contributionAmount').value;
+      
+      // Input validation
+      const validationError = validateContribution(amount);
+      if (validationError) {
+        showError(validationError);
+        return;
+      }
+
+      try {
+        // Anti-bot protection
+        RATE_LIMIT.check(account);
+
+        $('buyBtn').disabled = true;
+        $('buyBtn').innerHTML = '<span class="spinner"></span>Buying...';
+        $('buyStatus').textContent = 'Processing transaction...';
+
+        const amountWei = ethers.utils.parseEther(amount);
+
+        // Estimate gas first
+        const gasEstimate = await presaleContract.estimateGas.buyTokens({ value: amountWei });
+        const gasPrice = await provider.getGasPrice();
+
+        $('buyStatus').textContent = 'Confirming transaction...';
+
+        const tx = await presaleContract.buyTokens({ 
+          value: amountWei,
+          gasLimit: gasEstimate.mul(120).div(100), // 20% buffer
+          gasPrice: gasPrice
+        });
+
+        $('buyStatus').textContent = 'Transaction submitted...';
+        await tx.wait();
+
+        $('buyStatus').textContent = 'Tokens purchased successfully!';
+        $('contributionAmount').value = '';
+
+        await loadPresaleData();
+        await loadClaimData();
+
+      } catch (error) {
+        console.error('Buy tokens failed:', error);
+        showError('Purchase failed: ' + getErrorMessage(error));
+      } finally {
+        $('buyBtn').disabled = false;
+        $('buyBtn').textContent = 'Buy VANS Tokens';
+      }
+    }
+
+    // INPUT VALIDATION
+    function validateContribution(amount) {
+      if (!amount || amount === '') {
+        return 'Please enter an amount';
+      }
+      
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount)) {
+        return 'Please enter a valid number';
+      }
+      
+      if (numAmount < CONFIG.limits.minContribution) {
+        return `Minimum contribution is ${CONFIG.limits.minContribution} VANA`;
+      }
+      
+      if (numAmount > CONFIG.limits.maxContribution) {
+        return `Maximum contribution is ${CONFIG.limits.maxContribution} VANA per wallet`;
+      }
+      
+      if (!/^\d+(\.\d{1,18})?$/.test(amount)) {
+        return 'Invalid amount format';
+      }
+      
+      return null;
+    }
+
+    // START PRESALE (Admin only)
+    async function startPresale() {
+      try {
+        $('startPresaleBtn').disabled = true;
+        $('startPresaleBtn').innerHTML = '<span class="spinner"></span>Starting...';
+        $('adminStatus').textContent = 'Starting presale...';
+
+        const tx = await presaleContract.startPresale();
+        await tx.wait();
+
+        $('adminStatus').textContent = 'Presale started successfully!';
+        await loadPresaleData();
+
+      } catch (error) {
+        console.error('Start presale failed:', error);
+        showError('Start failed: ' + getErrorMessage(error));
+      } finally {
+        $('startPresaleBtn').disabled = false;
+        $('startPresaleBtn').textContent = 'Start Presale';
+      }
+    }
+
+    // FINALIZE PRESALE (Admin only)
+    async function finalizePresale() {
+      try {
+        $('finalizePresaleBtn').disabled = true;
+        $('finalizePresaleBtn').innerHTML = '<span class="spinner"></span>Finalizing...';
+        $('adminStatus').textContent = 'Finalizing presale...';
+
+        const tx = await presaleContract.finalizePresale();
+        await tx.wait();
+
+        $('adminStatus').textContent = 'Presale finalized successfully!';
+        await loadPresaleData();
+
+      } catch (error) {
+        console.error('Finalize presale failed:', error);
+        showError('Finalize failed: ' + getErrorMessage(error));
+      } finally {
+        $('finalizePresaleBtn').disabled = false;
+        $('finalizePresaleBtn').textContent = 'Finalize Presale';
+      }
+    }
+
+    // CLAIM TOKENS
+    async function claimTokens() {
+      try {
+        $('claimTokensBtn').disabled = true;
+        $('claimTokensBtn').innerHTML = '<span class="spinner"></span>Claiming...';
+        $('claimStatus').textContent = 'Claiming tokens...';
+
+        const tx = await presaleContract.claimTokens();
+        await tx.wait();
+
+        $('claimStatus').textContent = 'Tokens claimed successfully!';
+        await loadClaimData();
+
+      } catch (error) {
+        console.error('Claim tokens failed:', error);
+        showError('Claim failed: ' + getErrorMessage(error));
+      } finally {
+        $('claimTokensBtn').disabled = false;
+        $('claimTokensBtn').textContent = 'Claim Tokens Now';
+      }
+    }
+
+    // CLAIM REFUND
+    async function claimRefund() {
+      try {
+        $('claimRefundBtn').disabled = true;
+        $('claimRefundBtn').innerHTML = '<span class="spinner"></span>Refunding...';
+        $('claimStatus').textContent = 'Processing refund...';
+
+        const tx = await presaleContract.claimRefund();
+        await tx.wait();
+
+        $('claimStatus').textContent = 'Refund claimed successfully!';
+        await loadClaimData();
+
+      } catch (error) {
+        console.error('Claim refund failed:', error);
+        showError('Refund failed: ' + getErrorMessage(error));
+      } finally {
+        $('claimRefundBtn').disabled = false;
+        $('claimRefundBtn').textContent = 'Claim Refund';
+      }
+    }
+
+    // UPDATE BUTTON STATES
+    function updateButtonStates(isStarted, isActive, isFinalized, softCapReached) {
+      // Buy button
+      $('buyBtn').disabled = !isActive || isFinalized;
+      
+      if (isFinalized) {
+        $('buyBtn').textContent = 'Presale Ended';
+      } else if (!isActive && isStarted) {
+        $('buyBtn').textContent = 'Presale Ended';
+      } else if (!isStarted) {
+        $('buyBtn').textContent = 'Presale Not Started';
+      } else {
+        $('buyBtn').textContent = 'Buy VANS Tokens';
+      }
+
+      // Admin buttons
+      if (isOwner) {
+        $('startPresaleBtn').disabled = isStarted;
+        $('finalizePresaleBtn').disabled = isFinalized || !isStarted;
+      }
+    }
+
+    // CALCULATE TOKENS TO RECEIVE
+    function calculateTokens() {
+      const amount = $('contributionAmount').value;
+      if (amount && amount > 0) {
+        const tokens = amount * CONFIG.pricing.presale.vanaToVans;
+        $('tokensToReceive').textContent = tokens.toLocaleString() + ' VANS';
+      } else {
+        $('tokensToReceive').textContent = '0 VANS';
+      }
+    }
+
+    // SET MAX AMOUNT
+    async function setMaxAmount(percent = 1) {
+      if (!account) return;
+
+      try {
+        const balance = await provider.getBalance(account);
+        const balanceFormatted = parseFloat(ethers.utils.formatEther(balance));
+        const maxAmount = Math.min(balanceFormatted * percent, CONFIG.limits.maxContribution);
+        $('contributionAmount').value = maxAmount.toFixed(1);
+        calculateTokens();
+      } catch (error) {
+        console.error('Set max amount failed:', error);
+      }
+    }
+
+    // UTILITY FUNCTIONS
+    function formatEther(wei) {
+      return parseFloat(ethers.utils.formatEther(wei)).toFixed(2);
+    }
+
+    function getErrorMessage(error) {
+      const userFriendlyMessages = {
+        'insufficient funds': 'Insufficient VANA balance',
+        'user rejected': 'Transaction cancelled by user',
+        'presale not active': 'Presale is not active',
+        'max contribution': 'Maximum contribution limit reached',
+        'min contribution': `Minimum contribution is ${CONFIG.limits.minContribution} VANA`
+      };
+      
+      // Check for common error patterns
+      for (const [key, message] of Object.entries(userFriendlyMessages)) {
+        if (error.message?.toLowerCase().includes(key) || error.reason?.toLowerCase().includes(key)) {
+          return message;
+        }
+      }
+      
+      return error.reason || error.message || 'Unknown error occurred';
+    }
+
+    function showError(message) {
+      $('buyStatus').textContent = message;
+      $('buyStatus').style.color = 'var(--danger)';
+      
+      // Reset color after 5 seconds
+      setTimeout(() => {
+        $('buyStatus').style.color = 'var(--muted)';
+      }, 5000);
+    }
+
+    function startAutoUpdate() {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+      updateInterval = setInterval(loadPresaleData, 10000); // Update every 10 seconds
+    }
+
+    // EVENT LISTENERS
+    function setupEventListeners() {
+      // Menu
+      const menuBtn = $('menuBtn');
+      const menuDropdown = $('menuDropdown');
+      menuBtn.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        menuDropdown.classList.toggle('show'); 
+      });
+      menuDropdown.querySelectorAll('.menu-item').forEach(it => { 
+        it.addEventListener('click', () => { 
+          const href = it.getAttribute('data-href');
+          if (href) window.location.href = href;
+        }); 
+      });
+      document.addEventListener('click', () => menuDropdown.classList.remove('show'));
+
+      // Network
+      $('switchNetworkBtn').addEventListener('click', switchToVanaChain);
+
+      // Wallet
+      $('connectBtn').addEventListener('click', connectWallet);
+      $('connectForClaimBtn').addEventListener('click', connectWallet);
+
+      // Buy section
+      $('contributionAmount').addEventListener('input', calculateTokens);
+      $('buyBtn').addEventListener('click', buyTokens);
+
+      // Input sanitization
+      $('contributionAmount').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^\d.]/g, '').substring(0, 20);
+      });
+
+      // Admin section
+      $('startPresaleBtn').addEventListener('click', startPresale);
+      $('finalizePresaleBtn').addEventListener('click', finalizePresale);
+
+      // Claim section
+      $('claimTokensBtn').addEventListener('click', claimTokens);
+      $('claimRefundBtn').addEventListener('click', claimRefund);
+
+      // Percentage buttons
+      document.querySelectorAll('.btn-percent').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.btn-percent').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          setMaxAmount(parseFloat(this.dataset.percent) / 100);
+        });
+      });
+
+      // Wallet events
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', () => location.reload());
+        window.ethereum.on('chainChanged', () => location.reload());
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
