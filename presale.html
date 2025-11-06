@@ -275,7 +275,7 @@
       <!-- Buy Section -->
       <div class="form-group">
         <div class="form-label">Amount to Contribute (VANA)</div>
-        <input type="number" id="contributionAmount" class="form-input" placeholder="0.0" min="0.1" max="1000" step="0.1">
+        <input type="number" id="contributionAmount" class="form-input" placeholder="0.0" min="0.1" max="1000" step="0.1" value="0.1">
         
         <div class="input-actions">
           <button class="btn-percent" data-percent="25">25%</button>
@@ -287,7 +287,7 @@
         <div style="margin-top:12px;padding:12px;background:rgba(255,255,255,0.02);border-radius:8px">
           <div style="display:flex;justify-content:space-between;font-size:12px">
             <div style="color:var(--muted)">You will receive:</div>
-            <div style="font-weight:600;color:var(--accent)" id="tokensToReceive">0 VANS</div>
+            <div style="font-weight:600;color:var(--accent)" id="tokensToReceive">1,000 VANS</div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
             <div style="color:var(--muted)">Price:</div>
@@ -538,6 +538,7 @@
       await checkNetwork();
       await connectWallet();
       updatePricingDisplay();
+      calculateTokens(); // Calculate initial tokens
     }
 
     // UPDATE PRICING DISPLAY
@@ -867,7 +868,7 @@
       }
     }
 
-    // BUY TOKENS
+    // BUY TOKENS - IMPROVED WITH BETTER ERROR HANDLING
     async function buyTokens() {
       const amount = $('contributionAmount').value;
       
@@ -883,7 +884,9 @@
         $('buyBtn').innerHTML = '<span class="spinner"></span>Buying...';
         $('buyStatus').textContent = 'Processing transaction...';
 
-        const amountWei = ethers.utils.parseEther(amount);
+        const amountWei = ethers.utils.parseEther(amount.toString());
+
+        console.log('Buying tokens with amount:', amount, 'Wei:', amountWei.toString());
 
         // Estimate gas first
         const gasEstimate = await presaleContract.estimateGas.buyTokens({ value: amountWei });
@@ -897,25 +900,45 @@
           gasPrice: gasPrice
         });
 
-        $('buyStatus').textContent = 'Transaction submitted...';
-        await tx.wait();
+        $('buyStatus').textContent = 'Transaction submitted... Waiting for confirmation';
+        console.log('Transaction hash:', tx.hash);
+
+        const receipt = await tx.wait();
+        console.log('Transaction confirmed:', receipt);
 
         $('buyStatus').textContent = 'Tokens purchased successfully!';
-        $('contributionAmount').value = '';
+        $('buyStatus').style.color = 'var(--success)';
+        $('contributionAmount').value = '0.1';
 
         await loadPresaleData();
         await loadClaimData();
 
+        // Reset status after 5 seconds
+        setTimeout(() => {
+          $('buyStatus').style.color = 'var(--muted)';
+          $('buyStatus').textContent = 'Ready for next transaction';
+        }, 5000);
+
       } catch (error) {
         console.error('Buy tokens failed:', error);
-        showError('Purchase failed: ' + getErrorMessage(error));
+        const errorMsg = getErrorMessage(error);
+        showError('Purchase failed: ' + errorMsg);
+        
+        // Detailed error logging
+        if (error.data) {
+          console.error('Error data:', error.data);
+        }
+        if (error.reason) {
+          console.error('Error reason:', error.reason);
+        }
       } finally {
         $('buyBtn').disabled = false;
         $('buyBtn').textContent = 'Buy VANS Tokens';
+        calculateTokens(); // Recalculate tokens
       }
     }
 
-    // INPUT VALIDATION
+    // IMPROVED INPUT VALIDATION
     function validateContribution(amount) {
       if (!amount || amount === '') {
         return 'Please enter an amount';
@@ -934,7 +957,18 @@
         return `Maximum contribution is ${CONFIG.limits.maxContribution} VANA per wallet`;
       }
       
+      // Check for valid decimal places (up to 18)
       if (!/^\d+(\.\d{1,18})?$/.test(amount)) {
+        return 'Invalid amount format. Use up to 18 decimal places';
+      }
+      
+      // Check if amount is too small in wei
+      try {
+        const amountWei = ethers.utils.parseEther(amount.toString());
+        if (amountWei.lt(ethers.utils.parseEther(CONFIG.limits.minContribution.toString()))) {
+          return `Amount is below minimum contribution of ${CONFIG.limits.minContribution} VANA`;
+        }
+      } catch (e) {
         return 'Invalid amount format';
       }
       
@@ -1070,7 +1104,7 @@
         const balance = await provider.getBalance(account);
         const balanceFormatted = parseFloat(ethers.utils.formatEther(balance));
         const maxAmount = Math.min(balanceFormatted * percent, CONFIG.limits.maxContribution);
-        $('contributionAmount').value = maxAmount.toFixed(1);
+        $('contributionAmount').value = maxAmount.toFixed(4);
         calculateTokens();
       } catch (error) {
         console.error('Set max amount failed:', error);
@@ -1079,7 +1113,7 @@
 
     // UTILITY FUNCTIONS
     function formatEther(wei) {
-      return parseFloat(ethers.utils.formatEther(wei)).toFixed(2);
+      return parseFloat(ethers.utils.formatEther(wei)).toFixed(4);
     }
 
     function getErrorMessage(error) {
@@ -1088,17 +1122,30 @@
         'user rejected': 'Transaction cancelled by user',
         'presale not active': 'Presale is not active',
         'max contribution': 'Maximum contribution limit reached',
-        'min contribution': `Minimum contribution is ${CONFIG.limits.minContribution} VANA`
+        'min contribution': `Minimum contribution is ${CONFIG.limits.minContribution} VANA`,
+        'already contributed': 'You have already contributed to this presale',
+        'amount too low': `Minimum contribution is ${CONFIG.limits.minContribution} VANA`,
+        'amount too high': `Maximum contribution is ${CONFIG.limits.maxContribution} VANA`,
+        'hardcap reached': 'Presale hardcap has been reached',
+        'presale ended': 'Presale has ended',
+        'presale not started': 'Presale has not started yet'
       };
       
       // Check for common error patterns
+      const errorStr = error.message?.toLowerCase() || error.reason?.toLowerCase() || '';
+      
       for (const [key, message] of Object.entries(userFriendlyMessages)) {
-        if (error.message?.toLowerCase().includes(key) || error.reason?.toLowerCase().includes(key)) {
+        if (errorStr.includes(key)) {
           return message;
         }
       }
       
-      return error.reason || error.message || 'Unknown error occurred';
+      // Check for contract revert reasons
+      if (error.reason) {
+        return error.reason;
+      }
+      
+      return error.message || 'Unknown error occurred';
     }
 
     function showError(message) {
@@ -1108,6 +1155,7 @@
       // Reset color after 5 seconds
       setTimeout(() => {
         $('buyStatus').style.color = 'var(--muted)';
+        $('buyStatus').textContent = 'Enter amount to contribute';
       }, 5000);
     }
 
@@ -1146,9 +1194,23 @@
       $('contributionAmount').addEventListener('input', calculateTokens);
       $('buyBtn').addEventListener('click', buyTokens);
 
-      // Input sanitization
+      // Input sanitization - IMPROVED
       $('contributionAmount').addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^\d.]/g, '').substring(0, 20);
+        let value = this.value.replace(/[^\d.]/g, '');
+        
+        // Handle multiple decimal points
+        const decimalParts = value.split('.');
+        if (decimalParts.length > 2) {
+          value = decimalParts[0] + '.' + decimalParts.slice(1).join('');
+        }
+        
+        // Limit to 18 decimal places
+        if (decimalParts.length === 2) {
+          value = decimalParts[0] + '.' + decimalParts[1].substring(0, 18);
+        }
+        
+        this.value = value.substring(0, 25);
+        calculateTokens();
       });
 
       // Admin section
