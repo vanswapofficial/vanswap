@@ -6,7 +6,6 @@
   <title>VanSwap — Vana Swap Pools (Vana Chain)</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* CSS TETAP SAMA SEPERTI SEBELUMNYA */
     :root{
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
@@ -82,7 +81,6 @@
     .panel-row{display:flex;justify-content:space-between;color:var(--muted);padding:8px 0}
     footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
 
-    /* New styles for liquidity */
     .liquidity-info{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:16px}
     .liquidity-info h4{font-weight:600;margin-bottom:8px;font-size:15px}
     .liquidity-info p{color:var(--muted);font-size:13px;line-height:1.4;margin-bottom:8px}
@@ -96,7 +94,6 @@
     .tab.active{background:var(--primary)}
     .tab:hover:not(.active){background:rgba(255,255,255,0.04)}
 
-    /* New styles for pool management */
     .pool-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px;margin-bottom:12px}
     .pool-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
     .pool-tokens{display:flex;align-items:center;gap:8px}
@@ -111,7 +108,6 @@
     .pool-add{background:var(--primary)}
     .pool-remove{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
 
-    /* Remove Liquidity Modal */
     .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
     .modal{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;max-width:400px;width:100%}
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -126,7 +122,6 @@
     .slippage-info{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px}
     .slippage-info .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
 
-    /* Custom token feature */
     .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
     .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
     .add-token-btn span{font-weight:600;font-size:14px}
@@ -146,13 +141,11 @@
     .token-imported{color:var(--primary);font-size:11px;margin-left:6px}
     .token-warning{color:var(--warning);font-size:11px;margin-left:6px}
 
-    /* TVL and stats */
     .tvl-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
     .tvl-stat{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
     .tvl-value{font-weight:700;font-size:18px;color:var(--accent);margin-bottom:4px}
     .tvl-label{color:var(--muted);font-size:12px}
 
-    /* Empty state */
     .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
     .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
 
@@ -164,7 +157,6 @@
 </head>
 <body>
 
-  <!-- HEADER -->
   <header class="header">
     <div class="nav-container">
       <a class="logo" href="swap.html">
@@ -188,16 +180,13 @@
     </div>
   </header>
 
-  <!-- MAIN -->
   <main class="main">
     <div class="swap-row">
-      <!-- LIQUIDITY CARD -->
       <section class="card" aria-label="Liquidity">
         <div class="card-head">
           <div class="title" id="mainTitle">Liquidity</div>
         </div>
 
-        <!-- TVL Stats -->
         <div class="tvl-stats">
           <div class="tvl-stat">
             <div class="tvl-value" id="totalTVL">$---</div>
@@ -209,18 +198,14 @@
           </div>
         </div>
 
-        <!-- TABS -->
         <div class="tabs">
           <div class="tab active" id="myPoolsTab">My Pools</div>
           <div class="tab" id="addTab">Add Liquidity</div>
           <div class="tab" id="importTab">Import Pool</div>
         </div>
 
-        <!-- MY POOLS VIEW -->
         <div id="myPoolsView">
-          <div id="poolsList">
-            <!-- Pools will be populated here -->
-          </div>
+          <div id="poolsList"></div>
           <div class="empty-state" id="noPoolsMessage" style="display:none">
             <div class="empty-icon">🏊‍♂️</div>
             <h4>No Liquidity Pools Found</h4>
@@ -229,9 +214,7 @@
           </div>
         </div>
 
-        <!-- ADD LIQUIDITY VIEW -->
         <div id="addLiquidityView" style="display:none">
-          <!-- FROM -->
           <div class="token-block" id="fromBlock">
             <div class="input-head">
               <div class="label">Token 1</div>
@@ -246,10 +229,8 @@
                   </div>
                   <div style="margin-left:auto;color:var(--muted)">▼</div>
                 </div>
-
                 <div id="fromList" class="token-list" style="display:none"></div>
               </div>
-
               <div class="amount-wrap">
                 <input id="fromAmount" class="amount" placeholder="0.0" inputmode="decimal" autocomplete="off">
                 <div class="meta">
@@ -260,12 +241,10 @@
             </div>
           </div>
 
-          <!-- Add icon -->
           <div class="add-icon">
             <div>+</div>
           </div>
 
-          <!-- TO -->
           <div class="token-block" id="toBlock">
             <div class="input-head">
               <div class="label">Token 2</div>
@@ -280,10 +259,8 @@
                   </div>
                   <div style="margin-left:auto;color:var(--muted)">▼</div>
                 </div>
-
                 <div id="toList" class="token-list" style="display:none"></div>
               </div>
-
               <div class="amount-wrap">
                 <input id="toAmount" class="amount" placeholder="0.0" inputmode="decimal" autocomplete="off">
                 <div class="meta">
@@ -294,7 +271,6 @@
             </div>
           </div>
 
-          <!-- Liquidity info -->
           <div class="liquidity-info">
             <h4>Liquidity Information</h4>
             <p id="liquidityDescription">You are the first liquidity provider for this pair. The ratio of tokens you add will set the price of this pool.</p>
@@ -304,11 +280,9 @@
             </div>
           </div>
 
-          <!-- action -->
           <button id="actionBtn" class="primary">Connect Wallet</button>
         </div>
 
-        <!-- IMPORT POOL VIEW -->
         <div id="importPoolView" style="display:none">
           <div class="add-token-form">
             <div class="form-group">
@@ -342,7 +316,6 @@
         </div>
       </section>
 
-      <!-- PANEL -->
       <aside class="panel" aria-label="Info">
         <h4 id="panelTitle">Pool Information</h4>
         <div class="panel-row"><div>Pooled <span id="tokenASymbol">VANA</span></div><div id="pooledTokenA">—</div></div>
@@ -356,7 +329,6 @@
         <div class="panel-row"><div>Total Liquidity</div><div id="totalLiquidity">$—</div></div>
         <div class="panel-row"><div>24h Volume</div><div id="dailyVolume">$—</div></div>
 
-        <!-- Quick Add for Farming -->
         <h4 style="margin-top:14px">Quick Add Liquidity</h4>
         <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'USDC')">VANA-USDC</button>
         <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'VANS')" style="margin-top:8px">VANA-VANS</button>
@@ -365,7 +337,6 @@
     </div>
   </main>
 
-  <!-- REMOVE LIQUIDITY MODAL -->
   <div id="removeLiquidityModal" class="modal-overlay" style="display:none">
     <div class="modal">
       <div class="modal-header">
@@ -373,9 +344,7 @@
         <button class="close-modal" onclick="closeRemoveModal()">×</button>
       </div>
 
-      <div id="removePoolInfo">
-        <!-- Pool info will be populated here -->
-      </div>
+      <div id="removePoolInfo"></div>
 
       <div class="percentage-buttons">
         <button class="percentage-btn" data-percent="25" onclick="setRemovePercentage(25)">25%</button>
@@ -395,7 +364,6 @@
         </div>
       </div>
 
-      <!-- Slippage Info -->
       <div class="slippage-info">
         <div class="warning-header">
           <span>⚠️</span>
@@ -424,13 +392,15 @@
   const RPC = 'https://rpc.vana.org';
   const CHAIN_ID_HEX = '0x5C8';
 
-  // Price API endpoints
-  const PRICE_API_BASE = 'https://api.coingecko.com/api/v3/simple/price';
-  const TOKEN_IDS = {
-    'VANA': 'vana',
-    'USDC': 'usd-coin',
-    'VANS': 'vana', // Using VANA price as fallback for VANS
-    'BERY': 'vana'  // Using VANA price as fallback for BERY
+  // PERBAIKAN: Gunakan DexScreener untuk harga real-time
+  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens/';
+  
+  // Token addresses untuk DexScreener
+  const DEXSCREENER_TOKENS = {
+    'VANA': WVANA, // Gunakan WVANA untuk VANA
+    'VANS': VANS,
+    'BERY': BERY,
+    'USDC': USDC
   };
 
   const ROUTER_ABI = [
@@ -493,11 +463,9 @@
   let selectedFrom = tokens[0];
   let selectedTo = tokens[2];
 
-  // VARIABEL UNTUK MENCEGAH INFINITE LOOP - DIPERBAIKI
+  // State management
   let isCalculatingA = false;
   let isCalculatingB = false;
-  let lastFromValue = '';
-  let lastToValue = '';
 
   const $ = id => document.getElementById(id);
 
@@ -515,10 +483,168 @@
   function setStatus(s){ $('status').textContent = s }
 
   // =============================================
-  // PERBAIKAN UTAMA: FUNGSI INPUT HANDLING YANG AMAN
+  // HARGA REAL DARI DEXSCREENER
   // =============================================
 
+  async function getRealTokenPrice(tokenSymbol) {
+    if (tokenPrices[tokenSymbol] && (Date.now() - tokenPrices[tokenSymbol].timestamp) < 30000) {
+      return tokenPrices[tokenSymbol].price;
+    }
+
+    try {
+      const tokenAddress = DEXSCREENER_TOKENS[tokenSymbol];
+      if (!tokenAddress) {
+        console.warn(`No DexScreener address for ${tokenSymbol}`);
+        return 0;
+      }
+
+      const response = await fetch(`${DEXSCREENER_API}${tokenAddress}`);
+      const data = await response.json();
+
+      if (data && data.pairs && data.pairs.length > 0) {
+        const price = parseFloat(data.pairs[0].priceUsd);
+        
+        if (price && price > 0) {
+          tokenPrices[tokenSymbol] = {
+            price: price,
+            timestamp: Date.now()
+          };
+          return price;
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching DexScreener price for ${tokenSymbol}:`, error);
+    }
+
+    return 0;
+  }
+
+  // =============================================
+  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
+  // =============================================
+
+  async function calculateOptimalAmountB() {
+    if (!provider || !account || isCalculatingB) return;
+
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingB = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+
+        if (amountBOptimal.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
+        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount B:', error);
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingA = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        if (amountAOptimal.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
+        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
+    }
+  }
+
+  // =============================================
   // VIEW MANAGEMENT
+  // =============================================
+
   function switchToMyPoolsView() {
     $('myPoolsTab').classList.add('active');
     $('addTab').classList.remove('active');
@@ -541,14 +667,11 @@
     $('mainTitle').textContent = 'Add Liquidity';
     $('panelTitle').textContent = 'Pool Information';
     
-    // Reset input values ketika pindah tab
+    // Reset input values
     $('fromAmount').value = '';
     $('toAmount').value = '';
-    $('fromUsd').textContent = '—';
-    $('toUsd').textContent = '—';
     
     updateLiquidityInfo();
-    updateActionBtn();
   }
 
   function switchToImportView() {
@@ -567,7 +690,10 @@
   $('addTab').addEventListener('click', switchToAddView);
   $('importTab').addEventListener('click', switchToImportView);
 
-  // MENU
+  // =============================================
+  // MENU & DROPDOWNS
+  // =============================================
+
   const menuBtn = $('menuBtn');
   const menuDropdown = $('menuDropdown');
   menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menuDropdown.classList.toggle('show'); });
@@ -581,7 +707,6 @@
   });
   document.addEventListener('click', ()=> menuDropdown.classList.remove('show'));
 
-  // DROPDOWNS
   function buildTokenListHtml(type){
     const listEl = (type==='from') ? $('fromList') : $('toList');
     listEl.innerHTML = '';
@@ -611,7 +736,6 @@
       listEl.appendChild(opt);
     }
 
-    // Add "Add Custom Token" button at the bottom
     const addTokenBtn = document.createElement('div');
     addTokenBtn.className = 'add-token-btn';
     addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
@@ -625,11 +749,9 @@
     listEl.style.display = 'block'; listEl.style.pointerEvents = 'auto';
   }
 
-  // Function to show add token form
   function showAddTokenForm(type) {
     const listEl = (type==='from') ? $('fromList') : $('toList');
 
-    // Check if form already exists
     if (listEl.querySelector('.add-token-form')) {
       return;
     }
@@ -659,13 +781,11 @@
 
     listEl.appendChild(form);
 
-    // Focus on input
     setTimeout(() => {
       const input = form.querySelector('#tokenAddressInput');
       if (input) input.focus();
     }, 100);
 
-    // Add event listeners
     form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
       e.stopPropagation();
       form.remove();
@@ -676,7 +796,6 @@
       importCustomToken(type, form.querySelector('#tokenAddressInput').value);
     });
 
-    // Allow Enter key to import
     form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.stopPropagation();
@@ -685,20 +804,17 @@
     });
   }
 
-  // Function to import custom token
   async function importCustomToken(type, address) {
     if (!address || address.trim() === '') {
       showToast('Please enter a token address');
       return;
     }
 
-    // Basic validation
     if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
       showToast('Invalid token address format');
       return;
     }
 
-    // Check if token already exists
     const existingToken = tokens.find(t => 
       t.address.toLowerCase() === address.trim().toLowerCase()
     );
@@ -718,13 +834,11 @@
 
       const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
 
-      // Get token details
       const [symbol, decimals] = await Promise.all([
         tokenContract.symbol(),
         tokenContract.decimals()
       ]);
 
-      // Create token object
       const newToken = {
         symbol: symbol,
         address: address,
@@ -734,16 +848,9 @@
         verified: false
       };
 
-      // Add to tokens list
       tokens.push(newToken);
-
-      // Save to localStorage
       saveCustomTokens();
-
-      // Select the token
       selectToken(type, newToken);
-
-      // Rebuild token list to show new token
       buildTokenListHtml(type);
 
       showToast(`Token ${symbol} imported successfully`);
@@ -756,13 +863,11 @@
     }
   }
 
-  // Save custom tokens to localStorage
   function saveCustomTokens() {
     const customTokens = tokens.filter(t => t.custom);
     localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
   }
 
-  // Load custom tokens from localStorage
   function loadCustomTokens() {
     try {
       const stored = localStorage.getItem('vanswap_custom_tokens');
@@ -779,24 +884,77 @@
     }
   }
 
-  window.filterTokens = function(type, term){ const listEl = (type==='from') ? $('fromList') : $('toList'); const opts = listEl.querySelectorAll('.token-option'); opts.forEach(o=>{ const text = o.textContent.toLowerCase(); const ok = text.includes((term||'').toLowerCase()); o.style.display = ok ? 'flex' : 'none'; }); };
+  window.filterTokens = function(type, term){ 
+    const listEl = (type==='from') ? $('fromList') : $('toList'); 
+    const opts = listEl.querySelectorAll('.token-option'); 
+    opts.forEach(o=>{ 
+      const text = o.textContent.toLowerCase(); 
+      const ok = text.includes((term||'').toLowerCase()); 
+      o.style.display = ok ? 'flex' : 'none'; 
+    }); 
+  };
 
-  $('fromSelect').addEventListener('click', (e)=>{ e.stopPropagation(); const el = $('fromList'); if(el.style.display === 'block'){ el.style.display = 'none'; } else { buildTokenListHtml('from'); el.style.display = 'block'; $('toList').style.display = 'none'; } });
-  $('toSelect').addEventListener('click', (e)=>{ e.stopPropagation(); const el = $('toList'); if(el.style.display === 'block'){ el.style.display = 'none'; } else { buildTokenListHtml('to'); el.style.display = 'block'; $('fromList').style.display = 'none'; } });
-  document.addEventListener('click', (e)=>{ if(!e.target.closest('.select-wrap')){ $('fromList').style.display = 'none'; $('toList').style.display = 'none'; } });
+  $('fromSelect').addEventListener('click', (e)=>{ 
+    e.stopPropagation(); 
+    const el = $('fromList'); 
+    if(el.style.display === 'block'){ 
+      el.style.display = 'none'; 
+    } else { 
+      buildTokenListHtml('from'); 
+      el.style.display = 'block'; 
+      $('toList').style.display = 'none'; 
+    } 
+  });
+  
+  $('toSelect').addEventListener('click', (e)=>{ 
+    e.stopPropagation(); 
+    const el = $('toList'); 
+    if(el.style.display === 'block'){ 
+      el.style.display = 'none'; 
+    } else { 
+      buildTokenListHtml('to'); 
+      el.style.display = 'block'; 
+      $('fromList').style.display = 'none'; 
+    } 
+  });
+  
+  document.addEventListener('click', (e)=>{ 
+    if(!e.target.closest('.select-wrap')){ 
+      $('fromList').style.display = 'none'; 
+      $('toList').style.display = 'none'; 
+    } 
+  });
 
   async function selectToken(type, token){
-    if(type==='from'){ selectedFrom = token; $('fromLogo').src = token.logo; $('fromSymbol').textContent = token.symbol; $('fromList').style.display = 'none'; }
-    else{ selectedTo = token; $('toLogo').src = token.logo; $('toSymbol').textContent = token.symbol; $('toList').style.display = 'none'; }
-    updateBalances(); 
-    updateLiquidityInfo();
+    if(type==='from'){ 
+      selectedFrom = token; 
+      $('fromLogo').src = token.logo; 
+      $('fromSymbol').textContent = token.symbol; 
+      $('fromList').style.display = 'none'; 
+    } else { 
+      selectedTo = token; 
+      $('toLogo').src = token.logo; 
+      $('toSymbol').textContent = token.symbol; 
+      $('toList').style.display = 'none'; 
+    }
+    
+    // Reset input values ketika ganti token
+    $('fromAmount').value = '';
+    $('toAmount').value = '';
+    
+    await updateBalances(); 
+    await updateLiquidityInfo();
     updateActionBtn(); 
-    updateUSDValues();
+    await updateUSDValues();
   }
 
+  // =============================================
   // WALLET & CHAIN HANDLING
+  // =============================================
+
   const connectBtn = $('connectBtn');
   connectBtn.addEventListener('click', connectWallet);
+  
   async function ensureVanaChain(){
     if(!window.ethereum) return false;
     try{
@@ -844,7 +1002,6 @@
     }
   }
 
-  // listen for chain change and auto-handle
   if(window.ethereum){
     window.ethereum.on('chainChanged', async (chainId) => {
       console.log('chainChanged', chainId);
@@ -853,10 +1010,26 @@
         try{ await ensureVanaChain(); setStatus('Switched to Vana'); location.reload(); } catch(e){ setStatus('Please switch to Vana chain in wallet'); }
       } else { setStatus('Connected to Vana'); location.reload(); }
     });
-    window.ethereum.on('accountsChanged', (accs)=>{ if(accs && accs.length>0){ account = accs[0]; connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); updateBalances(); updateDropdownBalances(); updateLiquidityInfo(); loadUserPools(); updateUSDValues(); } else { account = null; connectBtn.textContent = 'Connect Wallet'; } });
+    window.ethereum.on('accountsChanged', (accs)=>{ 
+      if(accs && accs.length>0){ 
+        account = accs[0]; 
+        connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38); 
+        updateBalances(); 
+        updateDropdownBalances(); 
+        updateLiquidityInfo(); 
+        loadUserPools(); 
+        updateUSDValues(); 
+      } else { 
+        account = null; 
+        connectBtn.textContent = 'Connect Wallet'; 
+      } 
+    });
   }
 
+  // =============================================
   // BALANCES & MAX
+  // =============================================
+
   async function updateBalances(){
     if(!provider || !account) return;
     try{
@@ -921,277 +1094,16 @@
       } 
       updateLiquidityInfo();
       updateUSDValues();
-      calculateOptimalAmountB(); // Calculate optimal amount B when setting max
+      calculateOptimalAmountB();
     }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
   }
+  
   $('btnMax').addEventListener('click', setMax);
   $('fromBalance').addEventListener('click', setMax);
 
   // =============================================
-  // PERBAIKAN UTAMA: FUNGSI PERHITUNGAN RASIO YANG AMAN
+  // USD VALUES & LIQUIDITY INFO
   // =============================================
-
-  // FUNGSI BARU: Calculate optimal amount for token B based on input A dengan decimal adjustment
-  async function calculateOptimalAmountB() {
-    if (!provider || !account || isCalculatingB) return;
-
-    isCalculatingB = true;
-
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      $('toAmount').value = '';
-      isCalculatingB = false;
-      return;
-    }
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        // Pool exists - calculate amountB based on reserves dengan decimal adjustment
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        let decimalsA, decimalsB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-          decimalsA = selectedFrom.decimals;
-          decimalsB = selectedTo.decimals;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-          decimalsA = selectedTo.decimals;
-          decimalsB = selectedFrom.decimals;
-        }
-
-        // PERBAIKAN: Validasi reserves tidak nol
-        if (reserveA.isZero() || reserveB.isZero()) {
-          $('toAmount').value = '';
-          showToast('Pool reserves are zero - enter both amounts manually');
-          isCalculatingB = false;
-          return;
-        }
-
-        // PERBAIKAN: Convert input amount dengan decimals yang benar
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-
-        // PERBAIKAN: Hitung dengan memperhitungkan perbedaan decimals
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-
-        // Validasi amount tidak nol
-        if (amountBOptimal.isZero()) {
-          $('toAmount').value = '';
-          showToast('Calculated amount is zero - check input');
-          isCalculatingB = false;
-          return;
-        }
-
-        // PERBAIKAN: Format output dengan decimals yang benar
-        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
-
-        // PERBAIKAN KRITIS: Update toAmount field - HANYA jika nilainya berbeda
-        if (!isCalculatingA && $('toAmount').value !== toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals)) {
-          $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
-        }
-
-        console.log('Calculate B:', {
-          fromAmt,
-          reserveA: reserveA.toString(),
-          reserveB: reserveB.toString(),
-          amountADesired: amountADesired.toString(),
-          amountBOptimal: amountBOptimal.toString(),
-          toAmountFormatted,
-          decimalsA: selectedFrom.decimals,
-          decimalsB: selectedTo.decimals
-        });
-
-      } else {
-        // New pool - keep toAmount empty atau gunakan price dari API
-        const fromPrice = await getTokenPrice(selectedFrom.symbol);
-        const toPrice = await getTokenPrice(selectedTo.symbol);
-
-        if (fromPrice > 0 && toPrice > 0) {
-          const estimatedAmountB = (parseFloat(fromAmt) * fromPrice) / toPrice;
-          if (!isCalculatingA && $('toAmount').value !== estimatedAmountB.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals)) {
-            $('toAmount').value = estimatedAmountB.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
-          }
-        } else {
-          // PERBAIKAN: Jangan hapus value yang sudah ada untuk pair baru
-          if (!$('toAmount').value) {
-            $('toAmount').value = '';
-          }
-        }
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount B:', error);
-      // PERBAIKAN: Jangan hapus value yang sudah ada jika error
-      if (!$('toAmount').value) {
-        $('toAmount').value = '';
-      }
-      showToast('Error calculating optimal amount');
-    } finally {
-      setTimeout(() => { isCalculatingB = false; }, 100);
-    }
-  }
-
-  // FUNGSI BARU: Calculate optimal amount for token A based on input B dengan decimal adjustment
-  async function calculateOptimalAmountA() {
-    if (!provider || !account || isCalculatingA) return;
-
-    isCalculatingA = true;
-
-    const toAmt = $('toAmount').value;
-    if (!toAmt || parseFloat(toAmt) <= 0) {
-      $('fromAmount').value = '';
-      isCalculatingA = false;
-      return;
-    }
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        // Pool exists - calculate amountA based on reserves dengan decimal adjustment
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-        let decimalsA, decimalsB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-          decimalsA = selectedFrom.decimals;
-          decimalsB = selectedTo.decimals;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-          decimalsA = selectedTo.decimals;
-          decimalsB = selectedFrom.decimals;
-        }
-
-        // Validasi reserves tidak nol
-        if (reserveA.isZero() || reserveB.isZero()) {
-          $('fromAmount').value = '';
-          showToast('Pool reserves are zero - enter both amounts manually');
-          isCalculatingA = false;
-          return;
-        }
-
-        // PERBAIKAN: Convert input amount dengan decimals yang benar
-        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-
-        // PERBAIKAN: Hitung dengan memperhitungkan perbedaan decimals
-        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
-
-        // Validasi amount tidak nol
-        if (amountAOptimal.isZero()) {
-          $('fromAmount').value = '';
-          showToast('Calculated amount is zero - check input');
-          isCalculatingA = false;
-          return;
-        }
-
-        // PERBAIKAN: Format output dengan decimals yang benar
-        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
-
-        // PERBAIKAN KRITIS: Update fromAmount field - HANYA jika nilainya berbeda
-        if (!isCalculatingB && $('fromAmount').value !== fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals)) {
-          $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
-        }
-
-        console.log('Calculate A:', {
-          toAmt,
-          reserveA: reserveA.toString(),
-          reserveB: reserveB.toString(),
-          amountBDesired: amountBDesired.toString(),
-          amountAOptimal: amountAOptimal.toString(),
-          fromAmountFormatted,
-          decimalsA: selectedFrom.decimals,
-          decimalsB: selectedTo.decimals
-        });
-
-      } else {
-        // New pool - keep fromAmount empty atau gunakan price dari API
-        const fromPrice = await getTokenPrice(selectedFrom.symbol);
-        const toPrice = await getTokenPrice(selectedTo.symbol);
-
-        if (fromPrice > 0 && toPrice > 0) {
-          const estimatedAmountA = (parseFloat(toAmt) * toPrice) / fromPrice;
-          if (!isCalculatingB && $('fromAmount').value !== estimatedAmountA.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals)) {
-            $('fromAmount').value = estimatedAmountA.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
-          }
-        } else {
-          // PERBAIKAN: Jangan hapus value yang sudah ada untuk pair baru
-          if (!$('fromAmount').value) {
-            $('fromAmount').value = '';
-          }
-        }
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount A:', error);
-      // PERBAIKAN: Jangan hapus value yang sudah ada jika error
-      if (!$('fromAmount').value) {
-        $('fromAmount').value = '';
-      }
-      showToast('Error calculating optimal amount');
-    } finally {
-      setTimeout(() => { isCalculatingA = false; }, 100);
-    }
-  }
-
-  // REAL PRICE FUNCTIONS
-  async function getTokenPrice(tokenSymbol) {
-    // Cache prices for 30 seconds
-    if (tokenPrices[tokenSymbol] && (Date.now() - tokenPrices[tokenSymbol].timestamp) < 30000) {
-      return tokenPrices[tokenSymbol].price;
-    }
-
-    try {
-      const tokenId = TOKEN_IDS[tokenSymbol];
-      if (!tokenId) {
-        console.warn(`No price API ID for ${tokenSymbol}`);
-        return 0;
-      }
-
-      const response = await fetch(`${PRICE_API_BASE}?ids=${tokenId}&vs_currencies=usd`);
-      if (!response.ok) throw new Error('Price API failed');
-      
-      const data = await response.json();
-
-      if (data && data[tokenId] && data[tokenId].usd) {
-        const price = data[tokenId].usd;
-        tokenPrices[tokenSymbol] = {
-          price: price,
-          timestamp: Date.now()
-        };
-        return price;
-      }
-    } catch (error) {
-      console.error(`Error fetching price for ${tokenSymbol}:`, error);
-      // Return cached price if available, otherwise 0
-      return tokenPrices[tokenSymbol]?.price || 0;
-    }
-
-    return 0;
-  }
 
   async function updateUSDValues() {
     if (!provider) return;
@@ -1201,7 +1113,7 @@
       const toAmt = $('toAmount').value;
 
       if (fromAmt && parseFloat(fromAmt) > 0) {
-        const fromPrice = await getTokenPrice(selectedFrom.symbol);
+        const fromPrice = await getRealTokenPrice(selectedFrom.symbol);
         const fromUSD = parseFloat(fromAmt) * fromPrice;
         $('fromUsd').textContent = fromUSD > 0.01 ? `$${fromUSD.toFixed(2)}` : '< $0.01';
       } else {
@@ -1209,7 +1121,7 @@
       }
 
       if (toAmt && parseFloat(toAmt) > 0) {
-        const toPrice = await getTokenPrice(selectedTo.symbol);
+        const toPrice = await getRealTokenPrice(selectedTo.symbol);
         const toUSD = parseFloat(toAmt) * toPrice;
         $('toUsd').textContent = toUSD > 0.01 ? `$${toUSD.toFixed(2)}` : '< $0.01';
       } else {
@@ -1220,177 +1132,6 @@
     }
   }
 
-  // =============================================
-  // FUNGSI TVL YANG LENGKAP - TIDAK DIHILANGKAN
-  // =============================================
-
-  // REAL TVL CALCULATION - VERSI LENGKAP
-  async function calculateRealTVL() {
-    if (!provider) return 0;
-
-    try {
-      let totalTVL = 0;
-      const totalPairs = await factory.allPairsLength();
-
-      // Process all pairs for accurate TVL
-      for (let i = 0; i < Math.min(totalPairs, 50); i++) { // Limit to 50 pairs untuk performance
-        try {
-          const pairAddress = await factory.allPairs(i);
-          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-
-          const [reserve0, reserve1] = await pairContract.getReserves();
-          const token0 = await pairContract.token0();
-          const token1 = await pairContract.token1();
-
-          // Skip if reserves are zero
-          if (reserve0.isZero() && reserve1.isZero()) continue;
-
-          // Get token contracts untuk decimals dan symbol
-          const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
-          const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
-
-          const [decimals0, decimals1, symbol0, symbol1] = await Promise.all([
-            token0Contract.decimals().catch(() => 18),
-            token1Contract.decimals().catch(() => 18),
-            token0Contract.symbol().catch(() => 'UNKNOWN'),
-            token1Contract.symbol().catch(() => 'UNKNOWN')
-          ]);
-
-          // Format reserves
-          const reserve0Formatted = parseFloat(ethers.utils.formatUnits(reserve0, decimals0));
-          const reserve1Formatted = parseFloat(ethers.utils.formatUnits(reserve1, decimals1));
-
-          // Get prices - use 0 if price not available
-          const [price0, price1] = await Promise.all([
-            getTokenPrice(symbol0).catch(() => 0),
-            getTokenPrice(symbol1).catch(() => 0)
-          ]);
-
-          const reserve0Value = reserve0Formatted * price0;
-          const reserve1Value = reserve1Formatted * price1;
-
-          totalTVL += reserve0Value + reserve1Value;
-
-        } catch (error) {
-          console.error(`Error calculating TVL for pair ${i}:`, error);
-          continue;
-        }
-      }
-
-      return totalTVL;
-
-    } catch (error) {
-      console.error('Error calculating TVL:', error);
-      return 0;
-    }
-  }
-
-  // UPDATE TVL STATS WITH REAL DATA - VERSI LENGKAP
-  async function updateTVLStats() {
-    if (!provider) return;
-
-    try {
-      setStatus('Updating TVL...');
-      
-      let totalTVL = 0;
-      let activePairs = 0;
-
-      const totalPairs = await factory.allPairsLength();
-      
-      // Process major pairs first for faster response
-      const majorPairs = [
-        { tokenA: 'VANA', tokenB: 'USDC' },
-        { tokenA: 'VANA', tokenB: 'VANS' },
-        { tokenA: 'WVANA', tokenB: 'USDC' },
-        { tokenA: 'USDC', tokenB: 'VANS' },
-        { tokenA: 'VANA', tokenB: 'BERY' }
-      ];
-
-      // Calculate TVL for major pairs
-      for (const pair of majorPairs) {
-        try {
-          const tokenA = tokens.find(t => t.symbol === pair.tokenA);
-          const tokenB = tokens.find(t => t.symbol === pair.tokenB);
-
-          if (!tokenA || !tokenB) continue;
-
-          const tokenAAddr = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
-          const tokenBAddr = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
-
-          const pairAddress = await factory.getPair(tokenAAddr, tokenBAddr);
-          if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') continue;
-
-          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-          const [reserve0, reserve1] = await pairContract.getReserves();
-          
-          // Skip if reserves are zero
-          if (reserve0.isZero() && reserve1.isZero()) continue;
-
-          const token0 = await pairContract.token0();
-          const token1 = await pairContract.token1();
-
-          let reserveA, reserveB;
-          let decimalsA, decimalsB;
-          let symbolA, symbolB;
-
-          if (token0.toLowerCase() === tokenAAddr.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-            symbolA = pair.tokenA;
-            symbolB = pair.tokenB;
-            decimalsA = tokenA.decimals;
-            decimalsB = tokenB.decimals;
-          } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-            symbolA = pair.tokenB;
-            symbolB = pair.tokenA;
-            decimalsA = tokenB.decimals;
-            decimalsB = tokenA.decimals;
-          }
-
-          const [priceA, priceB] = await Promise.all([
-            getTokenPrice(symbolA),
-            getTokenPrice(symbolB)
-          ]);
-
-          const reserveAValue = parseFloat(ethers.utils.formatUnits(reserveA, decimalsA)) * priceA;
-          const reserveBValue = parseFloat(ethers.utils.formatUnits(reserveB, decimalsB)) * priceB;
-
-          totalTVL += reserveAValue + reserveBValue;
-          activePairs++;
-
-        } catch (error) {
-          console.error(`Error calculating TVL for ${pair.tokenA}-${pair.tokenB}:`, error);
-        }
-      }
-
-      // Update UI
-      $('totalTVL').textContent = formatUSD(totalTVL);
-      $('totalPairs').textContent = totalPairs.toString();
-      
-      setStatus('Ready');
-
-    } catch (error) {
-      console.error('Error updating TVL stats:', error);
-      $('totalTVL').textContent = '$---';
-      $('totalPairs').textContent = '--';
-      setStatus('Error updating TVL');
-    }
-  }
-
-  // Helper function untuk format USD
-  function formatUSD(amount) {
-    if (amount === 0) return '$0';
-    if (amount < 0.01) return '< $0.01';
-    if (amount < 1) return `$${amount.toFixed(4)}`;
-    if (amount < 1000) return `$${amount.toFixed(2)}`;
-    if (amount < 1000000) return `$${(amount / 1000).toFixed(2)}K`;
-    if (amount < 1000000000) return `$${(amount / 1000000).toFixed(2)}M`;
-    return `$${(amount / 1000000000).toFixed(2)}B`;
-  }
-
-  // Helper function untuk format price
   function formatPrice(price) {
     if (price === 0) return '0';
     if (price < 0.000001) return price.toExponential(6);
@@ -1401,12 +1142,19 @@
     return price.toExponential(4);
   }
 
-  // LIQUIDITY INFO WITH REAL PRICES - DIPERBAIKI
+  function formatUSD(amount) {
+    if (amount === 0) return '$0';
+    if (amount < 0.01) return '< $0.01';
+    if (amount < 1000) return `$${amount.toFixed(2)}`;
+    if (amount < 1000000) return `$${(amount / 1000).toFixed(2)}K`;
+    if (amount < 1000000000) return `$${(amount / 1000000).toFixed(2)}M`;
+    return `$${(amount / 1000000000).toFixed(2)}B`;
+  }
+
   async function updateLiquidityInfo() {
     if (!provider) return;
 
     try {
-      // Update panel symbols
       $('tokenASymbol').textContent = selectedFrom.symbol;
       $('tokenASymbol2').textContent = selectedFrom.symbol;
       $('tokenASymbol3').textContent = selectedFrom.symbol;
@@ -1414,10 +1162,8 @@
       $('tokenBSymbol2').textContent = selectedTo.symbol;
       $('tokenBSymbol3').textContent = selectedTo.symbol;
 
-      // Update USD values
       await updateUSDValues();
 
-      // Get pair address
       const tokenA = selectedFrom.address === 'VANA_NATIVE' ? WVANA : selectedFrom.address;
       const tokenB = selectedTo.address === 'VANA_NATIVE' ? WVANA : selectedTo.address;
 
@@ -1429,15 +1175,6 @@
         const token0 = await pairContract.token0();
         const totalSupply = await pairContract.totalSupply();
 
-        console.log('Raw Reserves:', {
-          reserve0: reserve0.toString(),
-          reserve1: reserve1.toString(),
-          token0: token0,
-          tokenA: tokenA,
-          tokenB: tokenB
-        });
-
-        // Dapatkan decimals untuk kedua token
         let token0Decimals, token1Decimals;
 
         if (token0.toLowerCase() === tokenA.toLowerCase()) {
@@ -1448,23 +1185,9 @@
           token1Decimals = selectedFrom.decimals;
         }
 
-        console.log('Token Decimals:', {
-          token0Decimals,
-          token1Decimals,
-          fromDecimals: selectedFrom.decimals,
-          toDecimals: selectedTo.decimals
-        });
-
-        // Format reserves dengan decimals yang benar
         const reserve0Formatted = parseFloat(ethers.utils.formatUnits(reserve0, token0Decimals));
         const reserve1Formatted = parseFloat(ethers.utils.formatUnits(reserve1, token1Decimals));
 
-        console.log('Formatted Reserves:', {
-          reserve0: reserve0Formatted,
-          reserve1: reserve1Formatted
-        });
-
-        // Tentukan reserve A dan B berdasarkan token yang dipilih user
         let reserveA, reserveB;
         if (token0.toLowerCase() === tokenA.toLowerCase()) {
           reserveA = reserve0Formatted;
@@ -1477,43 +1200,22 @@
         $('pooledTokenA').textContent = reserveA.toFixed(4);
         $('pooledTokenB').textContent = reserveB.toFixed(4);
 
-        // PERBAIKAN KRITIS: Hitung price yang benar
-        // Price A per B = ReserveB / ReserveA
         const priceAB = reserveB / reserveA;
-        // Price B per A = ReserveA / ReserveB
         const priceBA = reserveA / reserveB;
 
-        console.log('Price Calculation:', {
-          reserveA,
-          reserveB,
-          priceAB,
-          priceBA,
-          fromSymbol: selectedFrom.symbol,
-          toSymbol: selectedTo.symbol
-        });
-
-        // Format prices
         $('priceA').textContent = formatPrice(priceAB);
         $('priceB').textContent = formatPrice(priceBA);
 
-        // Calculate real total liquidity in USD
         const [priceTokenA, priceTokenB] = await Promise.all([
-          getTokenPrice(selectedFrom.symbol),
-          getTokenPrice(selectedTo.symbol)
+          getRealTokenPrice(selectedFrom.symbol),
+          getRealTokenPrice(selectedTo.symbol)
         ]);
-
-        console.log('Token Prices USD:', {
-          priceTokenA,
-          priceTokenB
-        });
 
         const totalLiquidityUSD = (reserveA * priceTokenA) + (reserveB * priceTokenB);
 
-        // Format total liquidity
         $('totalLiquidity').textContent = formatUSD(totalLiquidityUSD);
 
-        // Hitung volume 24h (simulasi - dalam real app ini harus dari API)
-        const dailyVolumeUSD = totalLiquidityUSD * 0.1; // Asumsi 10% dari TVL sebagai volume harian
+        const dailyVolumeUSD = totalLiquidityUSD * 0.1;
         $('dailyVolume').textContent = formatUSD(dailyVolumeUSD);
 
         if (account) {
@@ -1531,7 +1233,6 @@
         $('liquidityDescription').textContent = `By adding liquidity, you'll earn 0.25% fees on all trades for this token pair. Fees are added to the pool and can be claimed when you remove your liquidity.`;
 
       } else {
-        // Pool doesn't exist yet
         $('pooledTokenA').textContent = '0';
         $('pooledTokenB').textContent = '0';
         $('priceA').textContent = '0';
@@ -1546,7 +1247,6 @@
       }
     } catch (error) {
       console.error('Error updating liquidity info:', error);
-      // Fallback values dengan data real (0) bukan placeholder
       $('pooledTokenA').textContent = '0';
       $('pooledTokenB').textContent = '0';
       $('priceA').textContent = '0';
@@ -1559,7 +1259,78 @@
     }
   }
 
-  // LOAD USER POOLS WITH REAL USD VALUES - DIPERBAIKI
+  // =============================================
+  // TVL STATS
+  // =============================================
+
+  async function updateTVLStats() {
+    if (!provider) return;
+
+    try {
+      let totalTVL = 0;
+      const totalPairs = await factory.allPairsLength();
+
+      const majorPairs = [
+        { tokenA: 'VANA', tokenB: 'USDC' },
+        { tokenA: 'VANA', tokenB: 'VANS' },
+        { tokenA: 'WVANA', tokenB: 'USDC' },
+        { tokenA: 'USDC', tokenB: 'VANS' }
+      ];
+
+      for (const pair of majorPairs) {
+        try {
+          const tokenA = tokens.find(t => t.symbol === pair.tokenA);
+          const tokenB = tokens.find(t => t.symbol === pair.tokenB);
+
+          if (!tokenA || !tokenB) continue;
+
+          const tokenAAddr = tokenA.address === 'VANA_NATIVE' ? WVANA : tokenA.address;
+          const tokenBAddr = tokenB.address === 'VANA_NATIVE' ? WVANA : tokenB.address;
+
+          const pairAddress = await factory.getPair(tokenAAddr, tokenBAddr);
+          if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') continue;
+
+          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
+
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === tokenAAddr.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+
+          const [priceA, priceB] = await Promise.all([
+            getRealTokenPrice(tokenA.symbol),
+            getRealTokenPrice(tokenB.symbol)
+          ]);
+
+          const reserveAValue = parseFloat(ethers.utils.formatUnits(reserveA, tokenA.decimals)) * priceA;
+          const reserveBValue = parseFloat(ethers.utils.formatUnits(reserveB, tokenB.decimals)) * priceB;
+
+          totalTVL += reserveAValue + reserveBValue;
+
+        } catch (error) {
+          console.error(`Error calculating TVL for ${pair.tokenA}-${pair.tokenB}:`, error);
+        }
+      }
+
+      $('totalTVL').textContent = formatUSD(totalTVL);
+      $('totalPairs').textContent = totalPairs.toString();
+
+    } catch (error) {
+      console.error('Error updating TVL stats:', error);
+      $('totalTVL').textContent = '$---';
+    }
+  }
+
+  // =============================================
+  // USER POOLS
+  // =============================================
+
   async function loadUserPools() {
     if (!account || !provider) {
       $('noPoolsMessage').style.display = 'block';
@@ -1571,17 +1342,14 @@
       setStatus('Loading your pools...');
       userPools = [];
 
-      // Get total pairs count
       const totalPairs = await factory.allPairsLength();
       $('totalPairs').textContent = totalPairs.toString();
 
-      // Check all pairs for user's liquidity
-      for (let i = 0; i < Math.min(totalPairs, 100); i++) { // Limit untuk performance
+      for (let i = 0; i < Math.min(totalPairs, 100); i++) {
         try {
           const pairAddress = await factory.allPairs(i);
           const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
 
-          // Check if user has balance in this pair
           const userBalance = await pairContract.balanceOf(account);
 
           if (userBalance.gt(0)) {
@@ -1590,7 +1358,6 @@
             const token0 = await pairContract.token0();
             const token1 = await pairContract.token1();
 
-            // Get token symbols and decimals
             const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
             const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
 
@@ -1601,14 +1368,12 @@
               token1Contract.decimals()
             ]);
 
-            // Format reserves
             const reserve0Formatted = parseFloat(ethers.utils.formatUnits(reserve0, decimals0));
             const reserve1Formatted = parseFloat(ethers.utils.formatUnits(reserve1, decimals1));
 
-            // Calculate real USD value
             const [price0, price1] = await Promise.all([
-              getTokenPrice(symbol0),
-              getTokenPrice(symbol1)
+              getRealTokenPrice(symbol0),
+              getRealTokenPrice(symbol1)
             ]);
 
             const reserve0Value = reserve0Formatted * price0;
@@ -1639,7 +1404,6 @@
         }
       }
 
-      // Render pools
       renderUserPools();
       setStatus('Ready');
 
@@ -1650,7 +1414,6 @@
     }
   }
 
-  // RENDER USER POOLS WITH REAL USD VALUES
   function renderUserPools() {
     const poolsList = $('poolsList');
 
@@ -1702,7 +1465,10 @@
     });
   }
 
-  // ADD LIQUIDITY FUNCTION - IMPROVED VERSION DENGAN VALIDASI RASIO
+  // =============================================
+  // ADD LIQUIDITY
+  // =============================================
+
   async function addLiquidity() {
     if (!account || !signer) {
       await connectWallet();
@@ -1712,7 +1478,6 @@
     const fromAmt = $('fromAmount').value;
     const toAmt = $('toAmount').value;
 
-    // Validasi kedua amount harus terisi
     if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) {
       showToast('Please enter amounts for both tokens');
       return;
@@ -1724,25 +1489,20 @@
       btn.innerHTML = '<span class="spinner"></span>Processing...';
       setStatus('Preparing add liquidity...');
 
-      // Basic decimals validation
       if (typeof selectedFrom.decimals === 'undefined' || typeof selectedTo.decimals === 'undefined') {
         showToast('Token decimals belum terdeteksi, coba refresh atau pilih token lain');
         return;
       }
 
-      // parse amounts (amountADesired corresponds to "from" token input)
       const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
       const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
 
-      // token addresses: use WVANA constant when native selected
       const addressA = (selectedFrom.address === 'VANA_NATIVE') ? WVANA : selectedFrom.address;
       const addressB = (selectedTo.address === 'VANA_NATIVE') ? WVANA : selectedTo.address;
 
-      // contracts
       const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
       const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
-      // Validasi rasio untuk pool yang sudah ada
       const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
       if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
         try {
@@ -1759,9 +1519,8 @@
             reserveB = reserve0;
           }
 
-          // Validasi rasio dengan toleransi 5%
           const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
-          const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB); // basis points
+          const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
 
           if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
             const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
@@ -1776,7 +1535,6 @@
         }
       }
 
-      // Check pair exists and auto-create if missing
       let finalPairAddr = pairAddr;
       if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
         showToast('Creating new pool...');
@@ -1787,7 +1545,6 @@
           await txCreate.wait();
           showToast('Pool created successfully!');
           setStatus('Pool created successfully!');
-          // reload pair address
           finalPairAddr = await factoryWithSigner.getPair(addressA, addressB);
         } catch(e) {
           console.error('Failed to create pair', e);
@@ -1797,21 +1554,18 @@
         }
       }
 
-      // minimums: add small tolerance (1%) to avoid rounding reverts
       const amountAMin = amountADesired.mul(99).div(100);
       const amountBMin = amountBDesired.mul(99).div(100);
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-      // Determine case and call appropriate router function
       if (selectedFrom.address === 'VANA_NATIVE' && selectedTo.address !== 'VANA_NATIVE') {
-        // native -> token: addLiquidityETH(token, amountTokenDesired, amountTokenMin, amountETHMin, to, deadline)
         await ensureApproved(selectedTo.address, amountBDesired);
         setStatus('Sending addLiquidityETH (native -> token)...');
         const tx = await routerWithSigner.addLiquidityETH(
           selectedTo.address,
-          amountBDesired,   // token amount desired
-          amountBMin,       // token min (no slippage)
-          amountAMin,       // ETH min (no slippage)
+          amountBDesired,
+          amountBMin,
+          amountAMin,
           account,
           deadline,
           { value: amountADesired, gasLimit: 3000000 }
@@ -1820,23 +1574,21 @@
         await tx.wait();
 
       } else if (selectedTo.address === 'VANA_NATIVE' && selectedFrom.address !== 'VANA_NATIVE') {
-        // token -> native
         await ensureApproved(selectedFrom.address, amountADesired);
         setStatus('Sending addLiquidityETH (token -> native)...');
         const tx = await routerWithSigner.addLiquidityETH(
           selectedFrom.address,
-          amountADesired,  // token amount desired
-          amountAMin,      // token min (no slippage)
-          amountBMin,      // ETH min (no slippage)
+          amountADesired,
+          amountAMin,
+          amountBMin,
           account,
           deadline,
-          { value: amountBDesired, gasLimit: 3000000 } // value = ETH desired
+          { value: amountBDesired, gasLimit: 3000000 }
         );
         $('txLink').innerHTML = `<a href="https://vanascan.io/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
 
       } else {
-        // both ERC20 (or wrapped)
         await ensureApproved(selectedFrom.address, amountADesired);
         await ensureApproved(selectedTo.address, amountBDesired);
         setStatus('Sending addLiquidity (ERC20 <-> ERC20)...');
@@ -1858,11 +1610,13 @@
       showToast('Liquidity added successfully');
       setStatus('Liquidity added successfully!');
 
-      // refresh UI components
-      if (typeof updateBalances === 'function') await updateBalances();
-      if (typeof updateDropdownBalances === 'function') await updateDropdownBalances();
-      if (typeof updateLiquidityInfo === 'function') await updateLiquidityInfo();
-      if (typeof loadUserPools === 'function') await loadUserPools();
+      await updateBalances();
+      await updateDropdownBalances();
+      await updateLiquidityInfo();
+      await loadUserPools();
+
+      $('fromAmount').value = '';
+      $('toAmount').value = '';
 
     } catch (err) {
       console.error('addLiquidity error:', err);
@@ -1875,7 +1629,6 @@
     }
   }
 
-  // ADD MORE LIQUIDITY FUNCTION
   function addMoreLiquidity(tokenA, tokenB) {
     const tokenAObj = tokens.find(t => t.symbol === tokenA);
     const tokenBObj = tokens.find(t => t.symbol === tokenB);
@@ -1895,7 +1648,6 @@
     }
   }
 
-  // QUICK ADD LIQUIDITY
   function quickAddLiquidity(tokenASymbol, tokenBSymbol) {
     const tokenA = tokens.find(t => t.symbol === tokenASymbol);
     const tokenB = tokens.find(t => t.symbol === tokenBSymbol);
@@ -1915,7 +1667,6 @@
     }
   }
 
-  // UPDATE ACTION BUTTON
   function updateActionBtn() {
     const btn = $('actionBtn');
     if (!account) {
@@ -1927,7 +1678,6 @@
     const fromAmt = parseFloat($('fromAmount').value);
     const toAmt = parseFloat($('toAmount').value);
 
-    // Validasi kedua amount harus terisi
     if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) {
       btn.textContent = 'Enter Amounts';
       btn.disabled = true;
@@ -1939,10 +1689,9 @@
   }
 
   // =============================================
-  // PERBAIKAN KRITIS: FUNGSI REMOVE LIQUIDITY
+  // REMOVE LIQUIDITY
   // =============================================
 
-  // PERBAIKAN: Fungsi untuk check allowance LP tokens
   async function checkLPAllowance(pairAddress) {
     if (!account || !signer) return false;
 
@@ -1951,12 +1700,6 @@
       const userBalance = await pairContract.balanceOf(account);
       const allowance = await pairContract.allowance(account, ROUTER);
 
-      console.log('LP Allowance Check:', {
-        userBalance: userBalance.toString(),
-        allowance: allowance.toString(),
-        hasAllowance: allowance.gte(userBalance)
-      });
-
       return allowance.gte(userBalance);
     } catch (error) {
       console.error('Error checking LP allowance:', error);
@@ -1964,7 +1707,6 @@
     }
   }
 
-  // PERBAIKAN: Fungsi untuk approve LP tokens
   async function approveLPTokens(pairAddress) {
     if (!account || !signer) return false;
 
@@ -1979,7 +1721,6 @@
     }
   }
 
-  // REMOVE LIQUIDITY MODAL FUNCTIONS - DIPERBAIKI
   async function showRemoveModal(poolAddress) {
     currentRemovePool = poolAddress;
     currentRemovePercentage = 0;
@@ -1992,7 +1733,6 @@
       const userBalance = await pairContract.balanceOf(account);
       const totalSupply = await pairContract.totalSupply();
 
-      // Get token symbols
       const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
       const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
 
@@ -2003,10 +1743,8 @@
         token1Contract.decimals()
       ]);
 
-      // PERBAIKAN: Check allowance status
       const hasAllowance = await checkLPAllowance(poolAddress);
 
-      // Update modal info
       $('removePoolInfo').innerHTML = `
         <div style="text-align:center;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
@@ -2024,7 +1762,6 @@
       $('removeTokenASymbol').textContent = symbol0;
       $('removeTokenBSymbol').textContent = symbol1;
 
-      // Store pool data for calculations
       currentRemovePool = {
         address: poolAddress,
         token0: token0,
@@ -2039,7 +1776,6 @@
         hasAllowance: hasAllowance
       };
 
-      // Reset percentage buttons
       document.querySelectorAll('.percentage-btn').forEach(btn => {
         btn.classList.remove('active');
       });
@@ -2058,7 +1794,6 @@
   function setRemovePercentage(percent) {
     currentRemovePercentage = percent;
 
-    // Update button states
     document.querySelectorAll('.percentage-btn').forEach(btn => {
       if (parseInt(btn.getAttribute('data-percent')) === percent) {
         btn.classList.add('active');
@@ -2067,7 +1802,6 @@
       }
     });
 
-    // Calculate amounts
     if (currentRemovePool) {
       const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
 
@@ -2085,7 +1819,6 @@
     currentRemovePercentage = 0;
   }
 
-  // PERBAIKAN: Fungsi confirmRemoveLiquidity yang sudah diperbaiki
   async function confirmRemoveLiquidity() {
     if (!currentRemovePool || currentRemovePercentage === 0) {
       showToast('Please select a percentage to remove');
@@ -2100,13 +1833,6 @@
 
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
 
-      console.log('Remove Liquidity Details:', {
-        liquidityAmount: liquidityAmount.toString(),
-        percentage: currentRemovePercentage,
-        userBalance: currentRemovePool.userBalance.toString()
-      });
-
-      // PERBAIKAN: Check and handle allowance
       if (!currentRemovePool.hasAllowance) {
         setStatus('Approving LP tokens...');
         btn.innerHTML = '<span class="spinner"></span>Approving...';
@@ -2116,47 +1842,27 @@
           throw new Error('Failed to approve LP tokens');
         }
 
-        // Update allowance status
         currentRemovePool.hasAllowance = true;
         setStatus('Approval successful, removing liquidity...');
         btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      // PERBAIKAN KRITIS: Calculate minimum amounts dengan SLIPPAGE TOLERANCE 5%
       const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
       const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
-
-      console.log('Minimum Amounts Calculation:', {
-        reserve0: currentRemovePool.reserves[0].toString(),
-        reserve1: currentRemovePool.reserves[1].toString(),
-        totalSupply: currentRemovePool.totalSupply.toString(),
-        amount0Min: amount0Min.toString(),
-        amount1Min: amount1Min.toString(),
-        amount0MinFormatted: ethers.utils.formatUnits(amount0Min, currentRemovePool.decimals0),
-        amount1MinFormatted: ethers.utils.formatUnits(amount1Min, currentRemovePool.decimals1)
-      });
 
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
       setStatus('Removing liquidity...');
 
-      // PERBAIKAN: Handle native token case (VANA)
       const token0IsNative = currentRemovePool.token0 === WVANA;
       const token1IsNative = currentRemovePool.token1 === WVANA;
 
       let tx;
 
       if (token0IsNative || token1IsNative) {
-        // Handle native token removal
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
-
-        console.log('Removing liquidity with ETH:', {
-          token,
-          amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString()
-        });
 
         tx = await router.removeLiquidityETH(
           token,
@@ -2168,8 +1874,6 @@
           { gasLimit: 3000000 }
         );
       } else {
-        // Standard token removal
-        console.log('Removing standard liquidity');
         tx = await router.removeLiquidity(
           currentRemovePool.token0,
           currentRemovePool.token1,
@@ -2186,12 +1890,10 @@
       setStatus('Submitted — waiting confirmation...');
 
       const receipt = await tx.wait();
-      console.log('Transaction receipt:', receipt);
 
       showToast('Liquidity removed successfully!');
       setStatus('Liquidity removed');
 
-      // Close modal and refresh data
       closeRemoveModal();
       await updateBalances();
       await updateDropdownBalances();
@@ -2201,7 +1903,6 @@
     } catch (error) {
       console.error('Error removing liquidity:', error);
 
-      // PERBAIKAN: Error handling yang lebih spesifik
       if (error.message && error.message.includes('INSUFFICIENT_A_AMOUNT')) {
         showToast('Failed: Insufficient amount. Try with higher slippage tolerance.');
         setStatus('Failed: Increase slippage tolerance');
@@ -2222,7 +1923,10 @@
     }
   }
 
-  // IMPORT POOL FUNCTION
+  // =============================================
+  // IMPORT POOL
+  // =============================================
+
   async function importPool() {
     const tokenAInput = $('tokenAInput').value.trim();
     const tokenBInput = $('tokenBInput').value.trim();
@@ -2232,34 +1936,20 @@
       return;
     }
 
-    // Validasi format address
-    if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAInput)) {
-      showToast('Invalid Token A address format');
-      return;
-    }
-    
-    if (!/^0x[a-fA-F0-9]{40}$/.test(tokenBInput)) {
-      showToast('Invalid Token B address format');
-      return;
-    }
-
-    // Validasi tidak sama
-    if (tokenAInput.toLowerCase() === tokenBInput.toLowerCase()) {
-      showToast('Token addresses cannot be the same');
-      return;
-    }
-
     try {
       setStatus('Importing pool...');
 
-      // Check if pool exists
+      if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAInput) || !/^0x[a-fA-F0-9]{40}$/.test(tokenBInput)) {
+        showToast('Invalid token address format');
+        return;
+      }
+
       const pairAddress = await factory.getPair(tokenAInput, tokenBInput);
       if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
         showToast('Pool does not exist for these tokens');
         return;
       }
 
-      // Get token details and add to tokens list
       const tokenAContract = new ethers.Contract(tokenAInput, ERC20_ABI, provider);
       const tokenBContract = new ethers.Contract(tokenBInput, ERC20_ABI, provider);
 
@@ -2270,7 +1960,6 @@
         tokenBContract.decimals()
       ]);
 
-      // Add tokens to list if not already present
       const tokenAObj = {
         symbol: symbolA,
         address: tokenAInput,
@@ -2289,7 +1978,6 @@
         verified: false
       };
 
-      // Check if tokens already exist
       if (!tokens.some(t => t.address.toLowerCase() === tokenAInput.toLowerCase())) {
         tokens.push(tokenAObj);
       }
@@ -2298,10 +1986,8 @@
         tokens.push(tokenBObj);
       }
 
-      // Save custom tokens
       saveCustomTokens();
 
-      // Switch to add liquidity view with these tokens
       selectedFrom = tokenAObj;
       selectedTo = tokenBObj;
 
@@ -2323,7 +2009,10 @@
     }
   }
 
-  // Helper: ensure token approval for router
+  // =============================================
+  // HELPER FUNCTIONS
+  // =============================================
+
   async function ensureApproved(tokenAddress, neededAmount) {
     if (!tokenAddress || tokenAddress === 'VANA_NATIVE') return;
 
@@ -2342,67 +2031,48 @@
   }
 
   // =============================================
-  // PERBAIKAN UTAMA: EVENT LISTENERS YANG AMAN
+  // EVENT LISTENERS
   // =============================================
 
   $('actionBtn').addEventListener('click', addLiquidity);
 
-  // PERBAIKAN UTAMA: Event listeners dengan sistem pencegahan infinite loop yang lebih baik
   $('fromAmount').addEventListener('input', function() {
-    const currentValue = this.value;
-    
-    // Skip jika nilai sama dengan sebelumnya
-    if (currentValue === lastFromValue) return;
-    lastFromValue = currentValue;
-
-    updateLiquidityInfo();
     updateUSDValues();
     updateActionBtn();
 
-    // Hanya trigger calculate B jika tidak sedang calculate A dan ada nilai
-    if (!isCalculatingA && currentValue && parseFloat(currentValue) > 0) {
+    if (!isCalculatingA) {
       calculateOptimalAmountB();
     }
   });
 
   $('toAmount').addEventListener('input', function() {
-    const currentValue = this.value;
-    
-    // Skip jika nilai sama dengan sebelumnya
-    if (currentValue === lastToValue) return;
-    lastToValue = currentValue;
-
-    updateLiquidityInfo();
     updateUSDValues();
     updateActionBtn();
 
-    // Hanya trigger calculate A jika tidak sedang calculate B dan ada nilai
-    if (!isCalculatingB && currentValue && parseFloat(currentValue) > 0) {
+    if (!isCalculatingB) {
       calculateOptimalAmountA();
     }
   });
 
-  // Close modal when clicking outside
   window.addEventListener('click', (e) => {
     if (e.target === $('removeLiquidityModal')) {
       closeRemoveModal();
     }
   });
 
+  // =============================================
   // INITIALIZATION
+  // =============================================
+
   document.addEventListener('DOMContentLoaded', async () => {
-    // Load custom tokens from localStorage
     loadCustomTokens();
 
-    // Initialize provider for read-only operations
     try {
       provider = new ethers.providers.JsonRpcProvider(RPC);
       factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
 
-      // Update TVL stats - PASTIKAN DIPANGGIL
       updateTVLStats();
 
-      // Check if wallet is already connected
       if (window.ethereum && window.ethereum.selectedAddress) {
         account = window.ethereum.selectedAddress;
         connectBtn.textContent = account.substring(0,6) + '...' + account.substring(38);
@@ -2414,21 +2084,16 @@
         updateActionBtn();
         updateLiquidityInfo();
         loadUserPools();
-        
-        // Update TVL stats lagi setelah connect wallet
-        updateTVLStats();
       }
     } catch (error) {
       console.error('Initialization error:', error);
     }
 
-    // Start with My Pools view
     switchToMyPoolsView();
 
-    // Auto-refresh prices every 30 seconds
     setInterval(async () => {
       if (provider) {
-        await updateTVLStats(); // PASTIKAN INI ADA
+        await updateTVLStats();
         await updateUSDValues();
         if (account) {
           await loadUserPools();
