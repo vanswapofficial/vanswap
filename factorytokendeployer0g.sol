@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Primary Meta Tags for Token Generator -->
+  <title>VanSwap Token Generator - Create Your Own Token on Vana & 0G Chains | No Code Required</title>
+  <meta name="description" content="Create your own cryptocurrency token on Vana Chain and 0G Network in minutes with VanSwap's Token Generator. No coding skills required.">
+  <meta name="keywords" content="vanswap token generator, create token vana chain, create token 0g network, token creator, cryptocurrency token creation, no code token, defi token creation">
+  <meta name="author" content="VanSwap">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vanswap.xyz/tokencreator">
+  <meta property="og:title" content="VanSwap Token Generator - Create Your Own Token on Vana & 0G Chains">
+  <meta property="og:description" content="Create your own cryptocurrency token on Vana Chain and 0G Network in minutes. No coding required.">
+  <meta property="og:image" content="https://vanswap.xyz/assets/token-generator-og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="VanSwap">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://vanswap.xyz/tokencreator">
+  <meta property="twitter:title" content="VanSwap Token Generator - Create Your Own Token on Vana & 0G Chains">
+  <meta property="twitter:description" content="Create your own cryptocurrency token on Vana Chain and 0G Network in minutes. No coding required.">
+  <meta property="twitter:image" content="https://vanswap.xyz/assets/token-generator-twitter.png">
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://vanswap.xyz/tokencreator">
+
+  <!-- Structured Data for Token Generator -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "VanSwap Token Generator",
+    "url": "https://vanswap.xyz/tokencreator",
+    "description": "Create your own cryptocurrency token on Vana Chain and 0G Network with no coding required",
+    "provider": {
+      "@type": "Organization",
+      "name": "VanSwap",
+      "url": "https://vanswap.xyz"
+    },
+    "areaServed": "Worldwide",
+    "serviceType": "Cryptocurrency Token Creation",
+    "category": "Financial Service",
+    "offers": {
+      "@type": "Offer",
+      "description": "Token creation service on Vana Chain and 0G Network"
+    }
+  }
+  </script>
+  
+  <style>
+    :root {
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.7);
+      --background: #04140d;
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --warning: #ffd700;
+      --warning-dark: #e6c200;
+      --success: #4caf50;
+      --error: #f44336;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #04140d 0%, #07261b 50%, #0a2e21 100%);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 0;
+      z-index: 1000;
+      background: rgba(4, 20, 13, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(26, 127, 94, 0.1);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+    }
+
+    .logo span {
+      font-weight: 800;
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .connect-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .connect-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(49, 208, 170, 0.4);
+    }
+
+    .connect-btn.connected {
+      background: var(--primary);
+      color: white;
+    }
+
+    .main {
+      max-width: 500px;
+      margin: 120px auto 40px;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    .network-selector {
+      margin-bottom: 20px;
+    }
+
+    .network-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .network-btn {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .network-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .network-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .network-info img {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(255,255,255,0.08);
+    }
+
+    .input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+
+    .create-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .create-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(49, 208, 170, 0.4);
+    }
+
+    .create-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .fee-notice {
+      text-align: center;
+      color: var(--warning);
+      font-size: 14px;
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .success-message {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .success-title {
+      color: var(--success);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .token-info {
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    .token-address {
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+      word-break: break-all;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .copy-btn {
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .copy-btn:hover {
+      background: #4ad8b7;
+    }
+
+    .explorer-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .explorer-link:hover {
+      text-decoration: underline;
+    }
+
+    .wallet-status {
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .wallet-address {
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    .network-status {
+      background: rgba(255,255,255,0.05);
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .error-message {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid rgba(244, 67, 54, 0.5);
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+      color: var(--error);
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        margin: 100px auto 40px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .title {
+        font-size: 24px;
+      }
+
+      .network-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="nav-container">
+      <a href="/" class="logo">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="Vanswap">
+        <span>VANSWAP</span>
+      </a>
+      <button id="connectWalletBtn" class="connect-btn">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="card">
+      <h1 class="title">VanSwap Token Generator</h1>
+      <p class="subtitle">Create your own ERC20 token on multiple chains</p>
+
+      <div id="networkStatus" class="network-status">
+        🌐 Network: <span id="networkName">-</span> | Chain ID: <span id="chainId">-</span>
+      </div>
+
+      <div id="walletStatus" class="wallet-status">
+        🔗 Connected: <span id="walletAddress" class="wallet-address"></span>
+      </div>
+
+      <div id="errorMessage" class="error-message">
+        <strong>Error:</strong> <span id="errorText"></span>
+      </div>
+
+      <!-- Network Selector -->
+      <div class="network-selector">
+        <div class="network-buttons">
+          <button id="vanaBtn" class="network-btn active" data-network="vana">
+            <div class="network-info">
+              <img src="https://vanswap.xyz/assets/vana.png" alt="Vana">
+              <span>Vana Network</span>
+            </div>
+          </button>
+          <button id="zerogBtn" class="network-btn" data-network="zerog">
+            <div class="network-info">
+              <img src="https://vanswap.xyz/assets/0g.png" alt="0G">
+              <span>0G Network</span>
+            </div>
+          </button>
+        </div>
+        <div class="fee-notice" id="feeNotice">
+          *Fee 1 VANA will be charged for token creation
+        </div>
+      </div>
+
+      <form id="tokenForm">
+        <div class="form-group">
+          <label class="label">Name</label>
+          <input type="text" id="tokenName" class="input" placeholder="My Crypto Token" required>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Symbol</label>
+          <input type="text" id="tokenSymbol" class="input" placeholder="MCT" required>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Decimal</label>
+          <select id="tokenDecimal" class="input" required>
+            <option value="18">18 (Standard)</option>
+            <option value="6">6 (Like USDT)</option>
+            <option value="8">8 (Like BTC)</option>
+            <option value="0">0 (Integer)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Supply</label>
+          <input type="number" id="tokenSupply" class="input" placeholder="1000000" required>
+        </div>
+
+        <button type="submit" id="createBtn" class="create-btn">
+          Create Token on Vana Network
+        </button>
+      </form>
+
+      <div id="successMessage" class="success-message">
+        <div class="success-title">✅ Token Created Successfully!</div>
+        <div class="token-info">
+          <strong>Token Address:</strong>
+          <div id="tokenAddress" class="token-address">
+            <span id="tokenAddressText"></span>
+            <button class="copy-btn" id="copyAddressBtn">Copy</button>
+          </div>
+        </div>
+        <div class="token-info">
+          <strong>TX Hash:</strong>
+          <div id="txHash" class="token-address">
+            <span id="txHashText"></span>
+            <button class="copy-btn" id="copyTxBtn">Copy</button>
+          </div>
+        </div>
+        <div class="token-info">
+          <a href="#" id="explorerLink" class="explorer-link" target="_blank">
+            🔍 View on Explorer
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+    // Network Configurations - REAL CONTRACTS dengan fee berbeda
+    const NETWORKS = {
+      vana: {
+        chainId: '0x5c8',
+        chainIdDecimal: 1480,
+        chainName: 'Vana Chain',
+        rpcUrls: ['https://rpc.vana.org'],
+        nativeCurrency: {
+          name: 'VANA',
+          symbol: 'VANA',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://vanascan.io/'],
+        factoryAddress: "0x3a4e6c50EEB1018966c9a9314412AB21ce1AdDC7", // Vana factory
+        fee: "1", // 1 VANA
+        feeSymbol: "VANA"
+      },
+      zerog: {
+        chainId: '0x4115', 
+        chainIdDecimal: 16661,
+        chainName: '0G Network',
+        rpcUrls: ['https://evmrpc.0g.ai'],
+        nativeCurrency: {
+          name: '0G',
+          symbol: '0G',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://chainscan.0g.ai'],
+        factoryAddress: "0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d", // 0G factory - REAL ADDRESS
+        fee: "3", // 3 0G
+        feeSymbol: "0G"
+      }
+    };
+
+    // Factory Contract ABI
+    const FACTORY_ABI = [
+      "function createToken(string name, string symbol, uint8 decimals, uint256 initialSupply) external payable returns (address)",
+      "function createFee() external view returns (uint256)",
+      "function updateFee(uint256 newFee) external",
+      "function withdrawFees() external",
+      "function getTotalTokens() external view returns (uint256)",
+      "function getUserTokens(address user) external view returns (address[])",
+      "event TokenCreated(address indexed user, address tokenAddress, string name, string symbol, uint8 decimals, uint256 initialSupply)"
+    ];
+
+    let provider, signer, factory;
+    let userAddress = '';
+    let currentNetwork = 'vana';
+    let isOnCorrectNetwork = false;
+    let isSwitchingNetwork = false;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (window.ethereum) {
+        await checkNetwork();
+        await checkConnection();
+
+        // Network change listeners
+        window.ethereum.on('chainChanged', async (chainId) => {
+          console.log('Chain changed to:', chainId);
+          await checkNetwork();
+          await checkConnection();
+        });
+
+        window.ethereum.on('accountsChanged', async (accounts) => {
+          console.log('Accounts changed:', accounts);
+          if (accounts.length > 0) {
+            await setupWallet(accounts[0]);
+          } else {
+            resetWallet();
+          }
+        });
+
+        // Network selector event listeners
+        document.getElementById('vanaBtn').addEventListener('click', () => switchNetwork('vana'));
+        document.getElementById('zerogBtn').addEventListener('click', () => switchNetwork('zerog'));
+
+      } else {
+        showError('Please install MetaMask to use this dApp!');
+      }
+    });
+
+    // Update UI elements based on selected network
+    function updateNetworkUI(network) {
+      const networkConfig = NETWORKS[network];
+      
+      // Update create button text
+      document.getElementById('createBtn').textContent = `Create Token on ${networkConfig.chainName}`;
+      
+      // Update fee notice - INI YANG DIPERBAIKI
+      document.getElementById('feeNotice').innerHTML = 
+        `*Fee ${networkConfig.fee} ${networkConfig.feeSymbol} will be charged for token creation`;
+    }
+
+    // Switch network with AUTO SWITCH functionality
+    async function switchNetwork(network) {
+      if (isSwitchingNetwork) return;
+      
+      isSwitchingNetwork = true;
+      currentNetwork = network;
+      
+      // Update UI first
+      document.querySelectorAll('.network-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(network + 'Btn').classList.add('active');
+
+      // Update button text and fee notice
+      updateNetworkUI(network);
+
+      // AUTO SWITCH NETWORK if wallet is connected
+      if (window.ethereum && userAddress) {
+        try {
+          showNetworkSwitching(true);
+          await switchToNetwork(network);
+          await checkNetwork(); // Refresh status
+        } catch (error) {
+          console.error('Auto-switch failed:', error);
+          showError('Failed to switch network: ' + error.message);
+        } finally {
+          showNetworkSwitching(false);
+          isSwitchingNetwork = false;
+        }
+      } else {
+        isSwitchingNetwork = false;
+        // Check network status even if not connected
+        await checkNetwork();
+      }
+    }
+
+    // Show network switching status
+    function showNetworkSwitching(switching) {
+      const createBtn = document.getElementById('createBtn');
+      if (switching) {
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<span class="loading"></span>Switching Network...';
+      } else {
+        createBtn.disabled = false;
+        updateNetworkUI(currentNetwork);
+      }
+    }
+
+    // Switch to target network in wallet
+    async function switchToNetwork(network) {
+      const networkConfig = NETWORKS[network];
+      
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: networkConfig.chainId }],
+        });
+        console.log(`Switched to ${networkConfig.chainName}`);
+      } catch (switchError) {
+        // If network not added to wallet, add it
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [networkConfig],
+            });
+            console.log(`Added and switched to ${networkConfig.chainName}`);
+          } catch (addError) {
+            throw new Error(`Failed to add ${networkConfig.chainName}: ` + addError.message);
+          }
+        } else {
+          throw new Error(`Failed to switch to ${networkConfig.chainName}: ` + switchError.message);
+        }
+      }
+    }
+
+    // Check current network
+    async function checkNetwork() {
+      if (!window.ethereum) return;
+
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        const targetChainId = NETWORKS[currentNetwork].chainId;
+        
+        isOnCorrectNetwork = (chainId === targetChainId);
+
+        document.getElementById('networkName').textContent = getNetworkName(chainId);
+        document.getElementById('chainId').textContent = chainId;
+        document.getElementById('networkStatus').style.display = 'block';
+
+        if (!isOnCorrectNetwork) {
+          document.getElementById('networkStatus').style.background = 'rgba(244, 67, 54, 0.1)';
+          document.getElementById('networkStatus').style.border = '1px solid rgba(244, 67, 54, 0.3)';
+          showError(`Please switch to ${NETWORKS[currentNetwork].chainName} (Chain ID: ${targetChainId})`);
+        } else {
+          document.getElementById('networkStatus').style.background = 'rgba(76, 175, 80, 0.1)';
+          document.getElementById('networkStatus').style.border = '1px solid rgba(76, 175, 80, 0.3)';
+          hideError();
+          // Re-setup contract if on correct network
+          if (userAddress && NETWORKS[currentNetwork].factoryAddress) {
+            await setupContract();
+          }
+        }
+
+      } catch (error) {
+        console.error('Error checking network:', error);
+      }
+    }
+
+    function getNetworkName(chainId) {
+      const networks = {
+        '0x1': 'Ethereum Mainnet',
+        '0x4112': 'Vana Chain',
+        '0x4115': '0G Network',
+        '0xaa36a7': 'Sepolia',
+        '0x89': 'Polygon'
+      };
+      return networks[chainId] || `Unknown (${chainId})`;
+    }
+
+    // Check wallet connection
+    async function checkConnection() {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            await setupWallet(accounts[0]);
+          }
+        } catch (error) {
+          console.error('Error checking connection:', error);
+        }
+      }
+    }
+
+    // Connect wallet
+    document.getElementById('connectWalletBtn').addEventListener('click', async function() {
+      if (!window.ethereum) {
+        showError('Please install MetaMask first!');
+        return;
+      }
+
+      try {
+        // Switch to correct network if needed
+        if (!isOnCorrectNetwork) {
+          await switchToNetwork(currentNetwork);
+        }
+
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        await setupWallet(accounts[0]);
+
+      } catch (error) {
+        showError('Failed to connect: ' + error.message);
+      }
+    });
+
+    // Setup wallet and contract
+    async function setupWallet(address) {
+      try {
+        userAddress = address;
+        const shortAddress = address.substring(0, 6) + '...' + address.substring(38);
+        document.getElementById('walletAddress').textContent = shortAddress;
+        document.getElementById('walletStatus').style.display = 'block';
+        document.getElementById('connectWalletBtn').textContent = 'Connected';
+        document.getElementById('connectWalletBtn').classList.add('connected');
+
+        await setupContract();
+        hideError();
+
+      } catch (error) {
+        console.error('Error setting up wallet:', error);
+        showError('Error setting up wallet: ' + error.message);
+      }
+    }
+
+    // Setup contract instance
+    async function setupContract() {
+      if (!NETWORKS[currentNetwork].factoryAddress) {
+        showError(`Factory contract not deployed on ${NETWORKS[currentNetwork].chainName} yet`);
+        return;
+      }
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      factory = new ethers.Contract(
+        NETWORKS[currentNetwork].factoryAddress, 
+        FACTORY_ABI, 
+        signer
+      );
+
+      console.log(`Factory contract setup for ${currentNetwork}:`, NETWORKS[currentNetwork].factoryAddress);
+    }
+
+    function resetWallet() {
+      userAddress = '';
+      provider = null;
+      signer = null;
+      factory = null;
+
+      document.getElementById('walletStatus').style.display = 'none';
+      document.getElementById('connectWalletBtn').textContent = 'Connect Wallet';
+      document.getElementById('connectWalletBtn').classList.remove('connected');
+    }
+
+    // Handle form submission
+    document.getElementById('tokenForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (!window.ethereum) {
+        showError('Please install MetaMask first!');
+        return;
+      }
+
+      if (!isOnCorrectNetwork) {
+        showError(`Please switch to ${NETWORKS[currentNetwork].chainName} first!`);
+        return;
+      }
+
+      if (!userAddress) {
+        try {
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          await setupWallet(accounts[0]);
+        } catch (error) {
+          showError('Failed to connect wallet: ' + error.message);
+          return;
+        }
+      }
+
+      if (!factory) {
+        showError(`Factory contract not available on ${NETWORKS[currentNetwork].chainName}`);
+        return;
+      }
+
+      const name = document.getElementById('tokenName').value.trim();
+      const symbol = document.getElementById('tokenSymbol').value.trim().toUpperCase();
+      const decimal = parseInt(document.getElementById('tokenDecimal').value);
+      const supply = document.getElementById('tokenSupply').value;
+
+      // Validation
+      if (!name || !symbol || !supply) {
+        showError('Please fill all fields!');
+        return;
+      }
+
+      if (symbol.length > 11) {
+        showError('Symbol maximum 11 characters!');
+        return;
+      }
+
+      if (parseFloat(supply) <= 0) {
+        showError('Supply must be greater than 0!');
+        return;
+      }
+
+      try {
+        const createBtn = document.getElementById('createBtn');
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<span class="loading"></span>Creating Token...';
+        hideError();
+
+        // Convert supply to proper decimals
+        const initialSupplyWei = ethers.utils.parseUnits(supply, decimal);
+        const fee = ethers.utils.parseEther(NETWORKS[currentNetwork].fee);
+
+        console.log('Creating token with params:', {
+          network: currentNetwork,
+          name,
+          symbol,
+          decimal,
+          supply: supply,
+          supplyWei: initialSupplyWei.toString(),
+          fee: fee.toString(),
+          factory: NETWORKS[currentNetwork].factoryAddress
+        });
+
+        // Call factory contract
+        const tx = await factory.createToken(
+          name, 
+          symbol, 
+          decimal, 
+          initialSupplyWei,
+          { value: fee }
+        );
+
+        console.log('Transaction sent:', tx.hash);
+        document.getElementById('txHashText').textContent = tx.hash;
+
+        // Wait for confirmation
+        const receipt = await tx.wait();
+        console.log('Transaction confirmed:', receipt);
+
+        // Get token address from event
+        const event = receipt.events.find(e => e.event === 'TokenCreated');
+        if (!event) {
+          throw new Error('TokenCreated event not found in transaction receipt');
+        }
+
+        const tokenAddress = event.args.tokenAddress;
+        console.log('Token created at:', tokenAddress);
+
+        // Show success message
+        document.getElementById('tokenAddressText').textContent = tokenAddress;
+        document.getElementById('explorerLink').href = 
+          `${NETWORKS[currentNetwork].blockExplorerUrls[0]}address/${tokenAddress}#code`;
+        document.getElementById('successMessage').style.display = 'block';
+
+        // Reset form
+        document.getElementById('tokenForm').reset();
+
+        // Scroll to success message
+        document.getElementById('successMessage').scrollIntoView({ 
+          behavior: 'smooth' 
+        });
+
+      } catch (error) {
+        console.error('Error creating token:', error);
+
+        if (error.code === 'INSUFFICIENT_FUNDS') {
+          showError(`Insufficient ${NETWORKS[currentNetwork].feeSymbol} balance! Need ${NETWORKS[currentNetwork].fee} ${NETWORKS[currentNetwork].feeSymbol} fee + gas.`);
+        } else if (error.code === 'ACTION_REJECTED') {
+          showError('Transaction cancelled by user.');
+        } else if (error.message.includes('TokenCreated event not found')) {
+          showError('Token creation completed but event not found. Check block explorer for details.');
+        } else if (error.message.includes('factory contract not available')) {
+          showError(`Token creation not yet available on ${NETWORKS[currentNetwork].chainName}`);
+        } else {
+          showError('Failed to create token: ' + error.message);
+        }
+      } finally {
+        const createBtn = document.getElementById('createBtn');
+        createBtn.disabled = false;
+        updateNetworkUI(currentNetwork);
+      }
+    });
+
+    // Copy functions
+    document.getElementById('copyAddressBtn').addEventListener('click', function() {
+      const tokenAddress = document.getElementById('tokenAddressText').textContent;
+      navigator.clipboard.writeText(tokenAddress).then(() => {
+        const originalText = this.textContent;
+        this.textContent = 'Copied!';
+        setTimeout(() => {
+          this.textContent = originalText;
+        }, 2000);
+      });
+    });
+
+    document.getElementById('copyTxBtn').addEventListener('click', function() {
+      const txHash = document.getElementById('txHashText').textContent;
+      navigator.clipboard.writeText(txHash).then(() => {
+        const originalText = this.textContent;
+        this.textContent = 'Copied!';
+        setTimeout(() => {
+          this.textContent = originalText;
+        }, 2000);
+      });
+    });
+
+    // Error handling
+    function showError(message) {
+      document.getElementById('errorText').textContent = message;
+      document.getElementById('errorMessage').style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
