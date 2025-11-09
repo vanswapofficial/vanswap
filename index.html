@@ -79,6 +79,53 @@
 </script>
 
   <style>
+    /* 0G Network Banner */
+    .network-banner {
+      background: rgba(49,208,170,0.1);
+      border: 1px solid var(--accent);
+      padding: 16px;
+      border-radius: 12px;
+      margin: 20px 0;
+      text-align: center;
+      animation: fadeInUp 0.8s ease;
+    }
+
+    .network-banner p {
+      color: var(--accent);
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .network-logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .network-logo-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .network-logo-item img {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .network-logo-item span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .network-divider {
+      color: var(--muted);
+    }
+
     .presale-banner-enhanced {
       background: linear-gradient(135deg, #ff6b35, #ff8e53, #ff6b35);
       background-size: 200% 200%;
@@ -207,6 +254,29 @@
 
     /* Mobile responsive */
     @media (max-width: 768px) {
+      .network-banner {
+        padding: 14px;
+        margin: 15px 0;
+      }
+      
+      .network-banner p {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      
+      .network-logos {
+        gap: 12px;
+      }
+      
+      .network-logo-item img {
+        width: 18px;
+        height: 18px;
+      }
+      
+      .network-logo-item span {
+        font-size: 12px;
+      }
+
       .presale-banner-enhanced {
         font-size: 14px;
         padding: 12px 0;
@@ -852,15 +922,15 @@
       </a>
 
       <nav class="nav-links">
-        <a href="swap.html" class="nav-link">Swap</a>
-        <a href="liquidity.html" class="nav-link">Liquidity</a>
+        <a href="swap0g.html" class="nav-link">Swap</a>
+        <a href="liquidity0g.html" class="nav-link">Liquidity</a>
         <a href="tokencreator.html" class="nav-link">Create Token</a>
         <a href="staking.html" class="nav-link">Staking</a>
         <a href="presale.html" class="nav-link" style="color: var(--accent)">Presale</a>
         <a href="docs.html" class="nav-link">Docs</a>
       </nav>
 
-      <a href="swap.html" class="launch-btn">Launch App</a>
+      <a href="swap0g.html" class="launch-btn">Launch App</a>
     </div>
   </header>
 
@@ -873,6 +943,22 @@
     </div>
 
     <div class="hero-content">
+      <!-- 0G Network Banner -->
+      <div class="network-banner">
+        <p>⚡ <strong>0G Network Live!</strong> Experience lightning-fast trades with high throughput</p>
+        <div class="network-logos">
+          <div class="network-logo-item">
+            <img src="https://vanswap.xyz/assets/vana.png" alt="Vana Network">
+            <span>Vana</span>
+          </div>
+          <div class="network-divider">+</div>
+          <div class="network-logo-item">
+            <img src="https://vanswap.xyz/assets/0g.png" alt="0G Network">
+            <span>0G</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Banner dengan multiple flash effects -->
       <div class="presale-banner-enhanced" style="margin-bottom: 40px;">
         <div class="flash-container">
@@ -908,14 +994,14 @@
             <div class="column-icon">🔄</div>
             <h3>Swap</h3>
             <p>Trade tokens instantly with minimal fees</p>
-            <a href="swap.html" class="column-link">Start Swapping</a>
+            <a href="swap0g.html" class="column-link">Start Swapping</a>
           </div>
 
           <div class="column-item" style="animation-delay: 0.4s">
             <div class="column-icon">💧</div>
             <h3>Add Liquidity</h3>
             <p>Provide liquidity and earn fees</p>
-            <a href="liquidity.html" class="column-link">Add Liquidity</a>
+            <a href="liquidity0g.html" class="column-link">Add Liquidity</a>
           </div>
 
           <div class="column-item" style="animation-delay: 0.6s">
@@ -935,7 +1021,7 @@
       </div>
 
       <div class="cta-buttons">
-        <a href="swap.html" class="btn btn-primary">Launch App</a>
+        <a href="swap0g.html" class="btn btn-primary">Launch App</a>
         <a href="docs.html" class="btn btn-secondary">Learn More</a>
       </div>
     </div>
