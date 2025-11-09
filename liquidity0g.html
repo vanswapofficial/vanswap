@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VanSwap — Vana Swap Pools (Vana Chain)</title>
+  <title>VanSwap — Multi-Chain Swap Pools</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -410,7 +410,7 @@
     </div>
   </div>
 
-  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
+  <footer>© 2025 VanSwap. Multi-Chain DEX</footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
@@ -2185,15 +2185,15 @@
       const currentNetwork = networkManager.getCurrentNetwork();
       const nativeToken = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
       
-      const token0IsNative = currentRemovePool.token0 === nativeToken;
-      const token1IsNative = currentRemovePool.token1 === nativeToken;
+      const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeToken.toLowerCase();
+      const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeToken.toLowerCase();
 
       let tx;
 
       if (token0IsNative || token1IsNative) {
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
-                const amountETHMin = token0IsNative ? amount0Min : amount1Min;
+        const amountETHMin = token0IsNative ? amount0Min : amount1Min;
 
         tx = await router.removeLiquidityETH(
           token,
