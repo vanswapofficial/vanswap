@@ -1,0 +1,32 @@
+{
+  "name": "VanSwap - Multi-Chain DEX on Vana Chain & 0G Network",
+  "short_name": "VanSwap",
+  "description": "VanSwap is a multi-chain decentralized exchange (DEX) built on Vana Chain and 0G Network. Trade, earn, and provide liquidity securely with ultra-low fees.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b0d",
+  "theme_color": "#ff6b35",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/assets/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["finance", "cryptocurrency", "defi", "exchange"],
+  "dir": "ltr"
+}
