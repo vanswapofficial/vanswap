@@ -11,12 +11,12 @@
   "lang": "en",
   "icons": [
     {
-      "src": "/assets/favicon-192.png",
+      "src": "/assets/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/assets/favicon-512.png",
+      "src": "/assets/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
@@ -25,6 +25,11 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
     }
   ],
   "categories": ["finance", "cryptocurrency", "defi", "exchange"],
