@@ -347,6 +347,125 @@
   </div>
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
+<script type="module">
+    // WALLETCONNECT INTEGRATION - TAMBAHAN SAJA
+    import {
+      createWeb3Modal,
+      defaultWagmiConfig
+    } from "https://esm.sh/@web3modal/wagmi?bundle";
+
+    import {
+      getAccount,
+      getBalance,
+      watchAccount,
+      disconnect
+    } from "https://esm.sh/@wagmi/core@2.13.0";
+
+    import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
+    import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+
+    // WalletConnect Project ID
+    const projectId = "a9ca60975a434a874c01a34c5f7ff722";
+
+    // Metadata
+    const metadata = {
+      name: "VanSwap DEX",
+      description: "VanSwap Decentralized Exchange",
+      url: "https://vanswap.xyz", 
+      icons: ["https://vanswap.xyz/assets/vans.png"]
+    };
+
+    // Wagmi config
+    const chains = [mainnet, polygon, arbitrum];
+    const config = defaultWagmiConfig({ chains, projectId, metadata });
+
+    // Buat modal Web3Modal
+    const modal = createWeb3Modal({
+      wagmiConfig: config,
+      projectId,
+      chains,
+      enableAnalytics: false,
+      themeMode: "dark"
+    });
+
+    reconnect(config);
+
+    // Integrasi dengan existing connect button
+    const existingConnectBtn = document.getElementById('connectBtn');
+    const existingWalletText = document.getElementById('walletText');
+    
+    if (existingConnectBtn) {
+      // Backup original click handler
+      const originalOnClick = existingConnectBtn.onclick;
+      
+      // Override dengan WalletConnect
+      existingConnectBtn.onclick = async function(e) {
+        e.stopPropagation();
+        
+        // Jika sudah ada account MetaMask, gunakan logic original
+        if (window.ethereum && window.ethereum.selectedAddress) {
+          if (originalOnClick) originalOnClick.call(this, e);
+          return;
+        }
+        
+        // Jika tidak ada MetaMask, buka WalletConnect modal
+        console.log('Opening WalletConnect modal...');
+        modal.open();
+      };
+    }
+
+    // Watch for WalletConnect account changes
+    watchAccount(config, {
+      onChange: (account) => {
+        console.log('WalletConnect account changed:', account);
+        
+        if (account.isConnected && account.address) {
+          // Update UI dengan account WalletConnect
+          if (existingWalletText) {
+            existingWalletText.textContent = account.address.substring(0,6) + '...' + account.substring(38);
+          }
+          
+          // Trigger existing wallet connection logic
+          if (window.connectWallet) {
+            window.connectWallet();
+          }
+          
+          // Update network dropdown text
+          const connectBtn = document.getElementById('connectBtn');
+          if (connectBtn) {
+            connectBtn.querySelector('span').textContent = account.address.substring(0,6) + '...' + account.substring(38);
+          }
+        } else {
+          // Reset jika disconnect
+          if (existingWalletText) {
+            existingWalletText.textContent = 'Connect Wallet';
+          }
+        }
+      }
+    });
+
+    // Tambahkan disconnect handler untuk WalletConnect
+    const existingDisconnectBtn = document.getElementById('disconnectBtn');
+    if (existingDisconnectBtn) {
+      const originalDisconnectClick = existingDisconnectBtn.onclick;
+      
+      existingDisconnectBtn.onclick = async function(e) {
+        e.stopPropagation();
+        
+        // Disconnect WalletConnect jika terhubung
+        const account = getAccount(config);
+        if (account.isConnected) {
+          await disconnect(config);
+        }
+        
+        // Jalankan original disconnect logic
+        if (originalDisconnectClick) originalDisconnectClick.call(this, e);
+        if (window.disconnectWallet) window.disconnectWallet();
+      };
+    }
+
+    console.log('✅ WalletConnect integrated successfully');
+  </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
@@ -1705,126 +1824,6 @@
     window.wrapNative = wrapNative;
     window.unwrapNative = unwrapNative;
     window.filterTokens = filterTokens;
-  </script>
-
-<script type="module">
-    // WALLETCONNECT INTEGRATION - TAMBAHAN SAJA
-    import {
-      createWeb3Modal,
-      defaultWagmiConfig
-    } from "https://esm.sh/@web3modal/wagmi?bundle";
-
-    import {
-      getAccount,
-      getBalance,
-      watchAccount,
-      disconnect
-    } from "https://esm.sh/@wagmi/core@2.13.0";
-
-    import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
-    import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
-
-    // WalletConnect Project ID
-    const projectId = "a9ca60975a434a874c01a34c5f7ff722";
-
-    // Metadata
-    const metadata = {
-      name: "VanSwap DEX",
-      description: "VanSwap Decentralized Exchange",
-      url: "https://vanswap.xyz", 
-      icons: ["https://vanswap.xyz/assets/vans.png"]
-    };
-
-    // Wagmi config
-    const chains = [mainnet, polygon, arbitrum];
-    const config = defaultWagmiConfig({ chains, projectId, metadata });
-
-    // Buat modal Web3Modal
-    const modal = createWeb3Modal({
-      wagmiConfig: config,
-      projectId,
-      chains,
-      enableAnalytics: false,
-      themeMode: "dark"
-    });
-
-    reconnect(config);
-
-    // Integrasi dengan existing connect button
-    const existingConnectBtn = document.getElementById('connectBtn');
-    const existingWalletText = document.getElementById('walletText');
-    
-    if (existingConnectBtn) {
-      // Backup original click handler
-      const originalOnClick = existingConnectBtn.onclick;
-      
-      // Override dengan WalletConnect
-      existingConnectBtn.onclick = async function(e) {
-        e.stopPropagation();
-        
-        // Jika sudah ada account MetaMask, gunakan logic original
-        if (window.ethereum && window.ethereum.selectedAddress) {
-          if (originalOnClick) originalOnClick.call(this, e);
-          return;
-        }
-        
-        // Jika tidak ada MetaMask, buka WalletConnect modal
-        console.log('Opening WalletConnect modal...');
-        modal.open();
-      };
-    }
-
-    // Watch for WalletConnect account changes
-    watchAccount(config, {
-      onChange: (account) => {
-        console.log('WalletConnect account changed:', account);
-        
-        if (account.isConnected && account.address) {
-          // Update UI dengan account WalletConnect
-          if (existingWalletText) {
-            existingWalletText.textContent = account.address.substring(0,6) + '...' + account.substring(38);
-          }
-          
-          // Trigger existing wallet connection logic
-          if (window.connectWallet) {
-            window.connectWallet();
-          }
-          
-          // Update network dropdown text
-          const connectBtn = document.getElementById('connectBtn');
-          if (connectBtn) {
-            connectBtn.querySelector('span').textContent = account.address.substring(0,6) + '...' + account.substring(38);
-          }
-        } else {
-          // Reset jika disconnect
-          if (existingWalletText) {
-            existingWalletText.textContent = 'Connect Wallet';
-          }
-        }
-      }
-    });
-
-    // Tambahkan disconnect handler untuk WalletConnect
-    const existingDisconnectBtn = document.getElementById('disconnectBtn');
-    if (existingDisconnectBtn) {
-      const originalDisconnectClick = existingDisconnectBtn.onclick;
-      
-      existingDisconnectBtn.onclick = async function(e) {
-        e.stopPropagation();
-        
-        // Disconnect WalletConnect jika terhubung
-        const account = getAccount(config);
-        if (account.isConnected) {
-          await disconnect(config);
-        }
-        
-        // Jalankan original disconnect logic
-        if (originalDisconnectClick) originalDisconnectClick.call(this, e);
-        if (window.disconnectWallet) window.disconnectWallet();
-      };
-    }
-
-    console.log('✅ WalletConnect integrated successfully');
   </script>
 </body>
 </html>
