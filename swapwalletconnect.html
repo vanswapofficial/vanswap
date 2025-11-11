@@ -352,14 +352,14 @@
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 <script type="module">
-    // WALLETCONNECT INTEGRATION - PERBAIKAN
+    // WALLETCONNECT INTEGRATION - FIXED VERSION
     import { createWeb3Modal, defaultWagmiConfig } from "https://esm.sh/@web3modal/wagmi?bundle";
     import { getAccount, watchAccount, disconnect } from "https://esm.sh/@wagmi/core@2.13.0";
     import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
     import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
 
     // WalletConnect Project ID
-    const projectId = "103c1388571d2000e32d60c420d55b62";
+    const projectId = "a9ca60975a434a874c01a34c5f7ff722";
 
     // Metadata
     const metadata = {
@@ -371,97 +371,62 @@
 
     // Wagmi config
     const chains = [mainnet, polygon, arbitrum];
-    const config = defaultWagmiConfig({ 
-      chains, 
-      projectId, 
-      metadata,
-      enableWalletConnect: true,
-      enableInjected: true,
-      enableEIP6963: true,
-      enableCoinbase: true
-    });
+    const config = defaultWagmiConfig({ chains, projectId, metadata });
 
-    // Buat modal Web3Modal
+    // ✅ PERBAIKAN 1: BUAT MODAL DULU, BARU RECONNECT
     const modal = createWeb3Modal({
       wagmiConfig: config,
       projectId,
       chains,
       enableAnalytics: false,
-      themeMode: "dark",
-      themeVariables: {
-        '--w3m-accent': '#31d0aa',
-        '--w3m-border-radius-master': '8px',
-      }
+      themeMode: "dark"
     });
 
-    // Reconnect sessions
-    reconnect(config);
+    reconnect(config); // <- Setelah createWeb3Modal
 
-    // Integrasi dengan existing connect button
+    // ✅ PERBAIKAN 2: FUNGSI OPEN YANG SIMPLE
     const existingConnectBtn = document.getElementById('connectBtn');
     const existingWalletText = document.getElementById('walletText');
     
     if (existingConnectBtn) {
-      existingConnectBtn.onclick = async function(e) {
+      existingConnectBtn.onclick = function(e) {
         e.stopPropagation();
-        
         console.log('Opening Web3Modal...');
-        try {
-          await modal.open();
-        } catch (error) {
-          console.error('Error opening modal:', error);
-          // Fallback ke connect wallet biasa
-          if (window.connectWallet) {
-            window.connectWallet();
-          }
-        }
+        modal.open(); // <- Langsung open tanpa logic kompleks
       };
     }
 
-    // Watch for account changes
-    const unsubscribe = watchAccount(config, {
+    // ✅ PERBAIKAN 3: ACCOUNT HANDLER YANG LEBIH BAIK
+    watchAccount(config, {
       onChange: (account) => {
-        console.log('WalletConnect account changed:', account);
+        console.log('Account changed:', account);
         
-        if (account.isConnected && account.address) {
-          // Update UI dengan account
-          if (existingWalletText) {
-            const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
-            existingWalletText.textContent = shortAddr;
-          }
-          
-          // Set global account variable
+        if (account.isConnected && account.address && existingWalletText) {
+          const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
+          existingWalletText.textContent = shortAddr;
           window.account = account.address;
           
-          // Initialize web3 dengan provider WalletConnect
-          initializeWalletConnectWeb3();
+          // Initialize web3
+          initializeWeb3WithWalletConnect();
           
-          // Update wallet connection state
-          if (window.updateBalances) window.updateBalances();
-          if (window.updateSwapBtn) window.updateSwapBtn();
-          
-        } else {
-          // Reset jika disconnect
-          if (existingWalletText) {
-            existingWalletText.textContent = 'Connect Wallet';
-          }
+        } else if (existingWalletText) {
+          existingWalletText.textContent = 'Connect Wallet';
           window.account = null;
         }
       }
     });
 
-    // Fungsi untuk initialize web3 dengan WalletConnect
-    async function initializeWalletConnectWeb3() {
+    // Fungsi initialize web3
+    async function initializeWeb3WithWalletConnect() {
       if (!window.account) return;
       
       try {
-        // Dapatkan provider dari WalletConnect
         const provider = await modal.getWalletProvider();
         if (provider) {
           window.provider = new ethers.providers.Web3Provider(provider);
           window.signer = window.provider.getSigner();
           
-          // Initialize contracts
+          // Initialize contracts untuk network aktif
           const currentNetwork = window.networkManager?.getCurrentNetwork() || 'vana';
           const config = window.NETWORK_CONFIG[currentNetwork];
           
@@ -471,42 +436,26 @@
             window.wvanaContract = new ethers.Contract(config.contracts.wvana, window.WVANA_ABI, window.signer);
           }
           
-          console.log('Web3 initialized with WalletConnect');
+          // Update UI
+          if (window.updateBalances) await window.updateBalances();
+          if (window.updateDropdownBalances) await window.updateDropdownBalances();
+          if (window.updateSwapBtn) window.updateSwapBtn();
         }
       } catch (error) {
-        console.error('Error initializing web3 with WalletConnect:', error);
+        console.error('Error initializing web3:', error);
       }
     }
 
-    // Tambahkan disconnect handler untuk WalletConnect
+    // Disconnect handler
     const existingDisconnectBtn = document.getElementById('disconnectBtn');
     if (existingDisconnectBtn) {
       existingDisconnectBtn.onclick = async function(e) {
         e.stopPropagation();
-        
-        // Disconnect WalletConnect
-        const account = getAccount(config);
-        if (account.isConnected) {
-          await disconnect(config);
-        }
-        
-        // Reset UI
-        if (existingWalletText) {
-          existingWalletText.textContent = 'Connect Wallet';
-        }
-        window.account = null;
-        
-        // Close dropdown
-        const dropdown = document.getElementById('walletNetworkDropdown');
-        if (dropdown) dropdown.style.display = 'none';
-        
-        // Reset balances
-        if (window.updateBalances) window.updateBalances();
-        if (window.updateSwapBtn) window.updateSwapBtn();
+        await disconnect(config);
       };
     }
 
-    // Export modal untuk akses global
+    // Export untuk debugging
     window.web3modal = modal;
     console.log('✅ WalletConnect integrated successfully');
 </script>
