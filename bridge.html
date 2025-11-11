@@ -372,30 +372,33 @@
         chainIdDecimal: 16661,
         bridgeAddress: "0x68C1CAa64B4aB196204b1205Cf6b92509a9efd61",
         rpcUrl: "https://evmrpc.0g.ai",
-        explorer: "https://chainscan.0g.ai"
+        explorer: "https://chainscan.0g.ai",
+        wvansAddress: "0x68C1CAa64B4aB196204b1205Cf6b92509a9efd61" // wVANS address sama dengan bridge
       }
     };
 
-    // Contract ABIs
+    // Contract ABIs - DIPERBAIKI
     const VANABRIDGE_ABI = [
-      "function bridgeToZeroG(uint256) external payable returns (bytes32)",
-      "function bridgeFromZeroG(bytes32, uint256, address) external",
+      "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
+      "function bridgeFromZeroG(bytes32 proofHash, uint256 amount, address to) external",
       "function totalLocked() external view returns (uint256)",
       "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ZEROGBRIDGE_ABI = [
-      "function bridgeToVana(uint256) external returns (bytes32)", 
-      "function bridgeFromVana(bytes32, uint256, address) external",
+      "function bridgeToVana(uint256 amount) external returns (bytes32)", 
+      "function bridgeFromVana(bytes32 proofHash, uint256 amount, address to) external",
       "function totalSupply() external view returns (uint256)",
-      "function balanceOf(address) external view returns (uint256)",
+      "function balanceOf(address account) external view returns (uint256)",
+      "function mint(address to, uint256 amount) external",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ERC20_ABI = [
-      "function balanceOf(address) external view returns (uint256)",
-      "function approve(address, uint256) external returns (bool)",
-      "function allowance(address, address) external view returns (uint256)"
+      "function balanceOf(address account) external view returns (uint256)",
+      "function approve(address spender, uint256 amount) external returns (bool)",
+      "function allowance(address owner, address spender) external view returns (uint256)",
+      "function transfer(address to, uint256 amount) external returns (bool)"
     ];
 
     // Global variables
@@ -403,7 +406,7 @@
     let isBridging = false;
     let currentBridgeState = null;
 
-    // Token definitions
+    // Token definitions - DIPERBAIKI
     const TOKENS = {
       vans: {
         name: "VANS",
@@ -417,7 +420,7 @@
         name: "wVANS",
         symbol: "wVANS",
         logo: "https://vanswap.xyz/assets/vans.png", 
-        address: CONFIG.zerog.bridgeAddress,
+        address: CONFIG.zerog.wvansAddress, // Menggunakan address yang benar
         network: "zerog",
         decimals: 18
       }
@@ -459,8 +462,8 @@
       if (savedState) {
         const state = JSON.parse(savedState);
         
-        // Check if state is expired (more than 1 hour old)
-        if (Date.now() - state.timestamp < 3600000) {
+        // Check if state is expired (lebih dari 2 jam)
+        if (Date.now() - state.timestamp < 7200000) {
           currentBridgeState = state;
           showRecoveryBanner(state);
         } else {
@@ -514,16 +517,18 @@
       }
 
       try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
-        currentUser = await signer.getAddress();
+        currentUser = accounts[0];
         
         const network = await provider.getNetwork();
         currentNetwork = network.chainId.toString();
         
         updateUI();
         await updateBalances();
+        
+        updateStatus('✅ Wallet connected', 'success');
         
       } catch (error) {
         console.error('Wallet connection failed:', error);
@@ -539,34 +544,42 @@
       location.reload();
     }
 
-    // Network switching - FIXED: No page reload
+    // Network switching - DIPERBAIKI: Better error handling
     async function switchNetwork(targetNetwork) {
       const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
       
       try {
+        // Coba switch network
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: targetConfig.chainId }],
         });
         
-        // Update provider without page reload
+        // Tunggu network berubah
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update provider
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
         
-        // Update network info
+        // Verifikasi network
         const network = await provider.getNetwork();
         currentNetwork = network.chainId.toString();
+        
+        if (currentNetwork !== targetConfig.chainIdDecimal.toString()) {
+          throw new Error(`Network switch verification failed. Expected: ${targetConfig.chainIdDecimal}, Got: ${currentNetwork}`);
+        }
         
         updateUI();
         await updateBalances();
         
         return true;
       } catch (switchError) {
+        console.log('Switch error:', switchError);
         if (switchError.code === 4902) {
           return await addNetwork(targetConfig);
         }
-        console.error('Network switch failed:', switchError);
-        return false;
+        throw new Error(`Network switch failed: ${switchError.message}`);
       }
     }
 
@@ -699,29 +712,40 @@
       calculateOutput();
     }
 
-    // Balance updates
+    // Balance updates - DIPERBAIKI: Better error handling
     async function updateBalances() {
       if (!currentUser) return;
       
-      const fromToken = document.getElementById('fromSymbol').textContent;
-      const toToken = document.getElementById('toSymbol').textContent;
-      
-      const fromBalance = fromToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
-      const toBalance = toToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
-      
-      document.getElementById('fromBalance').textContent = `Balance: ${fromBalance}`;
-      document.getElementById('toBalance').textContent = `Balance: ${toBalance}`;
-      
-      document.getElementById('btnMax').disabled = parseFloat(fromBalance) === 0;
+      try {
+        const fromToken = document.getElementById('fromSymbol').textContent;
+        const toToken = document.getElementById('toSymbol').textContent;
+        
+        const fromBalance = fromToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
+        const toBalance = toToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
+        
+        document.getElementById('fromBalance').textContent = `Balance: ${fromBalance}`;
+        document.getElementById('toBalance').textContent = `Balance: ${toBalance}`;
+        
+        document.getElementById('btnMax').disabled = parseFloat(fromBalance) === 0;
+      } catch (error) {
+        console.error('Failed to update balances:', error);
+      }
     }
 
     async function getVANSBalance() {
       if (!currentUser) return '0';
       try {
+        // Pastikan kita di network Vana
+        const currentChainId = await provider.send('eth_chainId', []);
+        if (currentChainId !== CONFIG.vana.chainId) {
+          return '0';
+        }
+        
         const vansToken = new ethers.Contract(TOKENS.vans.address, ERC20_ABI, provider);
         const balance = await vansToken.balanceOf(currentUser);
         return parseFloat(ethers.utils.formatUnits(balance, 18)).toFixed(4);
-      } catch {
+      } catch (error) {
+        console.error('Error getting VANS balance:', error);
         return '0';
       }
     }
@@ -729,10 +753,17 @@
     async function getWVANSBalance() {
       if (!currentUser) return '0';
       try {
+        // Pastikan kita di network 0G
+        const currentChainId = await provider.send('eth_chainId', []);
+        if (currentChainId !== CONFIG.zerog.chainId) {
+          return '0';
+        }
+        
         const wvansToken = new ethers.Contract(TOKENS.wvans.address, ERC20_ABI, provider);
         const balance = await wvansToken.balanceOf(currentUser);
         return parseFloat(ethers.utils.formatUnits(balance, 18)).toFixed(4);
-      } catch {
+      } catch (error) {
+        console.error('Error getting wVANS balance:', error);
         return '0';
       }
     }
@@ -774,7 +805,7 @@
       }
     }
 
-    // Enhanced Auto Bridge Implementation
+    // Enhanced Auto Bridge Implementation - DIPERBAIKI: Fix minting issue
     async function startAutoBridge() {
       if (isBridging) return;
       
@@ -809,8 +840,7 @@
         updateStatus('🔀 Switching to Vana network...', 'processing');
         
         // Ensure we're on Vana network
-        const networkOk = await ensureNetwork('vana');
-        if (!networkOk) throw new Error('Failed to switch to Vana network');
+        await ensureNetwork('vana');
         
         updateStatus('✅ Approving VANS...', 'processing');
         await approveVANS(amount);
@@ -828,6 +858,11 @@
         
         const receipt = await tx.wait();
         const event = receipt.events.find(e => e.event === 'BridgedToZeroG');
+        
+        if (!event) {
+          throw new Error('BridgedToZeroG event not found');
+        }
+        
         const proofHash = event.args.proofHash;
         
         // Save state before switching networks
@@ -842,15 +877,19 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
+        showRecoveryBanner(bridgeState);
         
         updateStatus('🔀 Switching to 0G network...', 'processing');
-        const zeroGNetworkOk = await ensureNetwork('zerog');
-        if (!zeroGNetworkOk) throw new Error('Failed to switch to 0G network');
+        await ensureNetwork('zerog');
         
         // Complete the minting on 0G
         await completeZeroGMinting(bridgeState);
         
       } catch (error) {
+        // Clear state on error
+        localStorage.removeItem('vanswap_bridge_state');
+        currentBridgeState = null;
+        hideRecoveryBanner();
         throw error;
       }
     }
@@ -862,10 +901,33 @@
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
+        // Debug info
+        console.log('Minting wVANS with:', {
+          proofHash: bridgeState.proofHash,
+          amount: bridgeState.amount,
+          amountWei: amountWei.toString(),
+          user: currentUser
+        });
+        
         const mintTx = await zeroGBridge.bridgeFromVana(bridgeState.proofHash, amountWei, currentUser);
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
         
-        await mintTx.wait();
+        const receipt = await mintTx.wait();
+        console.log('Mint transaction receipt:', receipt);
+        
+        // Verify minting success
+        const wvansToken = new ethers.Contract(TOKENS.wvans.address, ERC20_ABI, provider);
+        const newBalance = await wvansToken.balanceOf(currentUser);
+        const expectedBalance = ethers.utils.parseEther(bridgeState.amount);
+        
+        console.log('Balance check:', {
+          newBalance: newBalance.toString(),
+          expectedBalance: expectedBalance.toString()
+        });
+        
+        if (newBalance.lt(expectedBalance)) {
+          throw new Error('wVANS balance not updated after minting');
+        }
         
         // Clear state after successful completion
         localStorage.removeItem('vanswap_bridge_state');
@@ -873,15 +935,16 @@
         hideRecoveryBanner();
         
         updateStep(3, 'completed');
-        updateStatus('✅ Bridge completed successfully!', 'success');
+        updateStatus('✅ Bridge completed successfully! wVANS minted.', 'success');
         
         // Update balances
         await updateBalances();
         await updateBridgeInfo();
         
       } catch (error) {
+        console.error('Minting failed:', error);
         // Keep the state saved for recovery
-        throw error;
+        throw new Error(`Minting failed: ${error.message}`);
       } finally {
         isBridging = false;
         validateBridge();
@@ -894,8 +957,7 @@
         updateStatus('🔀 Switching to 0G network...', 'processing');
         
         // Ensure we're on 0G network
-        const networkOk = await ensureNetwork('zerog');
-        if (!networkOk) throw new Error('Failed to switch to 0G network');
+        await ensureNetwork('zerog');
         
         updateStatus('🔥 Burning wVANS on 0G...', 'processing');
         
@@ -907,6 +969,11 @@
         
         const receipt = await tx.wait();
         const event = receipt.events.find(e => e.event === 'BridgedToVana');
+        
+        if (!event) {
+          throw new Error('BridgedToVana event not found');
+        }
+        
         const proofHash = event.args.proofHash;
         
         // Save state before switching networks
@@ -921,18 +988,22 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
+        showRecoveryBanner(bridgeState);
         
         updateStep(2, 'completed');
         updateStep(3, 'processing');
         updateStatus('🔀 Switching to Vana network...', 'processing');
         
-        const vanaNetworkOk = await ensureNetwork('vana');
-        if (!vanaNetworkOk) throw new Error('Failed to switch to Vana network');
+        await ensureNetwork('vana');
         
         // Complete the unlocking on Vana
         await completeVanaUnlocking(bridgeState);
         
       } catch (error) {
+        // Clear state on error
+        localStorage.removeItem('vanswap_bridge_state');
+        currentBridgeState = null;
+        hideRecoveryBanner();
         throw error;
       }
     }
@@ -955,7 +1026,7 @@
         hideRecoveryBanner();
         
         updateStep(3, 'completed');
-        updateStatus('✅ Bridge completed successfully!', 'success');
+        updateStatus('✅ Bridge completed successfully! VANS unlocked.', 'success');
         
         // Update balances
         await updateBalances();
@@ -977,13 +1048,16 @@
       if (currentChainId !== targetConfig.chainId) {
         updateStatus(`🔄 Switching to ${targetNetwork.toUpperCase()} network...`, 'processing');
         
-        const success = await switchNetwork(targetNetwork);
-        if (!success) {
-          throw new Error(`Failed to switch to ${targetNetwork} network`);
-        }
+        await switchNetwork(targetNetwork);
         
         // Wait for network to stabilize
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Verify network switch
+        const newChainId = await provider.send('eth_chainId', []);
+        if (newChainId !== targetConfig.chainId) {
+          throw new Error(`Network switch failed. Expected: ${targetConfig.chainId}, Got: ${newChainId}`);
+        }
       }
       return true;
     }
