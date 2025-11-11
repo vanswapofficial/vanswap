@@ -352,83 +352,161 @@
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 <script type="module">
-      import {
-        createWeb3Modal,
-        defaultWagmiConfig
-      } from "https://esm.sh/@web3modal/wagmi?bundle";
+    import { createWeb3Modal, defaultWagmiConfig } from "https://esm.sh/@web3modal/wagmi?bundle";
+    import { getAccount, watchAccount, disconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+    import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
+    import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
 
-      import {
-        getAccount,
-        getBalance,
-        watchAccount,
-        disconnect
-      } from "https://esm.sh/@wagmi/core@2.13.0";
+    // WalletConnect Project ID
+    const projectId = "a9ca60975a434a874c01a34c5f7ff722";
 
-      import { mainnet } from "https://esm.sh/@wagmi/core@2.13.0/chains";
-      import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+    // Metadata untuk VanSwap
+    const metadata = {
+      name: "VanSwap DEX",
+      description: "VanSwap Decentralized Exchange",
+      url: "https://vanswap.xyz", 
+      icons: ["https://vanswap.xyz/assets/vans.png"]
+    };
 
-      // WalletConnect Project ID
-      const projectId = "a9ca60975a434a874c01a34c5f7ff722";
+    // Wagmi config
+    const chains = [mainnet, polygon, arbitrum];
+    const config = defaultWagmiConfig({ chains, projectId, metadata });
 
-      // Metadata domain
-      const metadata = {
-        name: "CozySwap HTML",
-        description: "WalletConnect v2 Pure HTML Demo",
-        url: "https://saputangan.edgeone.app",
-        icons: ["https://avatars.githubusercontent.com/u/37784886"]
-      };
+    // Buat modal dulu baru panggil reconnect
+    const modal = createWeb3Modal({
+      wagmiConfig: config,
+      projectId,
+      chains,
+      enableAnalytics: false,
+      themeMode: "dark"
+    });
 
-      // Wagmi config
-      const chains = [mainnet];
-      const config = defaultWagmiConfig({ chains, projectId, metadata });
+    reconnect(config);
 
-      // Buat modal dulu baru panggil reconnect (ini penting)
-      const modal = createWeb3Modal({
-        wagmiConfig: config,
-        projectId,
-        chains,
-        enableAnalytics: false
-      });
+    // Integrasi dengan VanSwap UI
+    const existingConnectBtn = document.getElementById('connectBtn');
+    const existingWalletText = document.getElementById('walletText');
 
-      reconnect(config);
-
-      const info = document.getElementById("info");
-
-      async function updateInfo() {
-        const account = getAccount(config);
-        if (account?.address) {
-          const balance = await getBalance(config, { address: account.address });
-          info.innerHTML = `
-            <div style="text-align: left;">
-              <h3 style="color: green;">✅ Wallet Connected</h3>
-              <p><strong>Address:</strong><br>${account.address}</p>
-              <p><strong>Balance:</strong> ${parseFloat(balance.value) / 1e18} ETH</p>
-              <button onclick="disconnectWallet()" style="background: #dc3545;">Disconnect Wallet</button>
-            </div>
-          `;
-          info.classList.add('connected-info');
-        } else {
-          info.innerHTML = "Belum terkoneksi. Klik 'Connect Wallet' untuk memulai.";
-          info.classList.remove('connected-info');
+    async function updateVanSwapUI() {
+      const account = getAccount(config);
+      
+      if (account?.isConnected && account?.address) {
+        // Update UI dengan account yang terhubung
+        if (existingWalletText) {
+          const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
+          existingWalletText.textContent = shortAddr;
         }
+        
+        // Set global account variable untuk VanSwap
+        window.account = account.address;
+        
+        // Initialize web3 dengan provider WalletConnect
+        await initializeWeb3ForVanSwap();
+        
+        // Update VanSwap UI components
+        if (window.updateBalances) await window.updateBalances();
+        if (window.updateDropdownBalances) await window.updateDropdownBalances();
+        if (window.updateSwapBtn) window.updateSwapBtn();
+        if (window.getPoolReserves && window.selectedFrom && window.selectedTo) {
+          await window.getPoolReserves(window.selectedFrom, window.selectedTo);
+        }
+        
+        console.log('✅ Wallet connected to VanSwap');
+        
+      } else {
+        // Reset jika disconnect
+        if (existingWalletText) {
+          existingWalletText.textContent = 'Connect Wallet';
+        }
+        window.account = null;
+        
+        // Reset VanSwap UI
+        if (window.updateBalances) window.updateBalances();
+        if (window.updateSwapBtn) window.updateSwapBtn();
       }
+    }
 
-      watchAccount(config, updateInfo);
+    // Fungsi untuk initialize web3 untuk VanSwap
+    async function initializeWeb3ForVanSwap() {
+      if (!window.account) return;
+      
+      try {
+        const provider = await modal.getWalletProvider();
+        if (provider) {
+          // Gunakan ethers.js yang sudah ada di VanSwap
+          window.provider = new ethers.providers.Web3Provider(provider);
+          window.signer = window.provider.getSigner();
+          
+          // Initialize contracts untuk network aktif
+          const currentNetwork = window.networkManager?.getCurrentNetwork() || 'vana';
+          const networkConfig = window.NETWORK_CONFIG?.[currentNetwork];
+          
+          if (networkConfig) {
+            window.router = new ethers.Contract(networkConfig.contracts.router, window.ROUTER_ABI, window.signer);
+            window.factory = new ethers.Contract(networkConfig.contracts.factory, window.FACTORY_ABI, window.provider);
+            window.wvanaContract = new ethers.Contract(networkConfig.contracts.wvana, window.WVANA_ABI, window.signer);
+          }
+          
+          console.log('Web3 initialized for VanSwap with WalletConnect');
+        }
+      } catch (error) {
+        console.error('Error initializing web3 for VanSwap:', error);
+      }
+    }
 
-      window.disconnectWallet = async () => {
-        await disconnect(config);
-        updateInfo();
-      };
+    // Watch for account changes
+    watchAccount(config, {
+      onChange: updateVanSwapUI
+    });
 
-      // Fungsi untuk membuka modal - INI YANG PERLU DIPANGGIL
-      window.openWeb3Modal = function() {
-        console.log('Opening Web3Modal...');
+    // Integrasi dengan tombol connect VanSwap
+    if (existingConnectBtn) {
+      existingConnectBtn.onclick = function(e) {
+        e.stopPropagation();
+        console.log('Opening Web3Modal for VanSwap...');
         modal.open();
       };
+    }
 
-      // Initial update
-      updateInfo();
-    </script>
+    // Integrasi dengan tombol disconnect VanSwap
+    const existingDisconnectBtn = document.getElementById('disconnectBtn');
+    if (existingDisconnectBtn) {
+      const originalDisconnect = existingDisconnectBtn.onclick;
+      
+      existingDisconnectBtn.onclick = async function(e) {
+        e.stopPropagation();
+        
+        await disconnect(config);
+        
+        // Close dropdown
+        const dropdown = document.getElementById('walletNetworkDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        
+        // Jalankan original disconnect logic jika ada
+        if (originalDisconnect) {
+          originalDisconnect.call(this, e);
+        }
+      };
+    }
+
+    // Export fungsi untuk akses global
+    window.openWeb3Modal = function() {
+      console.log('Opening Web3Modal...');
+      modal.open();
+    };
+
+    window.disconnectWallet = async function() {
+      await disconnect(config);
+    };
+
+    // Export modal untuk debugging
+    window.web3modal = modal;
+
+    // Initial update
+    updateVanSwapUI();
+
+    console.log('✅ WalletConnect integrated with VanSwap successfully');
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
     // NETWORK CONFIGURATION
