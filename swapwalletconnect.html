@@ -351,73 +351,164 @@
   </div>
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
-<!-- Fallback script jika EM module gagal -->
-<script>
-  // Simple fallback - langsung buka WalletConnect modal
-  function initWalletConnectFallback() {
-    const connectBtn = document.getElementById('connectBtn');
-    if (connectBtn) {
-      connectBtn.onclick = function() {
-        // Redirect ke WalletConnect universal link
-        const universalLink = `https://walletconnect.com/wc?uri=wc:00e46b69-d0cc-4b3e-b6a2-cee442f97188@1?bridge=https%3A%2F%2Fbridge.walletconnect.org&key=91303dedf9ac576317aca883705e6b14e80d50a3e45a6a6127b65b41e6a3c6e7`;
-        window.open(universalLink, '_blank');
+<script type="module">
+    // WALLETCONNECT INTEGRATION - PERBAIKAN
+    import { createWeb3Modal, defaultWagmiConfig } from "https://esm.sh/@web3modal/wagmi?bundle";
+    import { getAccount, watchAccount, disconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+    import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
+    import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+
+    // WalletConnect Project ID
+    const projectId = "103c1388571d2000e32d60c420d55b62";
+
+    // Metadata
+    const metadata = {
+      name: "VanSwap DEX",
+      description: "VanSwap Decentralized Exchange",
+      url: "https://vanswap.xyz", 
+      icons: ["https://vanswap.xyz/assets/vans.png"]
+    };
+
+    // Wagmi config
+    const chains = [mainnet, polygon, arbitrum];
+    const config = defaultWagmiConfig({ 
+      chains, 
+      projectId, 
+      metadata,
+      enableWalletConnect: true,
+      enableInjected: true,
+      enableEIP6963: true,
+      enableCoinbase: true
+    });
+
+    // Buat modal Web3Modal
+    const modal = createWeb3Modal({
+      wagmiConfig: config,
+      projectId,
+      chains,
+      enableAnalytics: false,
+      themeMode: "dark",
+      themeVariables: {
+        '--w3m-accent': '#31d0aa',
+        '--w3m-border-radius-master': '8px',
+      }
+    });
+
+    // Reconnect sessions
+    reconnect(config);
+
+    // Integrasi dengan existing connect button
+    const existingConnectBtn = document.getElementById('connectBtn');
+    const existingWalletText = document.getElementById('walletText');
+    
+    if (existingConnectBtn) {
+      existingConnectBtn.onclick = async function(e) {
+        e.stopPropagation();
         
-        // Atau tampilkan QR code sederhana
-        showSimpleWalletOptions();
+        console.log('Opening Web3Modal...');
+        try {
+          await modal.open();
+        } catch (error) {
+          console.error('Error opening modal:', error);
+          // Fallback ke connect wallet biasa
+          if (window.connectWallet) {
+            window.connectWallet();
+          }
+        }
       };
     }
-  }
 
-  function showSimpleWalletOptions() {
-    const modalHTML = `
-      <div id="simpleWalletModal" class="modal-overlay" style="display:flex;z-index:9999">
-        <div class="modal" style="max-width:320px;text-align:center">
-          <div class="modal-header">
-            <div class="modal-title">Connect Wallet</div>
-            <button class="close-modal" onclick="closeSimpleModal()">×</button>
-          </div>
-          <div style="padding:20px">
-            <div style="margin-bottom:16px;color:var(--muted)">Scan with your wallet app</div>
-            <div style="background:white;padding:16px;border-radius:8px;display:inline-block">
-              <!-- QR Code placeholder -->
-              <div style="width:200px;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center">
-                <div style="color:#666;font-size:14px">QR Code</div>
-              </div>
-            </div>
-            <div style="margin-top:16px;font-size:14px;color:var(--muted)">
-              or use <a href="#" onclick="connectMetaMaskFallback()" style="color:var(--accent)">MetaMask</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-  }
-
-  function closeSimpleModal() {
-    const modal = document.getElementById('simpleWalletModal');
-    if (modal) modal.remove();
-  }
-
-  async function connectMetaMaskFallback() {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        window.account = accounts[0];
-        // Update UI...
-        closeSimpleModal();
-        showToast('MetaMask connected!');
-      } catch (error) {
-        showToast('Connection failed: ' + error.message);
+    // Watch for account changes
+    const unsubscribe = watchAccount(config, {
+      onChange: (account) => {
+        console.log('WalletConnect account changed:', account);
+        
+        if (account.isConnected && account.address) {
+          // Update UI dengan account
+          if (existingWalletText) {
+            const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
+            existingWalletText.textContent = shortAddr;
+          }
+          
+          // Set global account variable
+          window.account = account.address;
+          
+          // Initialize web3 dengan provider WalletConnect
+          initializeWalletConnectWeb3();
+          
+          // Update wallet connection state
+          if (window.updateBalances) window.updateBalances();
+          if (window.updateSwapBtn) window.updateSwapBtn();
+          
+        } else {
+          // Reset jika disconnect
+          if (existingWalletText) {
+            existingWalletText.textContent = 'Connect Wallet';
+          }
+          window.account = null;
+        }
       }
-    } else {
-      showToast('Please install MetaMask');
-      window.open('https://metamask.io/download/', '_blank');
-    }
-  }
+    });
 
-  // Initialize fallback
-  document.addEventListener('DOMContentLoaded', initWalletConnectFallback);
+    // Fungsi untuk initialize web3 dengan WalletConnect
+    async function initializeWalletConnectWeb3() {
+      if (!window.account) return;
+      
+      try {
+        // Dapatkan provider dari WalletConnect
+        const provider = await modal.getWalletProvider();
+        if (provider) {
+          window.provider = new ethers.providers.Web3Provider(provider);
+          window.signer = window.provider.getSigner();
+          
+          // Initialize contracts
+          const currentNetwork = window.networkManager?.getCurrentNetwork() || 'vana';
+          const config = window.NETWORK_CONFIG[currentNetwork];
+          
+          if (config) {
+            window.router = new ethers.Contract(config.contracts.router, window.ROUTER_ABI, window.signer);
+            window.factory = new ethers.Contract(config.contracts.factory, window.FACTORY_ABI, window.provider);
+            window.wvanaContract = new ethers.Contract(config.contracts.wvana, window.WVANA_ABI, window.signer);
+          }
+          
+          console.log('Web3 initialized with WalletConnect');
+        }
+      } catch (error) {
+        console.error('Error initializing web3 with WalletConnect:', error);
+      }
+    }
+
+    // Tambahkan disconnect handler untuk WalletConnect
+    const existingDisconnectBtn = document.getElementById('disconnectBtn');
+    if (existingDisconnectBtn) {
+      existingDisconnectBtn.onclick = async function(e) {
+        e.stopPropagation();
+        
+        // Disconnect WalletConnect
+        const account = getAccount(config);
+        if (account.isConnected) {
+          await disconnect(config);
+        }
+        
+        // Reset UI
+        if (existingWalletText) {
+          existingWalletText.textContent = 'Connect Wallet';
+        }
+        window.account = null;
+        
+        // Close dropdown
+        const dropdown = document.getElementById('walletNetworkDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        
+        // Reset balances
+        if (window.updateBalances) window.updateBalances();
+        if (window.updateSwapBtn) window.updateSwapBtn();
+      };
+    }
+
+    // Export modal untuk akses global
+    window.web3modal = modal;
+    console.log('✅ WalletConnect integrated successfully');
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
