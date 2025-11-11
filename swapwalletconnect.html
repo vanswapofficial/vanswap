@@ -352,7 +352,6 @@
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 <script type="module">
-    // WALLETCONNECT INTEGRATION - SIMPLE FIX
     import { createWeb3Modal, defaultWagmiConfig } from "https://esm.sh/@web3modal/wagmi?bundle";
     import { getAccount, watchAccount, disconnect } from "https://esm.sh/@wagmi/core@2.13.0";
     import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
@@ -361,7 +360,7 @@
     // WalletConnect Project ID
     const projectId = "a9ca60975a434a874c01a34c5f7ff722";
 
-    // Metadata
+    // Metadata untuk VanSwap
     const metadata = {
       name: "VanSwap DEX",
       description: "VanSwap Decentralized Exchange",
@@ -369,15 +368,11 @@
       icons: ["https://vanswap.xyz/assets/vans.png"]
     };
 
-    // Wagmi config - SEDERHANAKAN
-    const chains = [mainnet];
-    const config = defaultWagmiConfig({ 
-      chains, 
-      projectId, 
-      metadata 
-    });
+    // Wagmi config
+    const chains = [mainnet, polygon, arbitrum];
+    const config = defaultWagmiConfig({ chains, projectId, metadata });
 
-    // BUAT MODAL - YANG INI HARUS BERJALAN
+    // Buat modal
     const modal = createWeb3Modal({
       wagmiConfig: config,
       projectId,
@@ -386,72 +381,152 @@
       themeMode: "dark"
     });
 
-    // Reconnect - PASTIKAN INI DIPANGGIL
     reconnect(config);
 
-    // SIMPLE INTEGRATION - HAPUS LOGIC KOMPLEKS
+    // ✅ PERBAIKAN 1: SIMPAN ORIGINAL HANDLER
     const connectBtn = document.getElementById('connectBtn');
     const walletText = document.getElementById('walletText');
-    
-    // ✅ FUNGSI OPEN YANG SANGAT SEDERHANA
+    const originalOnClick = connectBtn?.onclick;
+
+    // ✅ PERBAIKAN 2: HANDLER YANG LEBIH PINTAR
     if (connectBtn) {
-      connectBtn.onclick = function(e) {
+      connectBtn.onclick = async function(e) {
         e.stopPropagation();
-        console.log('Opening modal...');
-        modal.open(); // <- INI SAJA
+        
+        // Cek jika sudah ada wallet yang connect (MetaMask)
+        if (window.ethereum && window.ethereum.selectedAddress) {
+          // Gunakan logic original VanSwap
+          if (originalOnClick) {
+            originalOnClick.call(this, e);
+          } else if (window.connectWallet) {
+            window.connectWallet();
+          }
+          return;
+        }
+        
+        // Jika tidak ada wallet, buka WalletConnect modal
+        console.log('Opening WalletConnect modal...');
+        try {
+          await modal.open();
+        } catch (error) {
+          console.error('Modal error:', error);
+          // Fallback ke MetaMask
+          if (window.connectWallet) {
+            window.connectWallet();
+          }
+        }
       };
     }
 
-    // ✅ WATCH ACCOUNT SEDERHANA
+    // ✅ PERBAIKAN 3: PROPER INITIALIZATION
     watchAccount(config, {
       onChange: (account) => {
-        console.log('Account changed:', account);
+        console.log('WalletConnect account:', account);
         
-        if (account.isConnected && account.address && walletText) {
-          const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
-          walletText.textContent = shortAddr;
-          window.account = account.address;
-          
-          // Initialize web3 sederhana
-          if (window.ethers && window.provider) {
-            initializeSimpleWeb3();
-          }
-          
-        } else if (walletText) {
-          walletText.textContent = 'Connect Wallet';
-          window.account = null;
+        if (account.isConnected && account.address) {
+          handleWalletConnectConnected(account.address);
+        } else {
+          handleWalletConnectDisconnected();
         }
       }
     });
 
-    // ✅ FUNGSI INITIALIZE SEDERHANA
-    async function initializeSimpleWeb3() {
+    function handleWalletConnectConnected(address) {
+      // Update UI
+      if (walletText) {
+        const shortAddr = `${address.substring(0,6)}...${address.substring(38)}`;
+        walletText.textContent = shortAddr;
+      }
+      
+      // Set global account
+      window.account = address;
+      window.isWalletConnect = true; // ✅ TANDAI INI WALLETCONNECT
+      
+      // Initialize web3 dengan WalletConnect provider
+      initializeWalletConnectProvider();
+      
+      // Update VanSwap UI
+      updateVanSwapUI();
+    }
+
+    function handleWalletConnectDisconnected() {
+      if (walletText) {
+        walletText.textContent = 'Connect Wallet';
+      }
+      window.account = null;
+      window.isWalletConnect = false;
+      
+      // Update VanSwap UI
+      if (window.updateBalances) window.updateBalances();
+      if (window.updateSwapBtn) window.updateSwapBtn();
+    }
+
+    async function initializeWalletConnectProvider() {
       try {
         const provider = await modal.getWalletProvider();
         if (provider && window.ethers) {
           window.provider = new ethers.providers.Web3Provider(provider);
           window.signer = window.provider.getSigner();
-          console.log('Web3 initialized');
+          
+          console.log('✅ WalletConnect provider initialized');
         }
       } catch (error) {
-        console.error('Init error:', error);
+        console.error('Provider init error:', error);
       }
     }
 
-    // ✅ DISCONNECT SEDERHANA
+    function updateVanSwapUI() {
+      // Initialize contracts untuk VanSwap
+      const currentNetwork = window.networkManager?.getCurrentNetwork() || 'vana';
+      const networkConfig = window.NETWORK_CONFIG?.[currentNetwork];
+      
+      if (networkConfig && window.ethers) {
+        window.router = new ethers.Contract(networkConfig.contracts.router, window.ROUTER_ABI, window.signer);
+        window.factory = new ethers.Contract(networkConfig.contracts.factory, window.FACTORY_ABI, window.provider);
+        window.wvanaContract = new ethers.Contract(networkConfig.contracts.wvana, window.WVANA_ABI, window.signer);
+      }
+      
+      // Update balances dan UI
+      if (window.updateBalances) window.updateBalances();
+      if (window.updateDropdownBalances) window.updateDropdownBalances();
+      if (window.updateSwapBtn) window.updateSwapBtn();
+      if (window.getPoolReserves && window.selectedFrom && window.selectedTo) {
+        window.getPoolReserves(window.selectedFrom, window.selectedTo);
+      }
+    }
+
+    // ✅ PERBAIKAN 4: DISCONNECT HANDLER YANG BAIK
     const disconnectBtn = document.getElementById('disconnectBtn');
     if (disconnectBtn) {
+      const originalDisconnect = disconnectBtn.onclick;
+      
       disconnectBtn.onclick = async function(e) {
         e.stopPropagation();
-        await disconnect(config);
+        
+        // Jika ini WalletConnect, disconnect dari Wagmi
+        if (window.isWalletConnect) {
+          await disconnect(config);
+          window.isWalletConnect = false;
+        }
+        
+        // Jalankan original disconnect logic
+        if (originalDisconnect) {
+          originalDisconnect.call(this, e);
+        } else if (window.disconnectWallet) {
+          window.disconnectWallet();
+        }
+        
+        // Close dropdown
+        const dropdown = document.getElementById('walletNetworkDropdown');
+        if (dropdown) dropdown.style.display = 'none';
       };
     }
 
-    // ✅ EXPORT UNTUK DEBUG
+    // Export untuk debugging
     window.web3modal = modal;
-    window.openWalletModal = () => modal.open();
-    
-    console.log('✅ WalletConnect ready - use openWalletModal() to test');
+    window.openWalletConnectModal = () => modal.open();
+
+    console.log('✅ WalletConnect integrated - No conflicts with VanSwap');
 
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
