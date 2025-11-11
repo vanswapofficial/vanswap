@@ -352,113 +352,83 @@
 
   <footer>© 2025 VanSwap. Built on Vana Chain</footer>
 <script type="module">
-    // WALLETCONNECT INTEGRATION - FIXED VERSION
-    import { createWeb3Modal, defaultWagmiConfig } from "https://esm.sh/@web3modal/wagmi?bundle";
-    import { getAccount, watchAccount, disconnect } from "https://esm.sh/@wagmi/core@2.13.0";
-    import { mainnet, polygon, arbitrum } from "https://esm.sh/@wagmi/core@2.13.0/chains";
-    import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
+      import {
+        createWeb3Modal,
+        defaultWagmiConfig
+      } from "https://esm.sh/@web3modal/wagmi?bundle";
 
-    // WalletConnect Project ID
-    const projectId = "a9ca60975a434a874c01a34c5f7ff722";
+      import {
+        getAccount,
+        getBalance,
+        watchAccount,
+        disconnect
+      } from "https://esm.sh/@wagmi/core@2.13.0";
 
-    // Metadata
-    const metadata = {
-      name: "VanSwap DEX",
-      description: "VanSwap Decentralized Exchange",
-      url: "https://vanswap.xyz", 
-      icons: ["https://vanswap.xyz/assets/vans.png"]
-    };
+      import { mainnet } from "https://esm.sh/@wagmi/core@2.13.0/chains";
+      import { reconnect } from "https://esm.sh/@wagmi/core@2.13.0";
 
-    // Wagmi config
-    const chains = [mainnet, polygon, arbitrum];
-    const config = defaultWagmiConfig({ chains, projectId, metadata });
+      // WalletConnect Project ID
+      const projectId = "a9ca60975a434a874c01a34c5f7ff722";
 
-    // ✅ PERBAIKAN 1: BUAT MODAL DULU, BARU RECONNECT
-    const modal = createWeb3Modal({
-      wagmiConfig: config,
-      projectId,
-      chains,
-      enableAnalytics: false,
-      themeMode: "dark"
-    });
-
-    reconnect(config); // <- Setelah createWeb3Modal
-
-    // ✅ PERBAIKAN 2: FUNGSI OPEN YANG SIMPLE
-    const existingConnectBtn = document.getElementById('connectBtn');
-    const existingWalletText = document.getElementById('walletText');
-    
-    if (existingConnectBtn) {
-      existingConnectBtn.onclick = function(e) {
-        e.stopPropagation();
-        console.log('Opening Web3Modal...');
-        modal.open(); // <- Langsung open tanpa logic kompleks
+      // Metadata domain
+      const metadata = {
+        name: "CozySwap HTML",
+        description: "WalletConnect v2 Pure HTML Demo",
+        url: "https://saputangan.edgeone.app",
+        icons: ["https://avatars.githubusercontent.com/u/37784886"]
       };
-    }
 
-    // ✅ PERBAIKAN 3: ACCOUNT HANDLER YANG LEBIH BAIK
-    watchAccount(config, {
-      onChange: (account) => {
-        console.log('Account changed:', account);
-        
-        if (account.isConnected && account.address && existingWalletText) {
-          const shortAddr = `${account.address.substring(0,6)}...${account.address.substring(38)}`;
-          existingWalletText.textContent = shortAddr;
-          window.account = account.address;
-          
-          // Initialize web3
-          initializeWeb3WithWalletConnect();
-          
-        } else if (existingWalletText) {
-          existingWalletText.textContent = 'Connect Wallet';
-          window.account = null;
+      // Wagmi config
+      const chains = [mainnet];
+      const config = defaultWagmiConfig({ chains, projectId, metadata });
+
+      // Buat modal dulu baru panggil reconnect (ini penting)
+      const modal = createWeb3Modal({
+        wagmiConfig: config,
+        projectId,
+        chains,
+        enableAnalytics: false
+      });
+
+      reconnect(config);
+
+      const info = document.getElementById("info");
+
+      async function updateInfo() {
+        const account = getAccount(config);
+        if (account?.address) {
+          const balance = await getBalance(config, { address: account.address });
+          info.innerHTML = `
+            <div style="text-align: left;">
+              <h3 style="color: green;">✅ Wallet Connected</h3>
+              <p><strong>Address:</strong><br>${account.address}</p>
+              <p><strong>Balance:</strong> ${parseFloat(balance.value) / 1e18} ETH</p>
+              <button onclick="disconnectWallet()" style="background: #dc3545;">Disconnect Wallet</button>
+            </div>
+          `;
+          info.classList.add('connected-info');
+        } else {
+          info.innerHTML = "Belum terkoneksi. Klik 'Connect Wallet' untuk memulai.";
+          info.classList.remove('connected-info');
         }
       }
-    });
 
-    // Fungsi initialize web3
-    async function initializeWeb3WithWalletConnect() {
-      if (!window.account) return;
-      
-      try {
-        const provider = await modal.getWalletProvider();
-        if (provider) {
-          window.provider = new ethers.providers.Web3Provider(provider);
-          window.signer = window.provider.getSigner();
-          
-          // Initialize contracts untuk network aktif
-          const currentNetwork = window.networkManager?.getCurrentNetwork() || 'vana';
-          const config = window.NETWORK_CONFIG[currentNetwork];
-          
-          if (config) {
-            window.router = new ethers.Contract(config.contracts.router, window.ROUTER_ABI, window.signer);
-            window.factory = new ethers.Contract(config.contracts.factory, window.FACTORY_ABI, window.provider);
-            window.wvanaContract = new ethers.Contract(config.contracts.wvana, window.WVANA_ABI, window.signer);
-          }
-          
-          // Update UI
-          if (window.updateBalances) await window.updateBalances();
-          if (window.updateDropdownBalances) await window.updateDropdownBalances();
-          if (window.updateSwapBtn) window.updateSwapBtn();
-        }
-      } catch (error) {
-        console.error('Error initializing web3:', error);
-      }
-    }
+      watchAccount(config, updateInfo);
 
-    // Disconnect handler
-    const existingDisconnectBtn = document.getElementById('disconnectBtn');
-    if (existingDisconnectBtn) {
-      existingDisconnectBtn.onclick = async function(e) {
-        e.stopPropagation();
+      window.disconnectWallet = async () => {
         await disconnect(config);
+        updateInfo();
       };
-    }
 
-    // Export untuk debugging
-    window.web3modal = modal;
-    console.log('✅ WalletConnect integrated successfully');
-</script>
+      // Fungsi untuk membuka modal - INI YANG PERLU DIPANGGIL
+      window.openWeb3Modal = function() {
+        console.log('Opening Web3Modal...');
+        modal.open();
+      };
+
+      // Initial update
+      updateInfo();
+    </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
     // NETWORK CONFIGURATION
