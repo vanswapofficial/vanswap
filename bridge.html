@@ -1051,7 +1051,7 @@
       }
     }
 
-    // Complete minting on 0G
+    // Complete minting on 0G - DENGAN GAS LIMIT TINGGI
     async function completeZeroGMinting(bridgeState) {
       try {
         updateStatus('🎁 Minting wVANS on 0G...', 'processing');
@@ -1077,14 +1077,17 @@
         
         console.log('Generated signature for 0G bridge:', signature);
         
+        // ✅ TAMBAHKAN GAS LIMIT TINGGI UNTUK 0G
+        const gasLimit = 500000; // Gas limit ditingkatkan untuk 0G
+        
         // Mint wVANS dengan signature
         const mintTx = await zeroGBridge.bridgeFromVana(
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
-          signature,  // ✅ SIGNATURE DITAMBAHKAN
+          signature,
           { 
-            gasLimit: 300000
+            gasLimit: gasLimit
           }
         );
         
@@ -1119,7 +1122,7 @@
           currentBridgeState = null;
           hideRecoveryBanner();
         } else if (error.message.includes('out of gas')) {
-          updateStatus('❌ Gas limit too low. Try again.', 'error');
+          updateStatus('❌ Gas limit too low. Try again with higher gas.', 'error');
         } else if (error.message.includes('Invalid signature')) {
           updateStatus('❌ Signature verification failed. Contact admin.', 'error');
         } else {
@@ -1133,7 +1136,7 @@
       }
     }
 
-    // 0G to Vana Bridge
+    // 0G to Vana Bridge - DENGAN GAS LIMIT TINGGI
     async function bridgeZeroGToVana(amount) {
       try {
         updateStep(2, 'processing');
@@ -1146,8 +1149,11 @@
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(amount);
         
+        // ✅ TAMBAHKAN GAS LIMIT TINGGI UNTUK 0G
+        const gasLimit = 400000;
+        
         const tx = await zeroGBridge.bridgeToVana(amountWei, {
-          gasLimit: 250000
+          gasLimit: gasLimit
         });
         
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
@@ -1216,7 +1222,7 @@
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
-          signature,  // ✅ SIGNATURE DITAMBAHKAN
+          signature,
           {
             gasLimit: 300000
           }
