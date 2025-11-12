@@ -111,6 +111,37 @@
     .recovery-text{color:var(--warning);font-size:14px}
     .recovery-btn{background:var(--warning);color:#000;border:none;padding:6px 12px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px}
 
+    /* Enhanced Status Styles */
+    .status-warning {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: var(--warning);
+    }
+    .retry-button {
+      background: var(--warning);
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .progress-bar {
+      height: 4px;
+      background: var(--muted);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
     @media (max-width:520px){
       .select img{width:28px;height:28px}.amount{font-size:20px}.menu-dropdown{right:12px;left:auto}.token-list{min-width:260px;left:0;right:0}
       .connect-wallet{min-width:120px;padding:6px 10px;font-size:14px}
@@ -327,6 +358,7 @@
         <div style="margin-top:12px;color:var(--muted);font-size:13px;text-align:center">
           <div id="status">Select tokens and amount to bridge</div>
           <div id="txLink" style="margin-top:6px;font-size:12px;word-break:break-all"></div>
+          <button id="forceClearBtn" class="secondary" style="margin-top:8px;font-size:12px;display:none">Force Clear Stuck Bridge</button>
         </div>
       </section>
 
@@ -443,6 +475,7 @@
       document.getElementById('bridgeBtn').addEventListener('click', startAutoBridge);
       document.getElementById('menuBtn').addEventListener('click', toggleMenu);
       document.getElementById('recoveryBtn').addEventListener('click', handleRecovery);
+      document.getElementById('forceClearBtn').addEventListener('click', forceClearStuckBridge);
       document.addEventListener('click', closeAllDropdowns);
 
       document.querySelectorAll('.network-option[data-network]').forEach(option => {
@@ -463,6 +496,7 @@
         if (Date.now() - state.timestamp < 3600000) {
           currentBridgeState = state;
           showRecoveryBanner(state);
+          document.getElementById('forceClearBtn').style.display = 'block';
         } else {
           localStorage.removeItem('vanswap_bridge_state');
         }
@@ -484,8 +518,10 @@
 
     function hideRecoveryBanner() {
       document.getElementById('recoveryBanner').style.display = 'none';
+      document.getElementById('forceClearBtn').style.display = 'none';
     }
 
+    // Enhanced recovery function with retry logic
     async function handleRecovery() {
       if (!currentBridgeState) return;
       
@@ -493,16 +529,50 @@
         isBridging = true;
         validateBridge();
         
-        if (currentBridgeState.step === 'locked') {
-          await completeZeroGMinting(currentBridgeState);
-        } else if (currentBridgeState.step === 'burned') {
-          await completeVanaUnlocking(currentBridgeState);
+        updateStatus('🔄 Attempting recovery...', 'processing');
+        
+        // Add retry logic for recovery
+        let retries = 3;
+        let lastError;
+        
+        while (retries > 0) {
+          try {
+            if (currentBridgeState.step === 'locked') {
+              await completeZeroGMinting(currentBridgeState);
+              return; // Success, exit loop
+            } else if (currentBridgeState.step === 'burned') {
+              await completeVanaUnlocking(currentBridgeState);
+              return; // Success, exit loop
+            }
+          } catch (error) {
+            lastError = error;
+            retries--;
+            
+            if (retries > 0) {
+              updateStatus(`🔄 Recovery attempt failed, retrying... (${retries} left)`, 'processing');
+              await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
+            }
+          }
         }
+        
+        // All retries failed
+        throw lastError;
+        
       } catch (error) {
-        console.error('Recovery failed:', error);
+        console.error('Recovery failed after all attempts:', error);
         updateStatus(`❌ Recovery failed: ${error.message}`, 'error');
         isBridging = false;
         validateBridge();
+      }
+    }
+
+    // Manual recovery option for stuck transactions
+    async function forceClearStuckBridge() {
+      if (confirm('This will clear any saved bridge state. Only use if you\'re sure the bridge completed or failed.')) {
+        localStorage.removeItem('vanswap_bridge_state');
+        currentBridgeState = null;
+        hideRecoveryBanner();
+        updateStatus('✅ Bridge state cleared', 'success');
       }
     }
 
@@ -539,7 +609,7 @@
       location.reload();
     }
 
-    // Network switching - FIXED: No page reload
+    // Network switching
     async function switchNetwork(targetNetwork) {
       const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
       
@@ -592,6 +662,42 @@
       } catch (addError) {
         console.error('Failed to add network:', addError);
         return false;
+      }
+    }
+
+    // Enhanced network switching with verification
+    async function ensureNetwork(targetNetwork) {
+      const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
+      
+      try {
+        const currentChainId = await provider.send('eth_chainId', []);
+        
+        if (currentChainId !== targetConfig.chainId) {
+          updateStatus(`🔄 Switching to ${targetNetwork.toUpperCase()} network...`, 'processing');
+          
+          const success = await switchNetwork(targetNetwork);
+          if (!success) {
+            throw new Error(`Failed to switch to ${targetNetwork} network`);
+          }
+          
+          // Wait for network to stabilize and verify switch
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Verify the switch actually happened
+          const newChainId = await provider.send('eth_chainId', []);
+          if (newChainId !== targetConfig.chainId) {
+            throw new Error(`Network switch verification failed. Expected ${targetConfig.chainId}, got ${newChainId}`);
+          }
+          
+          // Update provider reference
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Network switch error:', error);
+        throw new Error(`Network switch failed: ${error.message}`);
       }
     }
 
@@ -842,6 +948,7 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
+        document.getElementById('forceClearBtn').style.display = 'block';
         
         updateStatus('🔀 Switching to 0G network...', 'processing');
         const zeroGNetworkOk = await ensureNetwork('zerog');
@@ -855,17 +962,54 @@
       }
     }
 
+    // Enhanced bridge functions with better error handling
     async function completeZeroGMinting(bridgeState) {
       try {
         updateStatus('🎁 Minting wVANS on 0G...', 'processing');
         
+        // Add delay to ensure network is fully switched
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        const mintTx = await zeroGBridge.bridgeFromVana(bridgeState.proofHash, amountWei, currentUser);
+        // Enhanced gas estimation with fallback
+        let mintTx;
+        try {
+          const gasEstimate = await zeroGBridge.estimateGas.bridgeFromVana(
+            bridgeState.proofHash, 
+            amountWei, 
+            currentUser
+          );
+          
+          mintTx = await zeroGBridge.bridgeFromVana(
+            bridgeState.proofHash, 
+            amountWei, 
+            currentUser,
+            { gasLimit: gasEstimate.mul(120).div(100) } // 20% buffer
+          );
+        } catch (estimateError) {
+          console.warn('Gas estimation failed, using default:', estimateError);
+          mintTx = await zeroGBridge.bridgeFromVana(
+            bridgeState.proofHash, 
+            amountWei, 
+            currentUser,
+            { gasLimit: 300000 } // Fallback gas limit
+          );
+        }
+        
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
         
-        await mintTx.wait();
+        // Enhanced transaction waiting with timeout
+        const receipt = await waitForTransactionWithTimeout(mintTx, 120000); // 2 minute timeout
+        
+        if (!receipt) {
+          throw new Error('Transaction timeout on 0G network');
+        }
+        
+        if (receipt.status === 0) {
+          throw new Error('Transaction failed on 0G network');
+        }
         
         // Clear state after successful completion
         localStorage.removeItem('vanswap_bridge_state');
@@ -880,6 +1024,23 @@
         await updateBridgeInfo();
         
       } catch (error) {
+        console.error('Minting failed:', error);
+        
+        // Enhanced error handling for specific cases
+        if (error.message.includes('insufficient funds')) {
+          updateStatus('❌ Insufficient funds for gas on 0G network', 'error');
+        } else if (error.message.includes('timeout')) {
+          updateStatus('❌ Transaction timeout. Check later or try recovery.', 'error');
+        } else if (error.message.includes('already minted')) {
+          updateStatus('❌ wVANS already minted for this proof', 'error');
+          // Clear state if already minted
+          localStorage.removeItem('vanswap_bridge_state');
+          currentBridgeState = null;
+          hideRecoveryBanner();
+        } else {
+          updateStatus(`❌ Minting failed: ${error.message}`, 'error');
+        }
+        
         // Keep the state saved for recovery
         throw error;
       } finally {
@@ -921,6 +1082,7 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
+        document.getElementById('forceClearBtn').style.display = 'block';
         
         updateStep(2, 'completed');
         updateStep(3, 'processing');
@@ -970,22 +1132,14 @@
       }
     }
 
-    async function ensureNetwork(targetNetwork) {
-      const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
-      const currentChainId = await provider.send('eth_chainId', []);
-      
-      if (currentChainId !== targetConfig.chainId) {
-        updateStatus(`🔄 Switching to ${targetNetwork.toUpperCase()} network...`, 'processing');
-        
-        const success = await switchNetwork(targetNetwork);
-        if (!success) {
-          throw new Error(`Failed to switch to ${targetNetwork} network`);
-        }
-        
-        // Wait for network to stabilize
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-      return true;
+    // Transaction timeout handler
+    async function waitForTransactionWithTimeout(txPromise, timeoutMs) {
+      return Promise.race([
+        txPromise.wait(),
+        new Promise((resolve, reject) => 
+          setTimeout(() => reject(new Error('Transaction timeout')), timeoutMs)
+        )
+      ]);
     }
 
     async function approveVANS(amount) {
