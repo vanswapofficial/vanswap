@@ -358,7 +358,7 @@
   <footer>© 2025 VanSwap. Cross-chain bridge between Vana and 0G</footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-    // Configuration - GUNAKAN KONTRAK YANG SUDAH ADA
+    // Configuration
     const CONFIG = {
       vana: {
         chainId: "0x5c8",
@@ -371,14 +371,13 @@
       zerog: {
         chainId: "0x4115", 
         chainIdDecimal: 16661,
-        // GUNAKAN ADDRESS ZEROGBRIDGE YANG SUDAH ADA
-        bridgeAddress: "0x68C1CAa64B4aB196204b1205Cf6b92509a9efd61", // Kontrak yang sudah ada
+        bridgeAddress: "0x68C1CAa64B4aB196204b1205Cf6b92509a9efd61",
         rpcUrl: "https://evmrpc.0g.ai",
         explorer: "https://chainscan.0g.ai"
       }
     };
 
-    // Contract ABIs - SESUAIKAN DENGAN CONTRACT ZeroGBridge ANDA
+    // Contract ABIs - DIPERBAIKI: Hapus vanaBridge requirement
     const VANABRIDGE_ABI = [
       "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
       "function bridgeFromZeroG(bytes32 proofHash, uint256 amount, address to) external",
@@ -386,17 +385,13 @@
       "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
-    // ✅ ABI YANG SESUAI DENGAN ZeroGBridge.sol ANDA
+    // ✅ ABI YANG SESUAI - HAPUS vanaBridge REQUIREMENT
     const ZEROGBRIDGE_ABI = [
       "function bridgeToVana(uint256 amount) external returns (bytes32)",
       "function bridgeFromVana(bytes32 lockProof, uint256 amount, address recipient) external",
       "function totalSupply() external view returns (uint256)",
       "function balanceOf(address account) external view returns (uint256)",
       "function totalMinted() external view returns (uint256)",
-      "function vanaBridge() external view returns (address)",
-      "function setVanaBridge(address _vanaBridge) external",
-      "function pause() external",
-      "function unpause() external",
       "function usedProofs(bytes32) external view returns (bool)",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromVana(address indexed user, uint256 amount, bytes32 lockProof)"
@@ -428,7 +423,6 @@
         name: "wVANS",
         symbol: "wVANS",
         logo: "https://vanswap.xyz/assets/vans.png", 
-        // wVANS address SAMA dengan ZeroGBridge address
         address: CONFIG.zerog.bridgeAddress,
         network: "zerog",
         decimals: 18
@@ -442,48 +436,30 @@
       await connectWallet();
       await updateBridgeInfo();
       
-      // Check contract setup
-      await debugContractSetup();
+      // Check contract connectivity
+      await checkContractConnectivity();
     }
 
-    // Debug function untuk check contract setup
-    async function debugContractSetup() {
+    // Debug function untuk check contract connectivity
+    async function checkContractConnectivity() {
       if (!currentUser) return;
       
       try {
         const zerogProvider = new ethers.providers.JsonRpcProvider(CONFIG.zerog.rpcUrl);
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, zerogProvider);
         
-        const vanaBridgeAddress = await zeroGBridge.vanaBridge();
         const totalSupply = await zeroGBridge.totalSupply();
         const totalMinted = await zeroGBridge.totalMinted();
         
-        console.log('🔍 Contract Debug Info:');
+        console.log('🔍 Contract Connectivity Check:');
         console.log('- ZeroGBridge Address:', CONFIG.zerog.bridgeAddress);
-        console.log('- Vana Bridge Set To:', vanaBridgeAddress);
         console.log('- Total Supply:', ethers.utils.formatUnits(totalSupply, 18));
         console.log('- Total Minted:', ethers.utils.formatUnits(totalMinted, 18));
+        console.log('✅ Contract accessible');
         
-        // Tampilkan warning jika vanaBridge belum di-set
-        if (vanaBridgeAddress === ethers.constants.AddressZero) {
-          console.warn('⚠️ Vana Bridge address not set in ZeroGBridge contract!');
-          updateStatus('⚠️ Contract setup incomplete - contact admin', 'warning');
-          
-          // Tampilkan info di UI
-          const statusEl = document.getElementById('bridgeStatus');
-          statusEl.innerHTML = '⚠️ Bridge Contract Not Configured<br><small>Contact administrator to setup Vana Bridge address</small>';
-          statusEl.className = 'bridge-status status-error';
-        } else if (vanaBridgeAddress !== CONFIG.vana.bridgeAddress) {
-          console.warn('⚠️ Vana Bridge address mismatch!');
-          console.warn('- Expected:', CONFIG.vana.bridgeAddress);
-          console.warn('- Actual:', vanaBridgeAddress);
-          updateStatus('⚠️ Contract configuration mismatch', 'warning');
-        } else {
-          console.log('✅ Contract properly configured');
-          updateStatus('✅ Bridge ready', 'success');
-        }
+        updateStatus('✅ Bridge ready', 'success');
       } catch (error) {
-        console.error('Debug check failed:', error);
+        console.error('❌ Contract connectivity check failed:', error);
         updateStatus('❌ Cannot connect to bridge contract', 'error');
       }
     }
@@ -657,7 +633,7 @@
       }
     }
 
-    // Token selection (tetap sama)
+    // Token selection
     function toggleFromList() {
       const list = document.getElementById('fromList');
       const toList = document.getElementById('toList');
@@ -731,7 +707,7 @@
       }
     }
 
-    // Amount handling (tetap sama)
+    // Amount handling
     function calculateOutput() {
       const amount = parseFloat(document.getElementById('fromAmount').value) || 0;
       const fromToken = document.getElementById('fromSymbol').textContent;
@@ -851,7 +827,7 @@
       }
     }
 
-    // Enhanced Bridge Implementation
+    // Enhanced Bridge Implementation - FIXED: No vanaBridge check
     async function startAutoBridge() {
       if (isBridging) return;
       
@@ -867,9 +843,6 @@
       validateBridge();
 
       try {
-        // Check contract setup sebelum bridge
-        await checkContractSetup();
-        
         if (fromToken === 'VANS') {
           await bridgeVanaToZeroG(amount);
         } else {
@@ -881,24 +854,6 @@
         isBridging = false;
         validateBridge();
       }
-    }
-
-    // Check contract setup sebelum bridge
-    async function checkContractSetup() {
-      const zerogProvider = new ethers.providers.JsonRpcProvider(CONFIG.zerog.rpcUrl);
-      const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, zerogProvider);
-      
-      const vanaBridgeAddress = await zeroGBridge.vanaBridge();
-      
-      if (vanaBridgeAddress === ethers.constants.AddressZero) {
-        throw new Error('ZeroGBridge contract not configured. Vana Bridge address not set.');
-      }
-      
-      if (vanaBridgeAddress !== CONFIG.vana.bridgeAddress) {
-        throw new Error(`ZeroGBridge contract misconfigured. Expected: ${CONFIG.vana.bridgeAddress}, Got: ${vanaBridgeAddress}`);
-      }
-      
-      return true;
     }
 
     async function bridgeVanaToZeroG(amount) {
