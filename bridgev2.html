@@ -408,12 +408,15 @@
       }
     };
 
-    // Contract ABIs
+    // Enhanced Contract ABIs
     const VANABRIDGE_ABI = [
       "function bridgeToZeroG(uint256) external payable returns (bytes32)",
       "function bridgeFromZeroG(bytes32, uint256, address) external",
+      "function completeZeroGMinting(bytes32, uint256, address) external",
       "function totalLocked() external view returns (uint256)",
-      "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
+      "function isProofValid(bytes32) external view returns (bool)",
+      "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)",
+      "event ZeroGMintingCompleted(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ZEROGBRIDGE_ABI = [
@@ -421,14 +424,32 @@
       "function bridgeFromVana(bytes32, uint256, address) external",
       "function totalSupply() external view returns (uint256)",
       "function balanceOf(address) external view returns (uint256)",
+      "function vanaBridge() external view returns (address)",
+      "function usedProofs(bytes32) external view returns (bool)",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ERC20_ABI = [
       "function balanceOf(address) external view returns (uint256)",
       "function approve(address, uint256) external returns (bool)",
-      "function allowance(address, address) external view returns (uint256)"
+      "function allowance(address, address) external view returns (uint256)",
+      "function decimals() external view returns (uint8)"
     ];
+
+    // Enhanced Gas Configuration
+    const GAS_CONFIG = {
+      vana: {
+        bridgeToZeroG: 250000,
+        bridgeFromZeroG: 250000,
+        completeZeroGMinting: 300000,
+        approve: 80000
+      },
+      zerog: {
+        bridgeToVana: 200000,
+        bridgeFromVana: 250000,
+        default: 300000
+      }
+    };
 
     // Global variables
     let provider, signer, currentUser, currentNetwork;
@@ -486,6 +507,38 @@
       });
     }
 
+    // Enhanced Gas Management Functions
+    async function executeWithGasFallback(contract, method, args, network, methodName, overrides = {}) {
+      try {
+        // Try to estimate gas first
+        const gasEstimate = await contract.estimateGas[method](...args);
+        console.log(`Gas estimate for ${method}:`, gasEstimate.toString());
+        
+        // Add 40% buffer to estimated gas
+        const gasWithBuffer = gasEstimate.mul(140).div(100);
+        
+        const txOptions = {
+          gasLimit: gasWithBuffer,
+          ...overrides
+        };
+        
+        return await contract[method](...args, txOptions);
+      } catch (estimateError) {
+        console.warn(`Gas estimation failed for ${method}, using fallback:`, estimateError);
+        
+        // Use predefined gas limits
+        const fallbackGas = GAS_CONFIG[network][methodName] || GAS_CONFIG[network].default;
+        console.log(`Using fallback gas: ${fallbackGas} for ${method}`);
+        
+        const txOptions = {
+          gasLimit: fallbackGas,
+          ...overrides
+        };
+        
+        return await contract[method](...args, txOptions);
+      }
+    }
+
     // Check for saved bridge state on load
     async function checkSavedBridgeState() {
       const savedState = localStorage.getItem('vanswap_bridge_state');
@@ -521,7 +574,7 @@
       document.getElementById('forceClearBtn').style.display = 'none';
     }
 
-    // Enhanced recovery function with retry logic
+    // Enhanced recovery function
     async function handleRecovery() {
       if (!currentBridgeState) return;
       
@@ -531,42 +584,20 @@
         
         updateStatus('🔄 Attempting recovery...', 'processing');
         
-        // Add retry logic for recovery
-        let retries = 3;
-        let lastError;
-        
-        while (retries > 0) {
-          try {
-            if (currentBridgeState.step === 'locked') {
-              await completeZeroGMinting(currentBridgeState);
-              return; // Success, exit loop
-            } else if (currentBridgeState.step === 'burned') {
-              await completeVanaUnlocking(currentBridgeState);
-              return; // Success, exit loop
-            }
-          } catch (error) {
-            lastError = error;
-            retries--;
-            
-            if (retries > 0) {
-              updateStatus(`🔄 Recovery attempt failed, retrying... (${retries} left)`, 'processing');
-              await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
-            }
-          }
+        if (currentBridgeState.step === 'locked') {
+          await completeZeroGMinting(currentBridgeState);
+        } else if (currentBridgeState.step === 'burned') {
+          await completeVanaUnlocking(currentBridgeState);
         }
         
-        // All retries failed
-        throw lastError;
-        
       } catch (error) {
-        console.error('Recovery failed after all attempts:', error);
+        console.error('Recovery failed:', error);
         updateStatus(`❌ Recovery failed: ${error.message}`, 'error');
         isBridging = false;
         validateBridge();
       }
     }
 
-    // Manual recovery option for stuck transactions
     async function forceClearStuckBridge() {
       if (confirm('This will clear any saved bridge state. Only use if you\'re sure the bridge completed or failed.')) {
         localStorage.removeItem('vanswap_bridge_state');
@@ -619,11 +650,10 @@
           params: [{ chainId: targetConfig.chainId }],
         });
         
-        // Update provider without page reload
+        // Update provider
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
         
-        // Update network info
         const network = await provider.getNetwork();
         currentNetwork = network.chainId.toString();
         
@@ -680,16 +710,15 @@
             throw new Error(`Failed to switch to ${targetNetwork} network`);
           }
           
-          // Wait for network to stabilize and verify switch
+          // Wait for network to stabilize
           await new Promise(resolve => setTimeout(resolve, 3000));
           
-          // Verify the switch actually happened
+          // Verify the switch
           const newChainId = await provider.send('eth_chainId', []);
           if (newChainId !== targetConfig.chainId) {
-            throw new Error(`Network switch verification failed. Expected ${targetConfig.chainId}, got ${newChainId}`);
+            throw new Error(`Network switch verification failed`);
           }
           
-          // Update provider reference
           provider = new ethers.providers.Web3Provider(window.ethereum);
           signer = provider.getSigner();
         }
@@ -929,7 +958,15 @@
         const amountWei = ethers.utils.parseEther(amount);
         const fee = ethers.utils.parseEther("0.001");
         
-        const tx = await vanaBridge.bridgeToZeroG(amountWei, { value: fee });
+        const tx = await executeWithGasFallback(
+          vanaBridge,
+          'bridgeToZeroG',
+          [amountWei],
+          'vana',
+          'bridgeToZeroG',
+          { value: fee }
+        );
+        
         updateStatus('⏳ Waiting for Vana confirmation...', 'processing');
         
         const receipt = await tx.wait();
@@ -950,11 +987,7 @@
         currentBridgeState = bridgeState;
         document.getElementById('forceClearBtn').style.display = 'block';
         
-        updateStatus('🔀 Switching to 0G network...', 'processing');
-        const zeroGNetworkOk = await ensureNetwork('zerog');
-        if (!zeroGNetworkOk) throw new Error('Failed to switch to 0G network');
-        
-        // Complete the minting on 0G
+        // Complete the minting on 0G via VanaBridge
         await completeZeroGMinting(bridgeState);
         
       } catch (error) {
@@ -962,53 +995,29 @@
       }
     }
 
-    // Enhanced bridge functions with better error handling
+    // Enhanced completeZeroGMinting - VanaBridge handles the 0G minting
     async function completeZeroGMinting(bridgeState) {
       try {
-        updateStatus('🎁 Minting wVANS on 0G...', 'processing');
+        updateStatus('🎁 Finalizing bridge via Vana...', 'processing');
         
-        // Add delay to ensure network is fully switched
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
+        // Stay on Vana network - VanaBridge will handle the cross-chain
+        const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        // Enhanced gas estimation with fallback
-        let mintTx;
-        try {
-          const gasEstimate = await zeroGBridge.estimateGas.bridgeFromVana(
-            bridgeState.proofHash, 
-            amountWei, 
-            currentUser
-          );
-          
-          mintTx = await zeroGBridge.bridgeFromVana(
-            bridgeState.proofHash, 
-            amountWei, 
-            currentUser,
-            { gasLimit: gasEstimate.mul(120).div(100) } // 20% buffer
-          );
-        } catch (estimateError) {
-          console.warn('Gas estimation failed, using default:', estimateError);
-          mintTx = await zeroGBridge.bridgeFromVana(
-            bridgeState.proofHash, 
-            amountWei, 
-            currentUser,
-            { gasLimit: 3000000 } // Fallback gas limit
-          );
-        }
+        // VanaBridge completes the minting on 0G
+        const completeTx = await executeWithGasFallback(
+          vanaBridge,
+          'completeZeroGMinting',
+          [bridgeState.proofHash, amountWei, currentUser],
+          'vana',
+          'completeZeroGMinting'
+        );
         
-        updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
-        
-        // Enhanced transaction waiting with timeout
-        const receipt = await waitForTransactionWithTimeout(mintTx, 120000); // 2 minute timeout
-        
-        if (!receipt) {
-          throw new Error('Transaction timeout on 0G network');
-        }
+        updateStatus('⏳ Finalizing bridge transaction...', 'processing');
+        const receipt = await completeTx.wait();
         
         if (receipt.status === 0) {
-          throw new Error('Transaction failed on 0G network');
+          throw new Error('Bridge finalization failed');
         }
         
         // Clear state after successful completion
@@ -1024,24 +1033,21 @@
         await updateBridgeInfo();
         
       } catch (error) {
-        console.error('Minting failed:', error);
+        console.error('Minting completion failed:', error);
         
-        // Enhanced error handling for specific cases
-        if (error.message.includes('insufficient funds')) {
-          updateStatus('❌ Insufficient funds for gas on 0G network', 'error');
-        } else if (error.message.includes('timeout')) {
-          updateStatus('❌ Transaction timeout. Check later or try recovery.', 'error');
-        } else if (error.message.includes('already minted')) {
-          updateStatus('❌ wVANS already minted for this proof', 'error');
-          // Clear state if already minted
+        if (error.message.includes('out of gas')) {
+          updateStatus('❌ Gas limit too low. Try again with higher gas.', 'error');
+        } else if (error.message.includes('Only Vana bridge')) {
+          updateStatus('❌ Bridge configuration error', 'error');
+        } else if (error.message.includes('Proof already used')) {
+          updateStatus('❌ Bridge already completed', 'error');
           localStorage.removeItem('vanswap_bridge_state');
           currentBridgeState = null;
           hideRecoveryBanner();
         } else {
-          updateStatus(`❌ Minting failed: ${error.message}`, 'error');
+          updateStatus(`❌ Completion failed: ${error.message}`, 'error');
         }
         
-        // Keep the state saved for recovery
         throw error;
       } finally {
         isBridging = false;
@@ -1063,7 +1069,14 @@
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(amount);
         
-        const tx = await zeroGBridge.bridgeToVana(amountWei);
+        const tx = await executeWithGasFallback(
+          zeroGBridge,
+          'bridgeToVana',
+          [amountWei],
+          'zerog',
+          'bridgeToVana'
+        );
+        
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
         
         const receipt = await tx.wait();
@@ -1106,7 +1119,14 @@
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        const unlockTx = await vanaBridge.bridgeFromZeroG(bridgeState.proofHash, amountWei, currentUser);
+        const unlockTx = await executeWithGasFallback(
+          vanaBridge,
+          'bridgeFromZeroG',
+          [bridgeState.proofHash, amountWei, currentUser],
+          'vana',
+          'bridgeFromZeroG'
+        );
+        
         updateStatus('⏳ Waiting for Vana confirmation...', 'processing');
         
         await unlockTx.wait();
@@ -1124,7 +1144,6 @@
         await updateBridgeInfo();
         
       } catch (error) {
-        // Keep the state saved for recovery
         throw error;
       } finally {
         isBridging = false;
@@ -1132,23 +1151,20 @@
       }
     }
 
-    // Transaction timeout handler
-    async function waitForTransactionWithTimeout(txPromise, timeoutMs) {
-      return Promise.race([
-        txPromise.wait(),
-        new Promise((resolve, reject) => 
-          setTimeout(() => reject(new Error('Transaction timeout')), timeoutMs)
-        )
-      ]);
-    }
-
     async function approveVANS(amount) {
       const vansToken = new ethers.Contract(TOKENS.vans.address, ERC20_ABI, signer);
       const amountWei = ethers.utils.parseEther(amount);
+      
       const allowance = await vansToken.allowance(currentUser, CONFIG.vana.bridgeAddress);
       
       if (allowance.lt(amountWei)) {
-        const approveTx = await vansToken.approve(CONFIG.vana.bridgeAddress, amountWei);
+        const approveTx = await executeWithGasFallback(
+          vansToken,
+          'approve',
+          [CONFIG.vana.bridgeAddress, amountWei],
+          'vana',
+          'approve'
+        );
         await approveTx.wait();
       }
     }
@@ -1210,7 +1226,6 @@
     // Listen for network changes
     if (window.ethereum) {
       window.ethereum.on('chainChanged', () => {
-        // Update provider without page reload
         setTimeout(async () => {
           if (window.ethereum) {
             provider = new ethers.providers.Web3Provider(window.ethereum);
