@@ -358,7 +358,7 @@
   <footer>© 2025 VanSwap. Cross-chain bridge between Vana and 0G</footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-    // Configuration - BRIDGE ADDRESSES SUDAH TERDEPLOY
+    // REAL CONFIGURATION - REAL DEPLOYED ADDRESSES
     const CONFIG = {
       vana: {
         chainId: "0x5c8",
@@ -379,22 +379,37 @@
       }
     };
 
-    // Contract ABIs - SIMPLIFIED VERSION (Tanpa signature dulu untuk testing)
+    // REAL ABI - SESUAI DENGAN CONTRACT TERDEPLOY
     const VANABRIDGE_ABI = [
-      "function bridgeToZeroG(uint256 amount) external payable returns (bytes32 proofHash)",
+      "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
       "function bridgeFromZeroG(bytes32 burnProof, uint256 amount, address recipient) external",
       "function totalLocked() external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
+      "function bridgeFee() external view returns (uint256)",
+      "function minBridgeAmount() external view returns (uint256)",
+      "function maxBridgeAmount() external view returns (uint256)",
+      "function pause() external",
+      "function unpause() external",
+      "function setBridgeFee(uint256) external",
+      "function setBridgeLimits(uint256, uint256) external",
+      "function emergencyWithdrawVANS(uint256) external",
+      "function getBridgeInfo() external view returns (address, uint256, uint256, bool)",
       "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ZEROGBRIDGE_ABI = [
-      "function bridgeToVana(uint256 amount) external returns (bytes32 proofHash)",
+      "function bridgeToVana(uint256 amount) external returns (bytes32)",
       "function bridgeFromVana(bytes32 lockProof, uint256 amount, address recipient) external", 
       "function totalSupply() external view returns (uint256)",
       "function balanceOf(address) external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
+      "function totalMinted() external view returns (uint256)",
+      "function vanaBridge() external view returns (address)",
+      "function setVanaBridge(address) external",
+      "function pause() external",
+      "function unpause() external",
+      "function emergencyBurn(address, uint256) external",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromVana(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
@@ -403,7 +418,10 @@
       "function balanceOf(address) external view returns (uint256)",
       "function approve(address, uint256) external returns (bool)",
       "function allowance(address, address) external view returns (uint256)",
-      "function decimals() external view returns (uint8)"
+      "function decimals() external view returns (uint8)",
+      "function name() external view returns (string)",
+      "function symbol() external view returns (string)",
+      "function totalSupply() external view returns (uint256)"
     ];
 
     // Global variables
@@ -469,7 +487,7 @@
         if (savedState) {
           const state = JSON.parse(savedState);
           
-          if (Date.now() - state.timestamp < 86400000) { // 24 hours
+          if (Date.now() - state.timestamp < 86400000) {
             currentBridgeState = state;
             
             const isValid = await verifyBridgeState(state);
