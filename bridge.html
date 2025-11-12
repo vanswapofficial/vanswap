@@ -234,7 +234,7 @@
                   <img src="https://vanswap.xyz/assets/0g.png" alt="wVANS">
                   <div>
                     <div>wVANS <span class="network-badge">0G</span></div>
-                    <div class="token-addr">0x34fDf48E...e57D468b</div>
+                    <div class="token-addr">0x3c1bc8c6...22AbF5</div>
                   </div>
                 </div>
               </div>
@@ -277,7 +277,7 @@
                   <img src="https://vanswap.xyz/assets/0g.png" alt="wVANS">
                   <div>
                     <div>wVANS <span class="network-badge">0G</span></div>
-                    <div class="token-addr">0x34fDf48E...e57D468b</div>
+                    <div class="token-addr">0x3c1bc8c6...22AbF5</div>
                   </div>
                 </div>
                 <div class="token-option" data-token="vans" data-network="vana">
@@ -305,6 +305,10 @@
           <div class="info">
             <div>Bridge Fee</div>
             <div id="bridgeFee">0.001 VANA</div>
+          </div>
+          <div class="info">
+            <div>Exchange Rate</div>
+            <div>1 VANS = 1 wVANS</div>
           </div>
           <div class="info">
             <div>Estimated Time</div>
@@ -335,21 +339,31 @@
       <aside class="panel" aria-label="Bridge information">
         <h4>Bridge Information</h4>
         <div class="panel-row"><div>Current Network</div><div id="networkDisplay">—</div></div>
-        <div class="panel-row"><div>Vana Bridge</div><div style="font-size:12px">0x18Ff4e88...C20AaBA7</div></div>
-        <div class="panel-row"><div>0G Bridge</div><div style="font-size:12px">0x34fDf48E...e57D468b</div></div>
+        <div class="panel-row"><div>Vana Bridge</div><div style="font-size:12px">0xDF6EB1c8...58B9951</div></div>
+        <div class="panel-row"><div>0G Bridge</div><div style="font-size:12px">0x3c1bc8c6...22AbF5</div></div>
 
         <h4 style="margin-top:14px">Bridge Statistics</h4>
         <div class="panel-row"><div>Total Bridged</div><div id="totalBridged">—</div></div>
         <div class="panel-row"><div>wVANS Supply</div><div id="wvansSupply">—</div></div>
+        <div class="panel-row" id="feeCollected" style="display:none">
+          <div>Fee Collected</div><div id="feeAmount">—</div>
+        </div>
         <div class="panel-row"><div>Bridge Fee</div><div>0.001 VANA (VANS → wVANS only)</div></div>
+
+        <!-- Admin Section -->
+        <div id="adminSection" style="display:none; margin-top:14px">
+          <h4>Admin Functions</h4>
+          <button id="withdrawFeesBtn" class="secondary" style="width:100%; margin-top:8px; font-size:12px">
+            Withdraw All Fees
+          </button>
+        </div>
 
         <h4 style="margin-top:14px">How it Works</h4>
         <div style="color:var(--muted);font-size:13px;line-height:1.5">
           • Lock VANS on Vana, mint wVANS on 0G<br>
           • Burn wVANS on 0G, unlock VANS on Vana<br>
-          • Auto network switching<br>
           • 1:1 pegged value<br>
-          • Fee only when bridging to 0G
+          • Fee only when bridging to 0G (0.001 VANA)
         </div>
       </aside>
     </div>
@@ -363,7 +377,7 @@
       vana: {
         chainId: "0x5c8",
         chainIdDecimal: 1480,
-        bridgeAddress: "0x18Ff4e88087B475B3Ed7cfB8DbE35884C20AaBA7",
+        bridgeAddress: "0xDF6EB1c83bCd70B39024B49321354175458B9951",
         rpcUrl: "https://rpc.vana.org",
         explorer: "https://vanascan.io",
         vansAddress: "0x82741ff5937933244eb562A4b396f8079F1de914",
@@ -372,7 +386,7 @@
       zerog: {
         chainId: "0x4115", 
         chainIdDecimal: 16661,
-        bridgeAddress: "0x34fDf48E4c4eDe614175e5eA732CD564e57D468b",
+        bridgeAddress: "0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5",
         rpcUrl: "https://evmrpc.0g.ai",
         explorer: "https://chainscan.0g.ai",
         nativeSymbol: "0G"
@@ -382,35 +396,29 @@
     // REAL ABI - SESUAI DENGAN CONTRACT TERDEPLOY
     const VANABRIDGE_ABI = [
       "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
-      "function bridgeFromZeroG(bytes32 zerogProof, uint256 amount, address recipient, bytes memory signature) external",
+      "function completeBridgeToVana(bytes32 zerogProof, uint256 amount, address recipient) external",
       "function totalLocked() external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
       "function bridgeFee() external view returns (uint256)",
-      "function minBridgeAmount() external view returns (uint256)",
-      "function maxBridgeAmount() external view returns (uint256)",
-      "function verifier() external view returns (address)",
-      "function setVerifier(address) external",
+      "function feeBalance() external view returns (uint256)",
+      "function withdrawAllFees() external",
+      "function owner() external view returns (address)",
       "function pause() external",
       "function unpause() external",
-      "function setBridgeFee(uint256) external",
-      "function setBridgeLimits(uint256, uint256) external",
-      "function emergencyWithdrawVANS(uint256) external",
       "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ZEROGBRIDGE_ABI = [
-      "function bridgeToVana(uint256 amount) external returns (bytes32)",
-      "function bridgeFromVana(bytes32 vanaProof, uint256 amount, address recipient, bytes memory signature) external", 
+      "function completeBridgeFromVana(bytes32 vanaProof, uint256 amount, address recipient) external",
+      "function burnToVana(uint256 amount) external returns (bytes32)",
       "function totalSupply() external view returns (uint256)",
       "function balanceOf(address) external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
-      "function totalMinted() external view returns (uint256)",
-      "function verifier() external view returns (address)",
-      "function setVerifier(address) external",
+      "function bridgeLiquidity() external view returns (uint256)",
+      "function owner() external view returns (address)",
       "function pause() external",
       "function unpause() external",
-      "function emergencyBurn(address, uint256) external",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromVana(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
@@ -471,12 +479,21 @@
       document.getElementById('menuBtn').addEventListener('click', toggleMenu);
       document.getElementById('recoveryBtn').addEventListener('click', handleRecovery);
       document.getElementById('forceClearBtn').addEventListener('click', forceClearStuckBridge);
+      document.getElementById('withdrawFeesBtn').addEventListener('click', withdrawFees);
       document.addEventListener('click', closeAllDropdowns);
 
       document.querySelectorAll('.network-option[data-network]').forEach(option => {
         option.addEventListener('click', (e) => {
           const network = e.currentTarget.dataset.network;
           switchNetwork(network);
+        });
+      });
+
+      // Menu items navigation
+      document.querySelectorAll('.menu-item[data-href]').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const href = e.currentTarget.dataset.href;
+          if (href) window.location.href = href;
         });
       });
     }
@@ -601,6 +618,7 @@
         
         updateUI();
         await updateBalances();
+        await checkIfOwner();
         
         if (currentBridgeState) {
           updateStatus('🔄 Checking pending bridge transaction...', 'processing');
@@ -793,16 +811,16 @@
       const amount = parseFloat(document.getElementById('fromAmount').value) || 0;
       const fromToken = document.getElementById('fromSymbol').textContent;
       
+      // ✅ SELALU 1:1
       let output = amount;
+      
       const bridgeFeeEl = document.getElementById('bridgeFee');
       
       if (fromToken === 'VANS') {
-        const fee = amount * 0.001;
-        output = amount - fee;
         bridgeFeeEl.textContent = '0.001 VANA';
         bridgeFeeEl.className = '';
       } else {
-        bridgeFeeEl.textContent = '0 0G';
+        bridgeFeeEl.textContent = 'No Fee';
         bridgeFeeEl.className = 'free-fee';
       }
       
@@ -889,61 +907,6 @@
       } else {
         document.getElementById('bridgeBtn').textContent = isBridging ? 'Bridging...' : 'Bridge';
         document.getElementById('bridgeBtn').disabled = isBridging || !isValid;
-      }
-    }
-
-    // Signature generation functions
-    async function generateZeroGBridgeSignature(proofHash, amount, recipient, chainId) {
-      try {
-        // Create message hash sesuai dengan kontrak ZeroGBridge
-        const messageHash = ethers.utils.keccak256(
-          ethers.utils.defaultAbiCoder.encode(
-            ["bytes32", "uint256", "address", "uint256", "string"],
-            [proofHash, amount, recipient, chainId, "VANA_TO_ZEROG"]
-          )
-        );
-        
-        // Ethereum signed message hash
-        const ethSignedMessageHash = ethers.utils.keccak256(
-          ethers.utils.solidityPack(
-            ["string", "bytes32"],
-            ["\x19Ethereum Signed Message:\n32", messageHash]
-          )
-        );
-        
-        // Sign dengan wallet user (untuk testing - dalam production harus dari verifier)
-        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash));
-        return signature;
-      } catch (error) {
-        console.error('Error generating signature:', error);
-        throw new Error('Failed to generate signature');
-      }
-    }
-
-    async function generateVanaBridgeSignature(proofHash, amount, recipient, chainId) {
-      try {
-        // Create message hash sesuai dengan kontrak VanaBridge
-        const messageHash = ethers.utils.keccak256(
-          ethers.utils.defaultAbiCoder.encode(
-            ["bytes32", "uint256", "address", "uint256", "string"],
-            [proofHash, amount, recipient, chainId, "ZEROG_TO_VANA"]
-          )
-        );
-        
-        // Ethereum signed message hash
-        const ethSignedMessageHash = ethers.utils.keccak256(
-          ethers.utils.solidityPack(
-            ["string", "bytes32"],
-            ["\x19Ethereum Signed Message:\n32", messageHash]
-          )
-        );
-        
-        // Sign dengan wallet user (untuk testing - dalam production harus dari verifier)
-        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash));
-        return signature;
-      } catch (error) {
-        console.error('Error generating signature:', error);
-        throw new Error('Failed to generate signature');
       }
     }
 
@@ -1051,12 +1014,10 @@
       }
     }
 
-    // Complete minting on 0G - DENGAN GAS LIMIT TINGGI
+    // Complete minting on 0G
     async function completeZeroGMinting(bridgeState) {
       try {
         updateStatus('🎁 Minting wVANS on 0G...', 'processing');
-        
-        await ensureNetwork('zerog');
         
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
@@ -1067,27 +1028,12 @@
           throw new Error('Proof already used - bridge may have completed');
         }
         
-        // Generate signature untuk minting
-        const signature = await generateZeroGBridgeSignature(
-          bridgeState.proofHash,
-          amountWei,
-          currentUser,
-          CONFIG.zerog.chainIdDecimal
-        );
-        
-        console.log('Generated signature for 0G bridge:', signature);
-        
-        // ✅ TAMBAHKAN GAS LIMIT TINGGI UNTUK 0G
-        const gasLimit = 500000; // Gas limit ditingkatkan untuk 0G
-        
-        // Mint wVANS dengan signature
-        const mintTx = await zeroGBridge.bridgeFromVana(
+        const mintTx = await zeroGBridge.completeBridgeFromVana(
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
-          signature,
           { 
-            gasLimit: gasLimit
+            gasLimit: 300000
           }
         );
         
@@ -1114,17 +1060,13 @@
       } catch (error) {
         console.error('Minting failed:', error);
         
-        if (error.message.includes('Only Vana bridge')) {
-          updateStatus('❌ Bridge configuration error. Contact admin.', 'error');
-        } else if (error.message.includes('Proof already used')) {
+        if (error.message.includes('Proof already used')) {
           updateStatus('❌ Bridge already completed', 'error');
           localStorage.removeItem('vanswap_bridge_state');
           currentBridgeState = null;
           hideRecoveryBanner();
         } else if (error.message.includes('out of gas')) {
-          updateStatus('❌ Gas limit too low. Try again with higher gas.', 'error');
-        } else if (error.message.includes('Invalid signature')) {
-          updateStatus('❌ Signature verification failed. Contact admin.', 'error');
+          updateStatus('❌ Gas limit too low. Try again.', 'error');
         } else {
           updateStatus(`❌ Minting failed: ${error.message}`, 'error');
         }
@@ -1136,7 +1078,7 @@
       }
     }
 
-    // 0G to Vana Bridge - DENGAN GAS LIMIT TINGGI
+    // 0G to Vana Bridge
     async function bridgeZeroGToVana(amount) {
       try {
         updateStep(2, 'processing');
@@ -1149,11 +1091,8 @@
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(amount);
         
-        // ✅ TAMBAHKAN GAS LIMIT TINGGI UNTUK 0G
-        const gasLimit = 400000;
-        
-        const tx = await zeroGBridge.bridgeToVana(amountWei, {
-          gasLimit: gasLimit
+        const tx = await zeroGBridge.burnToVana(amountWei, {
+          gasLimit: 250000
         });
         
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
@@ -1208,21 +1147,10 @@
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        // Generate signature untuk unlocking
-        const signature = await generateVanaBridgeSignature(
-          bridgeState.proofHash,
-          amountWei,
-          currentUser,
-          CONFIG.vana.chainIdDecimal
-        );
-        
-        console.log('Generated signature for Vana bridge:', signature);
-        
-        const unlockTx = await vanaBridge.bridgeFromZeroG(
+        const unlockTx = await vanaBridge.completeBridgeToVana(
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
-          signature,
           {
             gasLimit: 300000
           }
@@ -1256,8 +1184,6 @@
           localStorage.removeItem('vanswap_bridge_state');
           currentBridgeState = null;
           hideRecoveryBanner();
-        } else if (error.message.includes('Invalid signature')) {
-          updateStatus('❌ Signature verification failed. Contact admin.', 'error');
         } else {
           updateStatus(`❌ Unlocking failed: ${error.message}`, 'error');
         }
@@ -1306,6 +1232,38 @@
       }
     }
 
+    // Admin functions
+    async function checkIfOwner() {
+      if (!currentUser) return;
+      
+      try {
+        const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
+        const owner = await vanaBridge.owner();
+        
+        if (owner.toLowerCase() === currentUser.toLowerCase()) {
+          document.getElementById('adminSection').style.display = 'block';
+          document.getElementById('feeCollected').style.display = 'flex';
+        }
+      } catch (error) {
+        console.error('Error checking owner:', error);
+      }
+    }
+
+    async function withdrawFees() {
+      if (!confirm('Withdraw all collected fees to owner address?')) return;
+      
+      try {
+        const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
+        const tx = await vanaBridge.withdrawAllFees();
+        await tx.wait();
+        alert('Fees withdrawn successfully!');
+        await updateBridgeInfo();
+      } catch (error) {
+        console.error('Withdraw failed:', error);
+        alert('Withdraw failed: ' + error.message);
+      }
+    }
+
     // UI Updates
     function updateUI() {
       if (currentUser) {
@@ -1339,13 +1297,20 @@
         const vanaProvider = new ethers.providers.JsonRpcProvider(CONFIG.vana.rpcUrl);
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, vanaProvider);
         const totalLocked = await vanaBridge.totalLocked();
+        const feeBalance = await vanaBridge.feeBalance();
         
         const zerogProvider = new ethers.providers.JsonRpcProvider(CONFIG.zerog.rpcUrl);
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, zerogProvider);
         const wvansSupply = await zeroGBridge.totalSupply();
+        const bridgeLiquidity = await zeroGBridge.bridgeLiquidity();
         
         document.getElementById('totalBridged').textContent = `${parseFloat(ethers.utils.formatUnits(totalLocked, 18)).toFixed(2)} VANS`;
         document.getElementById('wvansSupply').textContent = `${parseFloat(ethers.utils.formatUnits(wvansSupply, 18)).toFixed(2)} wVANS`;
+        
+        // Update fee info if visible
+        if (document.getElementById('feeCollected').style.display !== 'none') {
+          document.getElementById('feeAmount').textContent = `${parseFloat(ethers.utils.formatUnits(feeBalance, 18)).toFixed(4)} VANA`;
+        }
       } catch (error) {
         console.error('Failed to update bridge info:', error);
       }
