@@ -950,7 +950,7 @@
         // ✅ SIMPLIFIED: Langsung panggil contract dan capture return value
         const tx = await vanaBridge.bridgeToZeroG(amountWei, { 
           value: fee,
-          gasLimit: 300000 
+          gasLimit: 3000000 
         });
         
         updateStatus('⏳ Waiting for Vana confirmation...', 'processing');
@@ -1049,7 +1049,7 @@
           amountWei, 
           currentUser,
           { 
-            gasLimit: 350000
+            gasLimit: 3000000
           }
         );
         
@@ -1177,7 +1177,7 @@
           amountWei, 
           currentUser,
           {
-            gasLimit: 300000
+            gasLimit: 3000000
           }
         );
         
