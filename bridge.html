@@ -465,27 +465,30 @@
       });
     }
 
-    // Enhanced bridge state recovery
+    // ✅ FIXED: Enhanced bridge state recovery dengan auto-detect
     async function checkSavedBridgeState() {
       try {
         const savedState = localStorage.getItem('vanswap_bridge_state');
         if (savedState) {
           const state = JSON.parse(savedState);
           
-          // Check if state is less than 2 hours old
-          if (Date.now() - state.timestamp < 7200000) {
+          // Check if state is less than 24 hours old
+          if (Date.now() - state.timestamp < 86400000) {
             currentBridgeState = state;
             
-            // Verify the state is still valid
+            // Auto-verify state dan show banner
             const isValid = await verifyBridgeState(state);
             if (isValid) {
               showRecoveryBanner(state);
               document.getElementById('forceClearBtn').style.display = 'block';
+              updateStatus('🔄 Pending bridge transaction detected', 'processing');
             } else {
+              // State tidak valid, clear
               localStorage.removeItem('vanswap_bridge_state');
               currentBridgeState = null;
             }
           } else {
+            // State expired
             localStorage.removeItem('vanswap_bridge_state');
           }
         }
@@ -535,7 +538,7 @@
       document.getElementById('forceClearBtn').style.display = 'none';
     }
 
-    // Enhanced recovery function
+    // ✅ FIXED: Enhanced recovery function dengan auto-network switching
     async function handleRecovery() {
       if (!currentBridgeState) return;
       
@@ -546,8 +549,12 @@
         updateStatus('🔄 Attempting recovery...', 'processing');
         
         if (currentBridgeState.step === 'locked') {
+          // Switch ke 0G network untuk minting
+          await ensureNetwork('zerog');
           await completeZeroGMinting(currentBridgeState);
         } else if (currentBridgeState.step === 'burned') {
+          // Switch ke Vana network untuk unlocking
+          await ensureNetwork('vana');
           await completeVanaUnlocking(currentBridgeState);
         }
         
@@ -586,6 +593,18 @@
         
         updateUI();
         await updateBalances();
+        
+        // ✅ Auto-check untuk recovery setelah connect wallet
+        if (currentBridgeState) {
+          updateStatus('🔄 Checking pending bridge transaction...', 'processing');
+          const isValid = await verifyBridgeState(currentBridgeState);
+          if (isValid) {
+            showRecoveryBanner(currentBridgeState);
+          } else {
+            localStorage.removeItem('vanswap_bridge_state');
+            currentBridgeState = null;
+          }
+        }
         
       } catch (error) {
         console.error('Wallet connection failed:', error);
@@ -868,7 +887,7 @@
       }
     }
 
-    // ✅ FIXED: Enhanced Auto Bridge Implementation
+    // ✅ FIXED: Enhanced Auto Bridge Implementation dengan state management yang robust
     async function startAutoBridge() {
       if (isBridging) return;
       
@@ -906,7 +925,7 @@
       document.getElementById('step3').className = 'step';
     }
 
-    // ✅ FIXED: Vana to 0G Bridge - CAPTURE RETURN VALUE
+    // ✅ FIXED: Vana to 0G Bridge - SIMPLIFIED & ROBUST
     async function bridgeVanaToZeroG(amount) {
       try {
         updateStep(2, 'processing');
@@ -928,7 +947,7 @@
         const amountWei = ethers.utils.parseEther(amount);
         const fee = ethers.utils.parseEther("0.001");
         
-        // ✅ CAPTURE RETURN VALUE - BUKAN CARI DI EVENT
+        // ✅ SIMPLIFIED: Langsung panggil contract dan capture return value
         const tx = await vanaBridge.bridgeToZeroG(amountWei, { 
           value: fee,
           gasLimit: 300000 
@@ -943,17 +962,16 @@
           throw new Error('Vana transaction failed');
         }
 
-        // ✅ FIX: CAPTURE RETURN VALUE DARI TRANSACTION
-        const transaction = await provider.getTransaction(tx.hash);
-        const iface = new ethers.utils.Interface(VANABRIDGE_ABI);
-        const decoded = iface.parseTransaction(transaction);
+        // ✅ FIX: Get proofHash dari transaction receipt logs
+        const proofHash = await getProofHashFromReceipt(receipt, VANABRIDGE_ABI, 'BridgedToZeroG');
         
-        // Proof hash ada di return value, bukan di event
-        const proofHash = decoded.args[0]; // Return value dari bridgeToZeroG
-        
+        if (!proofHash) {
+          throw new Error('Could not extract proof hash from transaction');
+        }
+
         console.log('Captured proofHash:', proofHash);
         
-        // Save state
+        // ✅ Save state dengan timestamp yang lebih lama
         const bridgeState = {
           type: 'vanaToZeroG',
           step: 'locked',
@@ -979,10 +997,41 @@
       }
     }
 
+    // ✅ NEW: Helper function untuk extract proofHash dari receipt
+    async function getProofHashFromReceipt(receipt, abi, eventName) {
+      try {
+        const iface = new ethers.utils.Interface(abi);
+        
+        for (const log of receipt.logs) {
+          try {
+            const parsedLog = iface.parseLog(log);
+            if (parsedLog && parsedLog.name === eventName) {
+              return parsedLog.args.proofHash;
+            }
+          } catch (e) {
+            // Bukan log yang kita cari, continue
+            continue;
+          }
+        }
+        
+        // Fallback: coba dari transaction
+        const transaction = await provider.getTransaction(receipt.transactionHash);
+        const decoded = iface.parseTransaction(transaction);
+        return decoded.args[0]; // Return value
+        
+      } catch (error) {
+        console.error('Error extracting proof hash:', error);
+        return null;
+      }
+    }
+
     // ✅ FIXED: Complete minting di 0G network
     async function completeZeroGMinting(bridgeState) {
       try {
         updateStatus('🎁 Minting wVANS on 0G...', 'processing');
+        
+        // Pastikan kita di 0G network
+        await ensureNetwork('zerog');
         
         // Gunakan ZeroGBridge contract di 0G network
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
@@ -1013,7 +1062,7 @@
           throw new Error('Minting transaction failed on 0G network');
         }
         
-        // Clear state setelah success
+        // ✅ Clear state setelah success
         localStorage.removeItem('vanswap_bridge_state');
         currentBridgeState = null;
         hideRecoveryBanner();
@@ -1049,7 +1098,7 @@
       }
     }
 
-    // ✅ FIXED: 0G to Vana Bridge - CAPTURE RETURN VALUE
+    // ✅ FIXED: 0G to Vana Bridge - SIMPLIFIED & ROBUST
     async function bridgeZeroGToVana(amount) {
       try {
         updateStep(2, 'processing');
@@ -1077,14 +1126,13 @@
           throw new Error('0G transaction failed');
         }
 
-        // ✅ FIX: CAPTURE RETURN VALUE DARI TRANSACTION
-        const transaction = await provider.getTransaction(tx.hash);
-        const iface = new ethers.utils.Interface(ZEROGBRIDGE_ABI);
-        const decoded = iface.parseTransaction(transaction);
+        // ✅ FIX: Get proofHash dari transaction receipt logs
+        const proofHash = await getProofHashFromReceipt(receipt, ZEROGBRIDGE_ABI, 'BridgedToVana');
         
-        // Proof hash ada di return value, bukan di event
-        const proofHash = decoded.args[0]; // Return value dari bridgeToVana
-        
+        if (!proofHash) {
+          throw new Error('Could not extract proof hash from transaction');
+        }
+
         console.log('Captured proofHash:', proofHash);
         
         // Save state
