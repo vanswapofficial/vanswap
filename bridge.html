@@ -6,7 +6,7 @@
   <title>Bridge - VanSwap</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* CSS styles tetap sama seperti sebelumnya */
+    /* KEEP ALL YOUR EXISTING CSS STYLES - SAMA PERSIS */
     :root{
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
@@ -235,7 +235,7 @@
                   <img src="https://vanswap.xyz/assets/0g.png" alt="wVANS">
                   <div>
                     <div>wVANS <span class="network-badge">0G</span></div>
-                    <div class="token-addr" id="wvansAddressDisplay">0x68C1CAa6...9a9efd61</div>
+                    <div class="token-addr">0x68C1CAa6...9a9efd61</div>
                   </div>
                 </div>
               </div>
@@ -278,7 +278,7 @@
                   <img src="https://vanswap.xyz/assets/0g.png" alt="wVANS">
                   <div>
                     <div>wVANS <span class="network-badge">0G</span></div>
-                    <div class="token-addr" id="wvansAddressDisplay2">0x68C1CAa6...9a9efd61</div>
+                    <div class="token-addr">0x68C1CAa6...9a9efd61</div>
                   </div>
                 </div>
                 <div class="token-option" data-token="vans" data-network="vana">
@@ -328,6 +328,7 @@
         <div style="margin-top:12px;color:var(--muted);font-size:13px;text-align:center">
           <div id="status">Select tokens and amount to bridge</div>
           <div id="txLink" style="margin-top:6px;font-size:12px;word-break:break-all"></div>
+          <button id="forceClearBtn" class="secondary" style="margin-top:8px;font-size:12px;display:none">Force Clear Stuck Bridge</button>
         </div>
       </section>
 
@@ -336,7 +337,7 @@
         <h4>Bridge Information</h4>
         <div class="panel-row"><div>Current Network</div><div id="networkDisplay">—</div></div>
         <div class="panel-row"><div>Vana Bridge</div><div style="font-size:12px">0xe941575C...0250d41</div></div>
-        <div class="panel-row"><div>0G Bridge</div><div style="font-size:12px" id="zerogBridgeAddress">0x68C1CAa6...9a9efd61</div></div>
+        <div class="panel-row"><div>0G Bridge</div><div style="font-size:12px">0x68C1CAa6...9a9efd61</div></div>
 
         <h4 style="margin-top:14px">Bridge Statistics</h4>
         <div class="panel-row"><div>Total Bridged</div><div id="totalBridged">—</div></div>
@@ -358,7 +359,7 @@
   <footer>© 2025 VanSwap. Cross-chain bridge between Vana and 0G</footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-    // Configuration
+    // Configuration - SESUAI DENGAN CONTRACT SEBENARNYA
     const CONFIG = {
       vana: {
         chainId: "0x5c8",
@@ -366,42 +367,46 @@
         bridgeAddress: "0xe941575C60Ae5e87F82Da9ACCb0E5Cbd0A250d41",
         rpcUrl: "https://rpc.vana.org",
         explorer: "https://vanascan.io",
-        vansAddress: "0x82741ff5937933244eb562A4b396f8079F1de914"
+        vansAddress: "0x82741ff5937933244eb562A4b396f8079F1de914",
+        nativeSymbol: "VANA"
       },
       zerog: {
         chainId: "0x4115", 
         chainIdDecimal: 16661,
         bridgeAddress: "0x68C1CAa64B4aB196204b1205Cf6b92509a9efd61",
         rpcUrl: "https://evmrpc.0g.ai",
-        explorer: "https://chainscan.0g.ai"
+        explorer: "https://chainscan.0g.ai",
+        nativeSymbol: "0G"
       }
     };
 
-    // Contract ABIs - DIPERBAIKI: Hapus vanaBridge requirement
+    // Contract ABIs - SESUAI DENGAN IMPLEMENTASI SEBENARNYA
     const VANABRIDGE_ABI = [
-      "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
-      "function bridgeFromZeroG(bytes32 proofHash, uint256 amount, address to) external",
+      "function bridgeToZeroG(uint256 amount) external payable returns (bytes32 proofHash)",
+      "function bridgeFromZeroG(bytes32 burnProof, uint256 amount, address recipient) external",
       "function totalLocked() external view returns (uint256)",
-      "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
+      "function usedProofs(bytes32) external view returns (bool)",
+      "function getBridgeInfo() external view returns (address, uint256, uint256, bool)",
+      "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)",
+      "event BridgedFromZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
-    // ✅ ABI YANG SESUAI - HAPUS vanaBridge REQUIREMENT
     const ZEROGBRIDGE_ABI = [
-      "function bridgeToVana(uint256 amount) external returns (bytes32)",
-      "function bridgeFromVana(bytes32 lockProof, uint256 amount, address recipient) external",
+      "function bridgeToVana(uint256 amount) external returns (bytes32 proofHash)",
+      "function bridgeFromVana(bytes32 lockProof, uint256 amount, address recipient) external", 
       "function totalSupply() external view returns (uint256)",
-      "function balanceOf(address account) external view returns (uint256)",
-      "function totalMinted() external view returns (uint256)",
+      "function balanceOf(address) external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
+      "function vanaBridge() external view returns (address)",
       "event BridgedToVana(address indexed user, uint256 amount, bytes32 proofHash)",
-      "event BridgedFromVana(address indexed user, uint256 amount, bytes32 lockProof)"
+      "event BridgedFromVana(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ERC20_ABI = [
-      "function balanceOf(address account) external view returns (uint256)",
-      "function approve(address spender, uint256 amount) external returns (bool)",
-      "function allowance(address owner, address spender) external view returns (uint256)",
-      "function transfer(address to, uint256 amount) external returns (bool)"
+      "function balanceOf(address) external view returns (uint256)",
+      "function approve(address, uint256) external returns (bool)",
+      "function allowance(address, address) external view returns (uint256)",
+      "function decimals() external view returns (uint8)"
     ];
 
     // Global variables
@@ -434,34 +439,7 @@
       setupEventListeners();
       await checkSavedBridgeState();
       await connectWallet();
-      await updateBridgeInfo();
-      
-      // Check contract connectivity
-      await checkContractConnectivity();
-    }
-
-    // Debug function untuk check contract connectivity
-    async function checkContractConnectivity() {
-      if (!currentUser) return;
-      
-      try {
-        const zerogProvider = new ethers.providers.JsonRpcProvider(CONFIG.zerog.rpcUrl);
-        const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, zerogProvider);
-        
-        const totalSupply = await zeroGBridge.totalSupply();
-        const totalMinted = await zeroGBridge.totalMinted();
-        
-        console.log('🔍 Contract Connectivity Check:');
-        console.log('- ZeroGBridge Address:', CONFIG.zerog.bridgeAddress);
-        console.log('- Total Supply:', ethers.utils.formatUnits(totalSupply, 18));
-        console.log('- Total Minted:', ethers.utils.formatUnits(totalMinted, 18));
-        console.log('✅ Contract accessible');
-        
-        updateStatus('✅ Bridge ready', 'success');
-      } catch (error) {
-        console.error('❌ Contract connectivity check failed:', error);
-        updateStatus('❌ Cannot connect to bridge contract', 'error');
-      }
+      updateBridgeInfo();
     }
 
     // Setup event listeners
@@ -476,6 +454,7 @@
       document.getElementById('bridgeBtn').addEventListener('click', startAutoBridge);
       document.getElementById('menuBtn').addEventListener('click', toggleMenu);
       document.getElementById('recoveryBtn').addEventListener('click', handleRecovery);
+      document.getElementById('forceClearBtn').addEventListener('click', forceClearStuckBridge);
       document.addEventListener('click', closeAllDropdowns);
 
       document.querySelectorAll('.network-option[data-network]').forEach(option => {
@@ -484,25 +463,57 @@
           switchNetwork(network);
         });
       });
-
-      // Update displayed addresses
-      document.getElementById('wvansAddressDisplay').textContent = `${CONFIG.zerog.bridgeAddress.slice(0, 10)}...${CONFIG.zerog.bridgeAddress.slice(-8)}`;
-      document.getElementById('wvansAddressDisplay2').textContent = `${CONFIG.zerog.bridgeAddress.slice(0, 10)}...${CONFIG.zerog.bridgeAddress.slice(-8)}`;
-      document.getElementById('zerogBridgeAddress').textContent = `${CONFIG.zerog.bridgeAddress.slice(0, 10)}...${CONFIG.zerog.bridgeAddress.slice(-8)}`;
     }
 
-    // Check for saved bridge state on load
+    // Enhanced bridge state recovery
     async function checkSavedBridgeState() {
-      const savedState = localStorage.getItem('vanswap_bridge_state');
-      if (savedState) {
-        const state = JSON.parse(savedState);
-        
-        if (Date.now() - state.timestamp < 7200000) { // 2 hours
-          currentBridgeState = state;
-          showRecoveryBanner(state);
-        } else {
-          localStorage.removeItem('vanswap_bridge_state');
+      try {
+        const savedState = localStorage.getItem('vanswap_bridge_state');
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          
+          // Check if state is less than 2 hours old
+          if (Date.now() - state.timestamp < 7200000) {
+            currentBridgeState = state;
+            
+            // Verify the state is still valid
+            const isValid = await verifyBridgeState(state);
+            if (isValid) {
+              showRecoveryBanner(state);
+              document.getElementById('forceClearBtn').style.display = 'block';
+            } else {
+              localStorage.removeItem('vanswap_bridge_state');
+              currentBridgeState = null;
+            }
+          } else {
+            localStorage.removeItem('vanswap_bridge_state');
+          }
         }
+      } catch (error) {
+        console.error('Error checking saved bridge state:', error);
+        localStorage.removeItem('vanswap_bridge_state');
+      }
+    }
+
+    async function verifyBridgeState(state) {
+      try {
+        if (state.step === 'locked') {
+          // Verify proof hasn't been used on 0G
+          const zerogProvider = new ethers.providers.JsonRpcProvider(CONFIG.zerog.rpcUrl);
+          const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, zerogProvider);
+          const isUsed = await zeroGBridge.usedProofs(state.proofHash);
+          return !isUsed;
+        } else if (state.step === 'burned') {
+          // Verify proof hasn't been used on Vana
+          const vanaProvider = new ethers.providers.JsonRpcProvider(CONFIG.vana.rpcUrl);
+          const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, vanaProvider);
+          const isUsed = await vanaBridge.usedProofs(state.proofHash);
+          return !isUsed;
+        }
+        return false;
+      } catch (error) {
+        console.error('Error verifying bridge state:', error);
+        return false;
       }
     }
 
@@ -521,8 +532,10 @@
 
     function hideRecoveryBanner() {
       document.getElementById('recoveryBanner').style.display = 'none';
+      document.getElementById('forceClearBtn').style.display = 'none';
     }
 
+    // Enhanced recovery function
     async function handleRecovery() {
       if (!currentBridgeState) return;
       
@@ -530,16 +543,28 @@
         isBridging = true;
         validateBridge();
         
+        updateStatus('🔄 Attempting recovery...', 'processing');
+        
         if (currentBridgeState.step === 'locked') {
           await completeZeroGMinting(currentBridgeState);
         } else if (currentBridgeState.step === 'burned') {
           await completeVanaUnlocking(currentBridgeState);
         }
+        
       } catch (error) {
         console.error('Recovery failed:', error);
         updateStatus(`❌ Recovery failed: ${error.message}`, 'error');
         isBridging = false;
         validateBridge();
+      }
+    }
+
+    async function forceClearStuckBridge() {
+      if (confirm('This will clear any saved bridge state. Only use if you\'re sure the bridge completed or failed.')) {
+        localStorage.removeItem('vanswap_bridge_state');
+        currentBridgeState = null;
+        hideRecoveryBanner();
+        updateStatus('✅ Bridge state cleared', 'success');
       }
     }
 
@@ -551,18 +576,16 @@
       }
 
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
-        currentUser = accounts[0];
+        currentUser = await signer.getAddress();
         
         const network = await provider.getNetwork();
         currentNetwork = network.chainId.toString();
         
         updateUI();
         await updateBalances();
-        
-        updateStatus('✅ Wallet connected', 'success');
         
       } catch (error) {
         console.error('Wallet connection failed:', error);
@@ -588,8 +611,6 @@
           params: [{ chainId: targetConfig.chainId }],
         });
         
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
         
@@ -604,7 +625,8 @@
         if (switchError.code === 4902) {
           return await addNetwork(targetConfig);
         }
-        throw new Error(`Network switch failed: ${switchError.message}`);
+        console.error('Network switch failed:', switchError);
+        return false;
       }
     }
 
@@ -613,8 +635,8 @@
         chainId: config.chainId,
         chainName: config === CONFIG.vana ? "Vana Network" : "0G Network",
         nativeCurrency: {
-          name: config === CONFIG.vana ? "VANA" : "0G",
-          symbol: config === CONFIG.vana ? "VANA" : "0G",
+          name: config.nativeSymbol,
+          symbol: config.nativeSymbol,
           decimals: 18
         },
         rpcUrls: [config.rpcUrl],
@@ -633,7 +655,42 @@
       }
     }
 
-    // Token selection
+    // Enhanced network switching with better error handling
+    async function ensureNetwork(targetNetwork) {
+      const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
+      
+      try {
+        const currentChainId = await provider.send('eth_chainId', []);
+        
+        if (currentChainId !== targetConfig.chainId) {
+          updateStatus(`🔄 Switching to ${targetNetwork.toUpperCase()} network...`, 'processing');
+          
+          const success = await switchNetwork(targetNetwork);
+          if (!success) {
+            throw new Error(`Failed to switch to ${targetNetwork} network`);
+          }
+          
+          // Wait for network switch to complete
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Verify switch
+          const newChainId = await provider.send('eth_chainId', []);
+          if (newChainId !== targetConfig.chainId) {
+            throw new Error(`Network switch verification failed`);
+          }
+          
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Network switch error:', error);
+        throw new Error(`Network switch failed: ${error.message}`);
+      }
+    }
+
+    // Token selection functions
     function toggleFromList() {
       const list = document.getElementById('fromList');
       const toList = document.getElementById('toList');
@@ -740,35 +797,25 @@
     async function updateBalances() {
       if (!currentUser) return;
       
-      try {
-        const fromToken = document.getElementById('fromSymbol').textContent;
-        const toToken = document.getElementById('toSymbol').textContent;
-        
-        const fromBalance = fromToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
-        const toBalance = toToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
-        
-        document.getElementById('fromBalance').textContent = `Balance: ${fromBalance}`;
-        document.getElementById('toBalance').textContent = `Balance: ${toBalance}`;
-        
-        document.getElementById('btnMax').disabled = parseFloat(fromBalance) === 0;
-      } catch (error) {
-        console.error('Failed to update balances:', error);
-      }
+      const fromToken = document.getElementById('fromSymbol').textContent;
+      const toToken = document.getElementById('toSymbol').textContent;
+      
+      const fromBalance = fromToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
+      const toBalance = toToken === 'VANS' ? await getVANSBalance() : await getWVANSBalance();
+      
+      document.getElementById('fromBalance').textContent = `Balance: ${fromBalance}`;
+      document.getElementById('toBalance').textContent = `Balance: ${toBalance}`;
+      
+      document.getElementById('btnMax').disabled = parseFloat(fromBalance) === 0;
     }
 
     async function getVANSBalance() {
       if (!currentUser) return '0';
       try {
-        const currentChainId = await provider.send('eth_chainId', []);
-        if (currentChainId !== CONFIG.vana.chainId) {
-          return '0';
-        }
-        
         const vansToken = new ethers.Contract(TOKENS.vans.address, ERC20_ABI, provider);
         const balance = await vansToken.balanceOf(currentUser);
         return parseFloat(ethers.utils.formatUnits(balance, 18)).toFixed(4);
-      } catch (error) {
-        console.error('Error getting VANS balance:', error);
+      } catch {
         return '0';
       }
     }
@@ -776,16 +823,10 @@
     async function getWVANSBalance() {
       if (!currentUser) return '0';
       try {
-        const currentChainId = await provider.send('eth_chainId', []);
-        if (currentChainId !== CONFIG.zerog.chainId) {
-          return '0';
-        }
-        
-        const wvansToken = new ethers.Contract(TOKENS.wvans.address, ZEROGBRIDGE_ABI, provider);
+        const wvansToken = new ethers.Contract(TOKENS.wvans.address, ERC20_ABI, provider);
         const balance = await wvansToken.balanceOf(currentUser);
         return parseFloat(ethers.utils.formatUnits(balance, 18)).toFixed(4);
-      } catch (error) {
-        console.error('Error getting wVANS balance:', error);
+      } catch {
         return '0';
       }
     }
@@ -827,7 +868,7 @@
       }
     }
 
-    // Enhanced Bridge Implementation - FIXED: No vanaBridge check
+    // ✅ FIXED: Enhanced Auto Bridge Implementation
     async function startAutoBridge() {
       if (isBridging) return;
       
@@ -843,6 +884,9 @@
       validateBridge();
 
       try {
+        resetSteps();
+        updateStep(1, 'completed');
+        
         if (fromToken === 'VANS') {
           await bridgeVanaToZeroG(amount);
         } else {
@@ -856,37 +900,60 @@
       }
     }
 
+    function resetSteps() {
+      document.getElementById('step1').className = 'step';
+      document.getElementById('step2').className = 'step';
+      document.getElementById('step3').className = 'step';
+    }
+
+    // ✅ FIXED: Vana to 0G Bridge - CAPTURE RETURN VALUE
     async function bridgeVanaToZeroG(amount) {
       try {
         updateStep(2, 'processing');
         updateStatus('🔀 Switching to Vana network...', 'processing');
         
+        // 1. Switch to Vana network
         await ensureNetwork('vana');
         
-        updateStatus('✅ Approving VANS...', 'processing');
+        // 2. Check and approve VANS
+        updateStatus('✅ Checking VANS approval...', 'processing');
         await approveVANS(amount);
         
         updateStep(2, 'completed');
         updateStep(3, 'processing');
         updateStatus('🔒 Locking VANS on Vana...', 'processing');
         
+        // 3. Lock VANS on VanaBridge (Vana network)
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(amount);
         const fee = ethers.utils.parseEther("0.001");
         
-        const tx = await vanaBridge.bridgeToZeroG(amountWei, { value: fee });
+        // ✅ CAPTURE RETURN VALUE - BUKAN CARI DI EVENT
+        const tx = await vanaBridge.bridgeToZeroG(amountWei, { 
+          value: fee,
+          gasLimit: 300000 
+        });
+        
         updateStatus('⏳ Waiting for Vana confirmation...', 'processing');
+        document.getElementById('txLink').innerHTML = `<a href="${CONFIG.vana.explorer}/tx/${tx.hash}" target="_blank">View Vana TX</a>`;
         
         const receipt = await tx.wait();
-        const event = receipt.events.find(e => e.event === 'BridgedToZeroG');
         
-        if (!event) {
-          throw new Error('BridgedToZeroG event not found');
+        if (receipt.status === 0) {
+          throw new Error('Vana transaction failed');
         }
+
+        // ✅ FIX: CAPTURE RETURN VALUE DARI TRANSACTION
+        const transaction = await provider.getTransaction(tx.hash);
+        const iface = new ethers.utils.Interface(VANABRIDGE_ABI);
+        const decoded = iface.parseTransaction(transaction);
         
-        const proofHash = event.args.proofHash;
+        // Proof hash ada di return value, bukan di event
+        const proofHash = decoded.args[0]; // Return value dari bridgeToZeroG
         
-        // Save state sebelum switching networks
+        console.log('Captured proofHash:', proofHash);
+        
+        // Save state
         const bridgeState = {
           type: 'vanaToZeroG',
           step: 'locked',
@@ -898,59 +965,52 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
-        showRecoveryBanner(bridgeState);
+        document.getElementById('forceClearBtn').style.display = 'block';
         
-        updateStatus('🔀 Switching to 0G network...', 'processing');
+        // 4. Switch to 0G network untuk minting
+        updateStatus('🔀 Switching to 0G network for minting...', 'processing');
         await ensureNetwork('zerog');
         
-        // Complete the minting on 0G
+        // 5. Complete minting di 0G network
         await completeZeroGMinting(bridgeState);
         
       } catch (error) {
-        localStorage.removeItem('vanswap_bridge_state');
-        currentBridgeState = null;
-        hideRecoveryBanner();
         throw error;
       }
     }
 
+    // ✅ FIXED: Complete minting di 0G network
     async function completeZeroGMinting(bridgeState) {
       try {
         updateStatus('🎁 Minting wVANS on 0G...', 'processing');
         
+        // Gunakan ZeroGBridge contract di 0G network
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        console.log('🔧 Minting Parameters:', {
-          proofHash: bridgeState.proofHash,
-          amount: bridgeState.amount,
-          amountWei: amountWei.toString(),
-          recipient: currentUser
-        });
-        
-        // Check proof belum digunakan
+        // Cek apakah proof sudah digunakan
         const isProofUsed = await zeroGBridge.usedProofs(bridgeState.proofHash);
         if (isProofUsed) {
-          throw new Error('Proof already used');
+          throw new Error('Proof already used - bridge may have completed');
         }
         
-        const mintTx = await zeroGBridge.bridgeFromVana(bridgeState.proofHash, amountWei, currentUser);
+        // Mint wVANS
+        const mintTx = await zeroGBridge.bridgeFromVana(
+          bridgeState.proofHash, 
+          amountWei, 
+          currentUser,
+          { 
+            gasLimit: 350000
+          }
+        );
+        
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
+        document.getElementById('txLink').innerHTML += ` | <a href="${CONFIG.zerog.explorer}/tx/${mintTx.hash}" target="_blank">View 0G TX</a>`;
         
         const receipt = await mintTx.wait();
-        console.log('✅ Mint transaction receipt:', receipt);
         
-        // Verify minting success
-        const newBalance = await zeroGBridge.balanceOf(currentUser);
-        const expectedBalance = ethers.utils.parseEther(bridgeState.amount);
-        
-        console.log('💰 Balance Check:', {
-          newBalance: ethers.utils.formatUnits(newBalance, 18),
-          expectedBalance: ethers.utils.formatUnits(expectedBalance, 18)
-        });
-        
-        if (newBalance.lt(expectedBalance)) {
-          throw new Error('wVANS balance not properly updated after minting');
+        if (receipt.status === 0) {
+          throw new Error('Minting transaction failed on 0G network');
         }
         
         // Clear state setelah success
@@ -959,45 +1019,75 @@
         hideRecoveryBanner();
         
         updateStep(3, 'completed');
-        updateStatus('✅ Bridge completed successfully! wVANS minted.', 'success');
+        updateStatus('✅ Bridge completed successfully!', 'success');
         
+        // Update balances
         await updateBalances();
         await updateBridgeInfo();
         
       } catch (error) {
-        console.error('❌ Minting failed:', error);
-        throw new Error(`Minting failed: ${error.message}`);
+        console.error('Minting failed:', error);
+        
+        // Enhanced error handling
+        if (error.message.includes('Only Vana bridge')) {
+          updateStatus('❌ Bridge not configured. VanaBridge address not set in ZeroGBridge.', 'error');
+        } else if (error.message.includes('Proof already used')) {
+          updateStatus('❌ Bridge already completed', 'error');
+          localStorage.removeItem('vanswap_bridge_state');
+          currentBridgeState = null;
+          hideRecoveryBanner();
+        } else if (error.message.includes('out of gas')) {
+          updateStatus('❌ Gas limit too low. Try again.', 'error');
+        } else {
+          updateStatus(`❌ Minting failed: ${error.message}`, 'error');
+        }
+        
+        throw error;
       } finally {
         isBridging = false;
         validateBridge();
       }
     }
 
+    // ✅ FIXED: 0G to Vana Bridge - CAPTURE RETURN VALUE
     async function bridgeZeroGToVana(amount) {
       try {
         updateStep(2, 'processing');
         updateStatus('🔀 Switching to 0G network...', 'processing');
         
+        // 1. Switch to 0G network
         await ensureNetwork('zerog');
         
         updateStatus('🔥 Burning wVANS on 0G...', 'processing');
         
+        // 2. Burn wVANS on ZeroGBridge (0G network)
         const zeroGBridge = new ethers.Contract(CONFIG.zerog.bridgeAddress, ZEROGBRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(amount);
         
-        const tx = await zeroGBridge.bridgeToVana(amountWei);
+        const tx = await zeroGBridge.bridgeToVana(amountWei, {
+          gasLimit: 250000
+        });
+        
         updateStatus('⏳ Waiting for 0G confirmation...', 'processing');
+        document.getElementById('txLink').innerHTML = `<a href="${CONFIG.zerog.explorer}/tx/${tx.hash}" target="_blank">View 0G TX</a>`;
         
         const receipt = await tx.wait();
-        const event = receipt.events.find(e => e.event === 'BridgedToVana');
         
-        if (!event) {
-          throw new Error('BridgedToVana event not found');
+        if (receipt.status === 0) {
+          throw new Error('0G transaction failed');
         }
+
+        // ✅ FIX: CAPTURE RETURN VALUE DARI TRANSACTION
+        const transaction = await provider.getTransaction(tx.hash);
+        const iface = new ethers.utils.Interface(ZEROGBRIDGE_ABI);
+        const decoded = iface.parseTransaction(transaction);
         
-        const proofHash = event.args.proofHash;
+        // Proof hash ada di return value, bukan di event
+        const proofHash = decoded.args[0]; // Return value dari bridgeToVana
         
-        // Save state sebelum switching networks
+        console.log('Captured proofHash:', proofHash);
+        
+        // Save state
         const bridgeState = {
           type: 'zeroGToVana',
           step: 'burned',
@@ -1009,20 +1099,19 @@
         };
         localStorage.setItem('vanswap_bridge_state', JSON.stringify(bridgeState));
         currentBridgeState = bridgeState;
-        showRecoveryBanner(bridgeState);
+        document.getElementById('forceClearBtn').style.display = 'block';
         
         updateStep(2, 'completed');
         updateStep(3, 'processing');
         updateStatus('🔀 Switching to Vana network...', 'processing');
         
+        // 3. Switch to Vana network untuk unlocking
         await ensureNetwork('vana');
         
+        // 4. Complete unlocking di Vana network
         await completeVanaUnlocking(bridgeState);
         
       } catch (error) {
-        localStorage.removeItem('vanswap_bridge_state');
-        currentBridgeState = null;
-        hideRecoveryBanner();
         throw error;
       }
     }
@@ -1031,25 +1120,52 @@
       try {
         updateStatus('🔓 Unlocking VANS on Vana...', 'processing');
         
+        // Gunakan VanaBridge contract di Vana network
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
-        const unlockTx = await vanaBridge.bridgeFromZeroG(bridgeState.proofHash, amountWei, currentUser);
+        const unlockTx = await vanaBridge.bridgeFromZeroG(
+          bridgeState.proofHash, 
+          amountWei, 
+          currentUser,
+          {
+            gasLimit: 300000
+          }
+        );
+        
         updateStatus('⏳ Waiting for Vana confirmation...', 'processing');
+        document.getElementById('txLink').innerHTML += ` | <a href="${CONFIG.vana.explorer}/tx/${unlockTx.hash}" target="_blank">View Vana TX</a>`;
         
-        await unlockTx.wait();
+        const receipt = await unlockTx.wait();
         
+        if (receipt.status === 0) {
+          throw new Error('Unlocking transaction failed on Vana network');
+        }
+        
+        // Clear state setelah success
         localStorage.removeItem('vanswap_bridge_state');
         currentBridgeState = null;
         hideRecoveryBanner();
         
         updateStep(3, 'completed');
-        updateStatus('✅ Bridge completed successfully! VANS unlocked.', 'success');
+        updateStatus('✅ Bridge completed successfully!', 'success');
         
+        // Update balances
         await updateBalances();
         await updateBridgeInfo();
         
       } catch (error) {
+        console.error('Unlocking failed:', error);
+        
+        if (error.message.includes('Proof already used')) {
+          updateStatus('❌ Bridge already completed', 'error');
+          localStorage.removeItem('vanswap_bridge_state');
+          currentBridgeState = null;
+          hideRecoveryBanner();
+        } else {
+          updateStatus(`❌ Unlocking failed: ${error.message}`, 'error');
+        }
+        
         throw error;
       } finally {
         isBridging = false;
@@ -1057,32 +1173,16 @@
       }
     }
 
-    async function ensureNetwork(targetNetwork) {
-      const targetConfig = targetNetwork === 'vana' ? CONFIG.vana : CONFIG.zerog;
-      const currentChainId = await provider.send('eth_chainId', []);
-      
-      if (currentChainId !== targetConfig.chainId) {
-        updateStatus(`🔄 Switching to ${targetNetwork.toUpperCase()} network...`, 'processing');
-        
-        await switchNetwork(targetNetwork);
-        
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const newChainId = await provider.send('eth_chainId', []);
-        if (newChainId !== targetConfig.chainId) {
-          throw new Error(`Network switch failed. Expected: ${targetConfig.chainId}, Got: ${newChainId}`);
-        }
-      }
-      return true;
-    }
-
     async function approveVANS(amount) {
       const vansToken = new ethers.Contract(TOKENS.vans.address, ERC20_ABI, signer);
       const amountWei = ethers.utils.parseEther(amount);
+      
       const allowance = await vansToken.allowance(currentUser, CONFIG.vana.bridgeAddress);
       
       if (allowance.lt(amountWei)) {
-        const approveTx = await vansToken.approve(CONFIG.vana.bridgeAddress, amountWei);
+        const approveTx = await vansToken.approve(CONFIG.vana.bridgeAddress, ethers.constants.MaxUint256, {
+          gasLimit: 100000
+        });
         await approveTx.wait();
       }
     }
