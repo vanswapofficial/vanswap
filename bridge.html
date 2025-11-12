@@ -382,31 +382,32 @@
     // REAL ABI - SESUAI DENGAN CONTRACT TERDEPLOY
     const VANABRIDGE_ABI = [
       "function bridgeToZeroG(uint256 amount) external payable returns (bytes32)",
-      "function bridgeFromZeroG(bytes32 burnProof, uint256 amount, address recipient) external",
+      "function bridgeFromZeroG(bytes32 zerogProof, uint256 amount, address recipient, bytes memory signature) external",
       "function totalLocked() external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
       "function bridgeFee() external view returns (uint256)",
       "function minBridgeAmount() external view returns (uint256)",
       "function maxBridgeAmount() external view returns (uint256)",
+      "function verifier() external view returns (address)",
+      "function setVerifier(address) external",
       "function pause() external",
       "function unpause() external",
       "function setBridgeFee(uint256) external",
       "function setBridgeLimits(uint256, uint256) external",
       "function emergencyWithdrawVANS(uint256) external",
-      "function getBridgeInfo() external view returns (address, uint256, uint256, bool)",
       "event BridgedToZeroG(address indexed user, uint256 amount, bytes32 proofHash)",
       "event BridgedFromZeroG(address indexed user, uint256 amount, bytes32 proofHash)"
     ];
 
     const ZEROGBRIDGE_ABI = [
       "function bridgeToVana(uint256 amount) external returns (bytes32)",
-      "function bridgeFromVana(bytes32 lockProof, uint256 amount, address recipient) external", 
+      "function bridgeFromVana(bytes32 vanaProof, uint256 amount, address recipient, bytes memory signature) external", 
       "function totalSupply() external view returns (uint256)",
       "function balanceOf(address) external view returns (uint256)",
       "function usedProofs(bytes32) external view returns (bool)",
       "function totalMinted() external view returns (uint256)",
-      "function vanaBridge() external view returns (address)",
-      "function setVanaBridge(address) external",
+      "function verifier() external view returns (address)",
+      "function setVerifier(address) external",
       "function pause() external",
       "function unpause() external",
       "function emergencyBurn(address, uint256) external",
@@ -891,6 +892,61 @@
       }
     }
 
+    // Signature generation functions
+    async function generateZeroGBridgeSignature(proofHash, amount, recipient, chainId) {
+      try {
+        // Create message hash sesuai dengan kontrak ZeroGBridge
+        const messageHash = ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(
+            ["bytes32", "uint256", "address", "uint256", "string"],
+            [proofHash, amount, recipient, chainId, "VANA_TO_ZEROG"]
+          )
+        );
+        
+        // Ethereum signed message hash
+        const ethSignedMessageHash = ethers.utils.keccak256(
+          ethers.utils.solidityPack(
+            ["string", "bytes32"],
+            ["\x19Ethereum Signed Message:\n32", messageHash]
+          )
+        );
+        
+        // Sign dengan wallet user (untuk testing - dalam production harus dari verifier)
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash));
+        return signature;
+      } catch (error) {
+        console.error('Error generating signature:', error);
+        throw new Error('Failed to generate signature');
+      }
+    }
+
+    async function generateVanaBridgeSignature(proofHash, amount, recipient, chainId) {
+      try {
+        // Create message hash sesuai dengan kontrak VanaBridge
+        const messageHash = ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(
+            ["bytes32", "uint256", "address", "uint256", "string"],
+            [proofHash, amount, recipient, chainId, "ZEROG_TO_VANA"]
+          )
+        );
+        
+        // Ethereum signed message hash
+        const ethSignedMessageHash = ethers.utils.keccak256(
+          ethers.utils.solidityPack(
+            ["string", "bytes32"],
+            ["\x19Ethereum Signed Message:\n32", messageHash]
+          )
+        );
+        
+        // Sign dengan wallet user (untuk testing - dalam production harus dari verifier)
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash));
+        return signature;
+      } catch (error) {
+        console.error('Error generating signature:', error);
+        throw new Error('Failed to generate signature');
+      }
+    }
+
     // Main bridge function
     async function startAutoBridge() {
       if (isBridging) return;
@@ -1011,13 +1067,24 @@
           throw new Error('Proof already used - bridge may have completed');
         }
         
-        // Mint wVANS
+        // Generate signature untuk minting
+        const signature = await generateZeroGBridgeSignature(
+          bridgeState.proofHash,
+          amountWei,
+          currentUser,
+          CONFIG.zerog.chainIdDecimal
+        );
+        
+        console.log('Generated signature for 0G bridge:', signature);
+        
+        // Mint wVANS dengan signature
         const mintTx = await zeroGBridge.bridgeFromVana(
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
+          signature,  // ✅ SIGNATURE DITAMBAHKAN
           { 
-            gasLimit: 250000
+            gasLimit: 300000
           }
         );
         
@@ -1053,6 +1120,8 @@
           hideRecoveryBanner();
         } else if (error.message.includes('out of gas')) {
           updateStatus('❌ Gas limit too low. Try again.', 'error');
+        } else if (error.message.includes('Invalid signature')) {
+          updateStatus('❌ Signature verification failed. Contact admin.', 'error');
         } else {
           updateStatus(`❌ Minting failed: ${error.message}`, 'error');
         }
@@ -1133,10 +1202,21 @@
         const vanaBridge = new ethers.Contract(CONFIG.vana.bridgeAddress, VANABRIDGE_ABI, signer);
         const amountWei = ethers.utils.parseEther(bridgeState.amount);
         
+        // Generate signature untuk unlocking
+        const signature = await generateVanaBridgeSignature(
+          bridgeState.proofHash,
+          amountWei,
+          currentUser,
+          CONFIG.vana.chainIdDecimal
+        );
+        
+        console.log('Generated signature for Vana bridge:', signature);
+        
         const unlockTx = await vanaBridge.bridgeFromZeroG(
           bridgeState.proofHash, 
           amountWei, 
           currentUser,
+          signature,  // ✅ SIGNATURE DITAMBAHKAN
           {
             gasLimit: 300000
           }
@@ -1170,6 +1250,8 @@
           localStorage.removeItem('vanswap_bridge_state');
           currentBridgeState = null;
           hideRecoveryBanner();
+        } else if (error.message.includes('Invalid signature')) {
+          updateStatus('❌ Signature verification failed. Contact admin.', 'error');
         } else {
           updateStatus(`❌ Unlocking failed: ${error.message}`, 'error');
         }
