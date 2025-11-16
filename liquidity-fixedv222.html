@@ -451,7 +451,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-  // NETWORK CONFIGURATION - UPDATED FOR 0G FIX
+  // NETWORK CONFIGURATION
   const NETWORK_CONFIG = {
     vana: {
       chainId: 1480,
@@ -481,11 +481,11 @@
       explorer: "https://chainscan.0g.ai",
       logo: "https://vanswap.xyz/assets/0g.png",
       contracts: {
-        router: '0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d', // FIXED: Use correct 0G router
-        factory: '0x82741ff5937933244eb562a4b396f8079f1de914', // FIXED: Use correct 0G factory
+        router: '0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d',
+        factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
         w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
-       ldrz: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199',
-        panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',
+        vans: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199',
+        panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',   
         wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
         usdc: '0x1f3aa82227281ca364bfb3d253b0f1af1da6473e'
       },
@@ -585,8 +585,7 @@
     'VANS': NETWORK_CONFIG.vana.contracts.vans,
     'USDC': NETWORK_CONFIG.vana.contracts.usdc,
     '0G': NETWORK_CONFIG.zerog.contracts.w0g,
-    'W0G': NETWORK_CONFIG.zerog.contracts.w0g,
-    'PANDA': NETWORK_CONFIG.zerog.contracts.panda
+    'W0G': NETWORK_CONFIG.zerog.contracts.w0g
   };
 
   const ROUTER_ABI = [
@@ -688,7 +687,7 @@
       VANS = config.contracts.vans;
       USDC = config.contracts.usdc;
     } else { // zerog
-      WVANA = config.contracts.w0g;
+      WVANA = config.contracts.w0g; // Use W0G for 0G network
       VANS = config.contracts.vans;
       USDC = config.contracts.usdc;
     }
@@ -725,8 +724,10 @@
       e.stopPropagation();
       
       if (!account) {
+        // Jika belum connect, langsung connect wallet
         connectWallet();
       } else {
+        // Jika sudah connect, show network dropdown
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
       }
     });
@@ -783,21 +784,11 @@
   }
 
   function showToast(msg, t = 2400){
-    const el = document.createElement('div'); 
-    el.className = 'toast'; 
-    el.textContent = msg;
-    el.style.position = 'fixed'; 
-    el.style.bottom = '20px'; 
-    el.style.left = '50%'; 
-    el.style.transform = 'translateX(-50%)';
-    el.style.background = 'var(--primary)'; 
-    el.style.color = 'white'; 
-    el.style.padding = '12px 20px';
-    el.style.borderRadius = '8px'; 
-    el.style.zIndex = '9999'; 
-    el.style.fontWeight = '600';
-    el.style.opacity = '0'; 
-    el.style.transition = 'opacity .18s';
+    const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
+    el.style.position = 'fixed'; el.style.bottom = '20px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
+    el.style.background = 'var(--primary)'; el.style.color = 'white'; el.style.padding = '12px 20px';
+    el.style.borderRadius = '8px'; el.style.zIndex = '9999'; el.style.fontWeight = '600';
+    el.style.opacity = '0'; el.style.transition = 'opacity .18s';
     document.body.appendChild(el);
     setTimeout(()=> el.style.opacity = '1', 10);
     setTimeout(()=> { el.style.opacity = '0'; setTimeout(()=> el.remove(), 300); }, t);
@@ -805,7 +796,10 @@
 
   function setStatus(s){ $('status').textContent = s }
 
+  // =============================================
   // HARGA REAL DARI DEXSCREENER
+  // =============================================
+
   async function getRealTokenPrice(tokenSymbol) {
     if (tokenPrices[tokenSymbol] && (Date.now() - tokenPrices[tokenSymbol].timestamp) < 30000) {
       return tokenPrices[tokenSymbol].price;
@@ -839,7 +833,10 @@
     return 0;
   }
 
+  // =============================================
   // VIEW MANAGEMENT
+  // =============================================
+
   function switchToMyPoolsView() {
     $('myPoolsTab').classList.add('active');
     $('addTab').classList.remove('active');
@@ -885,7 +882,10 @@
   $('addTab').addEventListener('click', switchToAddView);
   $('importTab').addEventListener('click', switchToImportView);
 
+  // =============================================
   // MENU & DROPDOWNS
+  // =============================================
+
   const menuBtn = $('menuBtn');
   const menuDropdown = $('menuDropdown');
   menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menuDropdown.classList.toggle('show'); });
@@ -1140,7 +1140,10 @@
     await updateUSDValues();
   }
 
+  // =============================================
   // WALLET & CHAIN HANDLING
+  // =============================================
+
   const connectBtn = $('connectBtn');
   
   async function ensureCorrectChain(){
@@ -1206,6 +1209,7 @@
     }
   }
 
+  // Tambahkan fungsi disconnect
   function disconnectWallet() {
     account = null;
     signer = null;
@@ -1229,6 +1233,7 @@
   if(window.ethereum){
     window.ethereum.on('chainChanged', async (chainId) => {
       console.log('chainChanged', chainId);
+      // Check if the chain matches any of our networks
       const targetNetwork = Object.keys(NETWORK_CONFIG).find(
         network => NETWORK_CONFIG[network].chainIdHex === chainId
       );
@@ -1262,7 +1267,10 @@
     });
   }
 
+  // =============================================
   // BALANCES & MAX
+  // =============================================
+
   async function updateBalances(){
     if(!provider || !account) return;
     try{
@@ -1334,7 +1342,10 @@
   $('btnMax').addEventListener('click', setMax);
   $('fromBalance').addEventListener('click', setMax);
 
+  // =============================================
   // USD VALUES & LIQUIDITY INFO
+  // =============================================
+
   async function updateUSDValues() {
     if (!provider) return;
 
@@ -1477,10 +1488,22 @@
       }
     } catch (error) {
       console.error('Error updating liquidity info:', error);
+      $('pooledTokenA').textContent = '0';
+      $('pooledTokenB').textContent = '0';
+      $('priceA').textContent = '0';
+      $('priceB').textContent = '0';
+      $('poolSharePercent').textContent = '0%';
+      $('poolShareValue').textContent = '0%';
+      $('poolTokens').textContent = '0';
+      $('totalLiquidity').textContent = '$0';
+      $('dailyVolume').textContent = '$0';
     }
   }
 
+  // =============================================
   // TVL STATS
+  // =============================================
+
   async function updateTVLStats() {
     if (!provider) return;
 
@@ -1541,10 +1564,14 @@
 
     } catch (error) {
       console.error('Error updating TVL stats:', error);
+      $('totalTVL').textContent = '$---';
     }
   }
 
+  // =============================================
   // USER POOLS
+  // =============================================
+
   async function loadUserPools() {
     if (!account || !provider) {
       $('noPoolsMessage').style.display = 'block';
@@ -1679,124 +1706,10 @@
     });
   }
 
-  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
-  async function calculateOptimalAmountB() {
-    if (!provider || !account || isCalculatingB) return;
-
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      return;
-    }
-
-    isCalculatingB = true;
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      // HANYA untuk pool yang sudah ada
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        if (reserveA.isZero() || reserveB.isZero()) {
-          isCalculatingB = false;
-          return;
-        }
-
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-
-        if (amountBOptimal.isZero()) {
-          isCalculatingB = false;
-          return;
-        }
-
-        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
-        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount B:', error);
-    } finally {
-      setTimeout(() => { isCalculatingB = false; }, 100);
-    }
-  }
-
-  async function calculateOptimalAmountA() {
-    if (!provider || !account || isCalculatingA) return;
-
-    const toAmt = $('toAmount').value;
-    if (!toAmt || parseFloat(toAmt) <= 0) {
-      return;
-    }
-
-    isCalculatingA = true;
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      // HANYA untuk pool yang sudah ada
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        if (reserveA.isZero() || reserveB.isZero()) {
-          isCalculatingA = false;
-          return;
-        }
-
-        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
-
-        if (amountAOptimal.isZero()) {
-          isCalculatingA = false;
-          return;
-        }
-
-        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
-        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
-      }
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount A:', error);
-    } finally {
-      setTimeout(() => { isCalculatingA = false; }, 100);
-    }
-  }
-
+  // =============================================
   // ADD LIQUIDITY
+  // =============================================
+
   async function addLiquidity() {
     if (!account || !signer) {
       await connectWallet();
@@ -2020,7 +1933,10 @@
     btn.disabled = false;
   }
 
-  // REMOVE LIQUIDITY - FIXED VERSION
+  // =============================================
+  // REMOVE LIQUIDITY - COMPLETELY REWRITTEN
+  // =============================================
+
   async function checkLPAllowance(pairAddress) {
     if (!account || !signer) return false;
 
@@ -2028,6 +1944,12 @@
       const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
       const userBalance = await pairContract.balanceOf(account);
       const allowance = await pairContract.allowance(account, ROUTER);
+
+      console.log('LP Allowance Check:', {
+        userBalance: userBalance.toString(),
+        allowance: allowance.toString(),
+        hasAllowance: allowance.gte(userBalance)
+      });
 
       return allowance.gte(userBalance);
     } catch (error) {
@@ -2042,6 +1964,8 @@
     try {
       const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
       const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+      const explorerUrl = networkManager.getCurrentConfig().explorer;
+      $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txApprove.hash}" target="_blank" style="color:var(--accent)">Approving LP Tokens...</a>`;
       await txApprove.wait();
       return true;
     } catch (error) {
@@ -2056,6 +1980,8 @@
 
     try {
       const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
+      
+      // Get all pool data
       const [reserve0, reserve1] = await pairContract.getReserves();
       const token0 = await pairContract.token0();
       const token1 = await pairContract.token1();
@@ -2091,6 +2017,7 @@
       $('removeTokenASymbol').textContent = symbol0;
       $('removeTokenBSymbol').textContent = symbol1;
 
+      // Store complete pool data
       currentRemovePool = {
         address: poolAddress,
         token0: token0,
@@ -2105,6 +2032,7 @@
         hasAllowance: hasAllowance
       };
 
+      // Reset UI
       document.querySelectorAll('.percentage-btn').forEach(btn => {
         btn.classList.remove('active');
       });
@@ -2116,13 +2044,14 @@
 
     } catch (error) {
       console.error('Error loading remove modal:', error);
-      showToast('Failed to load pool information');
+      showToast('Failed to load pool information: ' + error.message);
     }
   }
 
   function setRemovePercentage(percent) {
     currentRemovePercentage = percent;
 
+    // Update button states
     document.querySelectorAll('.percentage-btn').forEach(btn => {
       if (parseInt(btn.getAttribute('data-percent')) === percent) {
         btn.classList.add('active');
@@ -2131,6 +2060,7 @@
       }
     });
 
+    // Calculate amounts to receive
     if (currentRemovePool) {
       const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
 
@@ -2155,19 +2085,6 @@
     }
 
     try {
-      setStatus('Checking pool configuration...');
-      
-      // Verify network first
-      const currentNetwork = networkManager.getCurrentNetwork();
-      if (currentNetwork !== 'zerog' && currentNetwork !== 'vana') {
-        throw new Error('Please ensure you are on supported network');
-      }
-
-      // Verify contract addresses
-      if (!ROUTER || !FACTORY) {
-        throw new Error('Router/Factory not properly initialized');
-      }
-
       setStatus('Removing liquidity...');
       const btn = $('confirmRemoveBtn');
       btn.disabled = true;
@@ -2175,6 +2092,14 @@
 
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
 
+      console.log('Remove Liquidity Details:', {
+        poolAddress: currentRemovePool.address,
+        liquidityAmount: liquidityAmount.toString(),
+        percentage: currentRemovePercentage,
+        hasAllowance: currentRemovePool.hasAllowance
+      });
+
+      // Handle approval if needed
       if (!currentRemovePool.hasAllowance) {
         setStatus('Approving LP tokens...');
         btn.innerHTML = '<span class="spinner"></span>Approving...';
@@ -2189,44 +2114,53 @@
         btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      // Calculate minimum amounts with 5% slippage
+      // Calculate minimum amounts with 5% slippage (95% of expected)
       const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
       const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
 
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
 
-      setStatus('Removing liquidity...');
+      console.log('Remove Parameters:', {
+        amount0Min: amount0Min.toString(),
+        amount1Min: amount1Min.toString(),
+        liquidityAmount: liquidityAmount.toString(),
+        deadline: deadline
+      });
 
-      const currentNetworkName = networkManager.getCurrentNetwork();
-      const nativeToken = currentNetworkName === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
+      const currentNetwork = networkManager.getCurrentNetwork();
+      const nativeToken = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
       
+      // PERBAIKAN KRITIS: Tentukan dengan benar token mana yang native
       const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeToken.toLowerCase();
       const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeToken.toLowerCase();
 
-      let tx;
-
-      console.log('Remove liquidity details:', {
-        network: currentNetworkName,
-        token0: currentRemovePool.symbol0,
-        token1: currentRemovePool.symbol1,
-        token0IsNative,
-        token1IsNative,
-        liquidityAmount: liquidityAmount.toString(),
-        amount0Min: amount0Min.toString(),
-        amount1Min: amount1Min.toString()
+      console.log('Native Token Check:', {
+        nativeToken: nativeToken,
+        token0: currentRemovePool.token0,
+        token1: currentRemovePool.token1,
+        token0IsNative: token0IsNative,
+        token1IsNative: token1IsNative
       });
 
+      let tx;
+
       if (token0IsNative || token1IsNative) {
+        // Remove liquidity dengan ETH/native
+        // PERBAIKAN: Parameter yang benar untuk removeLiquidityETH
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
 
-        console.log('Using removeLiquidityETH with:', {
-          token,
+        console.log('removeLiquidityETH Parameters:', {
+          token: token,
+          liquidity: liquidityAmount.toString(),
           amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString()
+          amountETHMin: amountETHMin.toString(),
+          to: account,
+          deadline: deadline
         });
 
+        setStatus('Removing liquidity (ETH pair)...');
         tx = await router.removeLiquidityETH(
           token,
           liquidityAmount,
@@ -2234,16 +2168,21 @@
           amountETHMin,
           account,
           deadline,
-          { gasLimit: 500000 }
+          { gasLimit: 3000000 }
         );
       } else {
-        console.log('Using removeLiquidity with:', {
-          token0: currentRemovePool.token0,
-          token1: currentRemovePool.token1,
-          amount0Min: amount0Min.toString(),
-          amount1Min: amount1Min.toString()
+        // Remove liquidity biasa (ERC20-ERC20)
+        console.log('removeLiquidity Parameters:', {
+          tokenA: currentRemovePool.token0,
+          tokenB: currentRemovePool.token1,
+          liquidity: liquidityAmount.toString(),
+          amountAMin: amount0Min.toString(),
+          amountBMin: amount1Min.toString(),
+          to: account,
+          deadline: deadline
         });
 
+        setStatus('Removing liquidity (ERC20 pair)...');
         tx = await router.removeLiquidity(
           currentRemovePool.token0,
           currentRemovePool.token1,
@@ -2252,21 +2191,22 @@
           amount1Min,
           account,
           deadline,
-          { gasLimit: 500000 }
+          { gasLimit: 3000000 }
         );
       }
 
       const explorerUrl = networkManager.getCurrentConfig().explorer;
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
-      setStatus('Transaction confirmed, waiting...');
+      setStatus('Waiting for confirmation...');
       await tx.wait();
 
-      showToast('Liquidity removed successfully');
+      showToast('Liquidity removed successfully!');
       setStatus('Liquidity removed successfully!');
 
       closeRemoveModal();
       
+      // Refresh all data
       await updateBalances();
       await updateDropdownBalances();
       await updateLiquidityInfo();
@@ -2275,29 +2215,35 @@
     } catch (err) {
       console.error('removeLiquidity error:', err);
       
-      // Specific error handling
-      if (err.message.includes('revert')) {
-        showToast('Remove failed: Contract reverted. Check network configuration');
-        setStatus('Revert error - check config');
-      } else if (err.message.includes('INSUFFICIENT')) {
-        showToast('Remove failed: Insufficient liquidity or incorrect amounts');
-        setStatus('Insufficient liquidity');
-      } else if (err.message.includes('user rejected')) {
-        showToast('Transaction rejected by user');
-        setStatus('Transaction rejected');
-      } else {
-        showToast('Remove liquidity failed: ' + (err.message || err));
-        setStatus('Remove liquidity failed');
+      // Detailed error analysis
+      let errorMsg = 'Remove liquidity failed';
+      if (err.message) {
+        if (err.message.includes('INSUFFICIENT_LIQUIDITY')) {
+          errorMsg = 'Insufficient liquidity in pool';
+        } else if (err.message.includes('INSUFFICIENT_A_AMOUNT') || err.message.includes('INSUFFICIENT_B_AMOUNT')) {
+          errorMsg = 'Slippage too high, try increasing slippage tolerance';
+        } else if (err.message.includes('TRANSFER_FROM_FAILED')) {
+          errorMsg = 'LP token transfer failed - check allowance';
+        } else if (err.message.includes('expired')) {
+          errorMsg = 'Transaction expired, please try again';
+        } else {
+          errorMsg = err.message;
+        }
       }
+      
+      showToast(errorMsg);
+      setStatus('Remove liquidity failed: ' + errorMsg);
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
       btn.textContent = 'Remove Liquidity';
-      setStatus('Ready');
     }
   }
 
+  // =============================================
   // IMPORT POOL
+  // =============================================
+
   async function importPool() {
     const tokenAInput = $('tokenAInput').value.trim();
     const tokenBInput = $('tokenBInput').value.trim();
@@ -2394,7 +2340,10 @@
     }
   }
 
+  // =============================================
   // APPROVAL HANDLING
+  // =============================================
+
   async function ensureApproved(tokenAddress, amount) {
     if (!account || !signer) return false;
     
@@ -2421,7 +2370,130 @@
     }
   }
 
+  // =============================================
+  // AUTO-CALCULATION FUNCTIONS
+  // =============================================
+
+  async function calculateOptimalAmountB() {
+    if (!provider || !account || isCalculatingB) return;
+
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingB = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // Hanya untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+
+        if (amountBOptimal.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
+        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+      }
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount B:', error);
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingA = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // Hanya untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        if (amountAOptimal.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
+        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+      }
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
+    }
+  }
+
+  // =============================================
   // EVENT LISTENERS & INITIALIZATION
+  // =============================================
+
   $('fromAmount').addEventListener('input', async function() {
     if (isCalculatingB) return;
     updateUSDValues();
