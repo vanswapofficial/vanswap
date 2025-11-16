@@ -30,7 +30,7 @@
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Provide Liquidity | VanSwap DEX">
-  <meta name="twitter:description" content="Earn fees by providing liquidity to VanSwap's decentralized pools on Vana Chain & 0G Network.">
+  <meta name="twitter:description" content="Earn fees by providing liquidity to VanSwap’s decentralized pools on Vana Chain & 0G Network.">
   <meta name="twitter:image" content="https://vanswap.xyz/assets/og-liquidity.png">
 
   <link rel="canonical" href="https://vanswap.xyz/liquidity">
@@ -485,8 +485,9 @@
         factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
         w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
         vans: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199',
-        panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',   
-        wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
+       panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',   
+
+      wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
         usdc: '0x1f3aa82227281ca364bfb3d253b0f1af1da6473e'
       },
       nativeCurrency: {
@@ -595,8 +596,7 @@
     'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
     'function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)',
     'function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)',
-    'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)',
-    'function removeLiquidityETHSupportingFeeOnTransferTokens(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountETH)'
+    'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)'
   ];
 
   const FACTORY_ABI = [
@@ -834,6 +834,128 @@
     }
 
     return 0;
+  }
+
+  // =============================================
+  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
+  // =============================================
+
+  async function calculateOptimalAmountB() {
+    if (!provider || !account || isCalculatingB) return;
+
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingB = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+
+        if (amountBOptimal.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
+        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount B:', error);
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingA = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        if (amountAOptimal.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
+        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
+    }
   }
 
   // =============================================
@@ -1937,7 +2059,7 @@
   }
 
   // =============================================
-  // REMOVE LIQUIDITY - PERBAIKAN UTAMA
+  // REMOVE LIQUIDITY
   // =============================================
 
   async function checkLPAllowance(pairAddress) {
@@ -2095,56 +2217,25 @@
         btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(85).div(100);
-      const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(85).div(100);
+      const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
+      const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
 
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
       setStatus('Removing liquidity...');
 
-      // PERBAIKAN UTAMA: Deteksi token native dengan benar untuk semua jaringan
       const currentNetwork = networkManager.getCurrentNetwork();
-      const config = NETWORK_CONFIG[currentNetwork];
+      const nativeToken = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
       
-      // Gunakan wrapped native token yang sesuai
-      const wrappedNative = currentNetwork === 'vana' ? 
-        NETWORK_CONFIG.vana.contracts.wvana : 
-        NETWORK_CONFIG.zerog.contracts.w0g;
-      
-      const token0IsNative = currentRemovePool.token0.toLowerCase() === wrappedNative.toLowerCase();
-      const token1IsNative = currentRemovePool.token1.toLowerCase() === wrappedNative.toLowerCase();
-
-      console.log('Remove liquidity details:', {
-        pool: currentRemovePool.address,
-        token0: currentRemovePool.symbol0,
-        token1: currentRemovePool.symbol1,
-        token0Address: currentRemovePool.token0,
-        token1Address: currentRemovePool.token1,
-        wrappedNative: wrappedNative,
-        token0IsNative: token0IsNative,
-        token1IsNative: token1IsNative,
-        liquidityAmount: liquidityAmount.toString(),
-        amount0Min: amount0Min.toString(),
-        amount1Min: amount1Min.toString()
-      });
+      const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeToken.toLowerCase();
+      const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeToken.toLowerCase();
 
       let tx;
 
-      // PERBAIKAN: Gunakan fungsi yang tepat berdasarkan apakah ada token native
       if (token0IsNative || token1IsNative) {
-        // Remove liquidity dengan native token (menggunakan removeLiquidityETH)
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
-
-        console.log('Calling removeLiquidityETH:', {
-          token: token,
-          liquidity: liquidityAmount.toString(),
-          amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString(),
-          to: account,
-          deadline: deadline
-        });
 
         tx = await router.removeLiquidityETH(
           token,
@@ -2153,20 +2244,9 @@
           amountETHMin,
           account,
           deadline,
-          { gasLimit: 5000000 } // Increased gas limit
+          { gasLimit: 3000000 }
         );
       } else {
-        // Remove liquidity untuk token ERC20 biasa (menggunakan removeLiquidity)
-        console.log('Calling removeLiquidity:', {
-          tokenA: currentRemovePool.token0,
-          tokenB: currentRemovePool.token1,
-          liquidity: liquidityAmount.toString(),
-          amountAMin: amount0Min.toString(),
-          amountBMin: amount1Min.toString(),
-          to: account,
-          deadline: deadline
-        });
-
         tx = await router.removeLiquidity(
           currentRemovePool.token0,
           currentRemovePool.token1,
@@ -2175,14 +2255,13 @@
           amount1Min,
           account,
           deadline,
-          { gasLimit: 5000000 } // Increased gas limit
+          { gasLimit: 3000000 }
         );
       }
 
       const explorerUrl = networkManager.getCurrentConfig().explorer;
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
-      setStatus('Waiting for transaction confirmation...');
       await tx.wait();
 
       showToast('Liquidity removed successfully');
@@ -2190,7 +2269,6 @@
 
       closeRemoveModal();
       
-      // Refresh data
       await updateBalances();
       await updateDropdownBalances();
       await updateLiquidityInfo();
@@ -2198,30 +2276,13 @@
 
     } catch (err) {
       console.error('removeLiquidity error:', err);
-      
-      // PERBAIKAN: Berikan error message yang lebih spesifik
-      let errorMessage = 'Remove liquidity failed: ';
-      
-      if (err.message) {
-        if (err.message.includes('user rejected transaction')) {
-          errorMessage += 'Transaction rejected by user';
-        } else if (err.message.includes('insufficient')) {
-          errorMessage += 'Insufficient liquidity or balance';
-        } else if (err.message.includes('deadline')) {
-          errorMessage += 'Transaction expired, please try again';
-        } else {
-          errorMessage += err.message;
-        }
-      } else {
-        errorMessage += 'Unknown error occurred';
-      }
-      
-      showToast(errorMessage);
+      showToast('Remove liquidity failed: ' + (err && err.message ? err.message : err));
       setStatus('Remove liquidity failed');
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
       btn.textContent = 'Remove Liquidity';
+      setStatus('Ready');
     }
   }
 
@@ -2352,128 +2413,6 @@
     } catch (error) {
       console.error('Approval error:', error);
       throw new Error('Token approval failed: ' + (error.message || error));
-    }
-  }
-
-  // =============================================
-  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
-  // =============================================
-
-  async function calculateOptimalAmountB() {
-    if (!provider || !account || isCalculatingB) return;
-
-    const fromAmt = $('fromAmount').value;
-    if (!fromAmt || parseFloat(fromAmt) <= 0) {
-      return;
-    }
-
-    isCalculatingB = true;
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      // HANYA untuk pool yang sudah ada
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        if (reserveA.isZero() || reserveB.isZero()) {
-          isCalculatingB = false;
-          return;
-        }
-
-        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
-
-        if (amountBOptimal.isZero()) {
-          isCalculatingB = false;
-          return;
-        }
-
-        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
-        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
-      }
-      // Untuk pool baru: TIDAK ADA auto-calculation
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount B:', error);
-    } finally {
-      setTimeout(() => { isCalculatingB = false; }, 100);
-    }
-  }
-
-  async function calculateOptimalAmountA() {
-    if (!provider || !account || isCalculatingA) return;
-
-    const toAmt = $('toAmount').value;
-    if (!toAmt || parseFloat(toAmt) <= 0) {
-      return;
-    }
-
-    isCalculatingA = true;
-
-    try {
-      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
-      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
-
-      const pairAddress = await factory.getPair(tokenA, tokenB);
-
-      // HANYA untuk pool yang sudah ada
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-        const [reserve0, reserve1] = await pairContract.getReserves();
-        const token0 = await pairContract.token0();
-
-        let reserveA, reserveB;
-
-        if (token0.toLowerCase() === tokenA.toLowerCase()) {
-          reserveA = reserve0;
-          reserveB = reserve1;
-        } else {
-          reserveA = reserve1;
-          reserveB = reserve0;
-        }
-
-        if (reserveA.isZero() || reserveB.isZero()) {
-          isCalculatingA = false;
-          return;
-        }
-
-        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
-        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
-
-        if (amountAOptimal.isZero()) {
-          isCalculatingA = false;
-          return;
-        }
-
-        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
-        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
-      }
-      // Untuk pool baru: TIDAK ADA auto-calculation
-
-      updateUSDValues();
-      updateActionBtn();
-    } catch (error) {
-      console.error('Error calculating optimal amount A:', error);
-    } finally {
-      setTimeout(() => { isCalculatingA = false; }, 100);
     }
   }
 
