@@ -1937,7 +1937,7 @@
   }
 
   // =============================================
-  // REMOVE LIQUIDITY - PERBAIKAN UTAMA
+  // REMOVE LIQUIDITY - FIXED VERSION
   // =============================================
 
   async function checkLPAllowance(pairAddress) {
@@ -1970,57 +1970,39 @@
   }
 
   async function showRemoveModal(poolAddress) {
-    currentRemovePool = poolAddress;
+    currentRemovePool = null;
     currentRemovePercentage = 0;
 
     try {
-      const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
-      const [reserve0, reserve1] = await pairContract.getReserves();
-      const token0 = await pairContract.token0();
-      const token1 = await pairContract.token1();
-      const userBalance = await pairContract.balanceOf(account);
-      const totalSupply = await pairContract.totalSupply();
+      const pool = userPools.find(p => p.address === poolAddress);
+      if (!pool) {
+        showToast('Pool not found');
+        return;
+      }
 
-      const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
-      const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
-
-      const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
-        token0Contract.symbol(),
-        token1Contract.symbol(),
-        token0Contract.decimals(),
-        token1Contract.decimals()
-      ]);
-
+      const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, signer);
       const hasAllowance = await checkLPAllowance(poolAddress);
 
       $('removePoolInfo').innerHTML = `
         <div style="text-align:center;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
-            <img src="https://vanswap.xyz/assets/${symbol0.toLowerCase()}.png" alt="${symbol0}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-            <span style="font-weight:600">${symbol0}</span>
+            <img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" alt="${pool.tokenA}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+            <span style="font-weight:600">${pool.tokenA}</span>
             <span>+</span>
-            <img src="https://vanswap.xyz/assets/${symbol1.toLowerCase()}.png" alt="${symbol1}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-            <span style="font-weight:600">${symbol1}</span>
+            <img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" alt="${pool.tokenB}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+            <span style="font-weight:600">${pool.tokenB}</span>
           </div>
-          <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6)}</div>
+          <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${pool.balance}</div>
           ${!hasAllowance ? '<div style="color:var(--warning);font-size:12px;margin-top:8px">⚠️ Approval required</div>' : ''}
         </div>
       `;
 
-      $('removeTokenASymbol').textContent = symbol0;
-      $('removeTokenBSymbol').textContent = symbol1;
+      $('removeTokenASymbol').textContent = pool.tokenA;
+      $('removeTokenBSymbol').textContent = pool.tokenB;
 
       currentRemovePool = {
-        address: poolAddress,
-        token0: token0,
-        token1: token1,
-        symbol0: symbol0,
-        symbol1: symbol1,
-        decimals0: decimals0,
-        decimals1: decimals1,
-        userBalance: userBalance,
-        totalSupply: totalSupply,
-        reserves: [reserve0, reserve1],
+        ...pool,
+        pairContract: pairContract,
         hasAllowance: hasAllowance
       };
 
@@ -2077,81 +2059,77 @@
       setStatus('Removing liquidity...');
       const btn = $('confirmRemoveBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Removing...';
+      btn.innerHTML = '<span class="spinner"></span>Processing...';
 
-      // compute liquidity amount to remove
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
 
-      // Ensure allowance for LP tokens
       if (!currentRemovePool.hasAllowance) {
         setStatus('Approving LP tokens...');
         btn.innerHTML = '<span class="spinner"></span>Approving...';
+
         const approved = await approveLPTokens(currentRemovePool.address);
         if (!approved) {
           throw new Error('Failed to approve LP tokens');
         }
+
         currentRemovePool.hasAllowance = true;
         setStatus('Approval successful, removing liquidity...');
         btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      // compute minimum amounts with conservative slippage (85%)
-      const amount0Expected = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
-      const amount1Expected = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
-      const amount0Min = amount0Expected.mul(85).div(100);
-      const amount1Min = amount1Expected.mul(85).div(100);
+      const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
+      const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
 
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
       setStatus('Removing liquidity...');
 
-      // create router with signer
-      const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-
-      // Determine wrapped native token address for current network (W0G or WVANA)
+      // PERBAIKAN UTAMA: Deteksi token native dengan benar untuk semua jaringan
       const currentNetwork = networkManager.getCurrentNetwork();
-      const wrappedNative = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
+      const config = NETWORK_CONFIG[currentNetwork];
+      
+      // Gunakan wrapped native token yang sesuai
+      const wrappedNative = currentNetwork === 'vana' ? 
+        NETWORK_CONFIG.vana.contracts.wvana : 
+        NETWORK_CONFIG.zerog.contracts.w0g;
+      
+      const token0IsNative = currentRemovePool.token0.toLowerCase() === wrappedNative.toLowerCase();
+      const token1IsNative = currentRemovePool.token1.toLowerCase() === wrappedNative.toLowerCase();
 
-      // Detect whether pair actually contains wrapped native token and at which position
-      const token0Lower = currentRemovePool.token0.toLowerCase();
-      const token1Lower = currentRemovePool.token1.toLowerCase();
-      const wrappedLower = wrappedNative.toLowerCase();
-
-      const isWrappedAt0 = token0Lower === wrappedLower;
-      const isWrappedAt1 = token1Lower === wrappedLower;
-      const useRemoveETH = isWrappedAt0 || isWrappedAt1;
-
-      console.log('Confirm remove liquidity:', {
+      console.log('Remove liquidity details:', {
         pool: currentRemovePool.address,
-        token0: currentRemovePool.token0,
-        token1: currentRemovePool.token1,
-        isWrappedAt0,
-        isWrappedAt1,
+        token0: currentRemovePool.tokenA,
+        token1: currentRemovePool.tokenB,
+        token0Address: currentRemovePool.token0,
+        token1Address: currentRemovePool.token1,
+        wrappedNative: wrappedNative,
+        token0IsNative: token0IsNative,
+        token1IsNative: token1IsNative,
         liquidityAmount: liquidityAmount.toString(),
         amount0Min: amount0Min.toString(),
         amount1Min: amount1Min.toString()
       });
 
       let tx;
-      if (useRemoveETH) {
-        // If wrapped native is present, call removeLiquidityETH with proper parameter order.
-        // The router expects (token, liquidity, amountTokenMin, amountETHMin, to, deadline)
-        // where 'token' is the ERC20 token (non-wrapped), and ETH corresponds to wrappedNative.
-        const tokenIsWrappedAt0 = isWrappedAt0;
-        const tokenAddress = tokenIsWrappedAt0 ? currentRemovePool.token1 : currentRemovePool.token0;
-        const amountTokenMin = tokenIsWrappedAt0 ? amount1Min : amount0Min;
-        const amountETHMin = tokenIsWrappedAt0 ? amount0Min : amount1Min;
 
-        console.log('Calling removeLiquidityETH with:', {
-          tokenAddress,
-          liquidityAmount: liquidityAmount.toString(),
+      // PERBAIKAN: Gunakan fungsi yang tepat berdasarkan apakah ada token native
+      if (token0IsNative || token1IsNative) {
+        // Remove liquidity dengan native token (menggunakan removeLiquidityETH)
+        const token = token0IsNative ? currentRemovePool.token1Address : currentRemovePool.token0Address;
+        const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
+        const amountETHMin = token0IsNative ? amount0Min : amount1Min;
+
+        console.log('Calling removeLiquidityETH:', {
+          token: token,
+          liquidity: liquidityAmount.toString(),
           amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString()
+          amountETHMin: amountETHMin.toString(),
+          to: account,
+          deadline: deadline
         });
 
-        // Call removeLiquidityETH and wait
-        tx = await routerWithSigner.removeLiquidityETH(
-          tokenAddress,
+        tx = await router.removeLiquidityETH(
+          token,
           liquidityAmount,
           amountTokenMin,
           amountETHMin,
@@ -2160,18 +2138,20 @@
           { gasLimit: 5000000 }
         );
       } else {
-        // Standard ERC20-ERC20 removal (tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline)
-        console.log('Calling removeLiquidity with:', {
-          tokenA: currentRemovePool.token0,
-          tokenB: currentRemovePool.token1,
-          liquidityAmount: liquidityAmount.toString(),
+        // Remove liquidity untuk token ERC20 biasa (menggunakan removeLiquidity)
+        console.log('Calling removeLiquidity:', {
+          tokenA: currentRemovePool.token0Address,
+          tokenB: currentRemovePool.token1Address,
+          liquidity: liquidityAmount.toString(),
           amountAMin: amount0Min.toString(),
-          amountBMin: amount1Min.toString()
+          amountBMin: amount1Min.toString(),
+          to: account,
+          deadline: deadline
         });
 
-        tx = await routerWithSigner.removeLiquidity(
-          currentRemovePool.token0,
-          currentRemovePool.token1,
+        tx = await router.removeLiquidity(
+          currentRemovePool.token0Address,
+          currentRemovePool.token1Address,
           liquidityAmount,
           amount0Min,
           amount1Min,
@@ -2181,9 +2161,9 @@
         );
       }
 
-      const explorerUrl = networkManager.getCurrentConfig().explorer;
+      const explorerUrl = config.explorer;
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
-
+      
       setStatus('Waiting for transaction confirmation...');
       await tx.wait();
 
@@ -2191,7 +2171,7 @@
       setStatus('Liquidity removed successfully!');
 
       closeRemoveModal();
-
+      
       // Refresh data
       await updateBalances();
       await updateDropdownBalances();
@@ -2199,14 +2179,17 @@
       await loadUserPools();
 
     } catch (err) {
-      console.error('confirmRemoveLiquidity error:', err);
+      console.error('removeLiquidity error:', err);
+      
+      // PERBAIKAN: Berikan error message yang lebih spesifik
       let errorMessage = 'Remove liquidity failed: ';
-      if (err && err.message) {
+      
+      if (err.message) {
         if (err.message.includes('user rejected transaction')) {
           errorMessage += 'Transaction rejected by user';
-        } else if (err.message.toLowerCase().includes('insufficient')) {
+        } else if (err.message.includes('insufficient')) {
           errorMessage += 'Insufficient liquidity or balance';
-        } else if (err.message.toLowerCase().includes('deadline')) {
+        } else if (err.message.includes('deadline')) {
           errorMessage += 'Transaction expired, please try again';
         } else {
           errorMessage += err.message;
@@ -2214,6 +2197,7 @@
       } else {
         errorMessage += 'Unknown error occurred';
       }
+      
       showToast(errorMessage);
       setStatus('Remove liquidity failed');
     } finally {
@@ -2221,7 +2205,7 @@
       btn.disabled = false;
       btn.textContent = 'Remove Liquidity';
     }
-
+  }
 
   // =============================================
   // IMPORT POOL
