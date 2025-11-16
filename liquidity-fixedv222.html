@@ -451,7 +451,9 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-  // NETWORK CONFIGURATION
+  // =============================================
+  // NETWORK CONFIGURATION - DIPERBAIKI
+  // =============================================
   const NETWORK_CONFIG = {
     vana: {
       chainId: 1480,
@@ -497,11 +499,17 @@
     }
   };
 
-  // NETWORK MANAGER
-  class NetworkManager {
+  // =============================================
+  // CONFIGURATION MANAGER - BARU & DIPERBAIKI
+  // =============================================
+  class ConfigurationManager {
     constructor() {
       this.currentNetwork = this.getStoredNetwork() || 'vana';
-      this.listeners = [];
+      this.updateGlobalConfig();
+    }
+    
+    getStoredNetwork() {
+      return localStorage.getItem('vanswap-network');
     }
     
     setNetwork(network) {
@@ -509,11 +517,9 @@
       
       this.currentNetwork = network;
       localStorage.setItem('vanswap-network', network);
-      this.notifyAllListeners();
+      this.updateGlobalConfig();
       
-      // Update UI immediately
-      this.updateNetworkUI();
-      this.reloadPageForNetwork();
+      return this.getCurrentConfig();
     }
     
     getCurrentNetwork() {
@@ -524,72 +530,53 @@
       return NETWORK_CONFIG[this.currentNetwork];
     }
     
-    getStoredNetwork() {
-      return localStorage.getItem('vanswap-network');
-    }
-    
-    addListener(callback) {
-      this.listeners.push(callback);
-    }
-    
-    notifyAllListeners() {
-      this.listeners.forEach(callback => callback(this.currentNetwork));
-    }
-    
-    updateNetworkUI() {
+    updateGlobalConfig() {
       const config = this.getCurrentConfig();
-      const networkDisplay = document.getElementById('networkDisplay');
-      if (networkDisplay) {
-        networkDisplay.textContent = config.name;
+      
+      // Update semua variabel global
+      window.ROUTER = config.contracts.router;
+      window.FACTORY = config.contracts.factory;
+      window.RPC = config.rpcUrl;
+      window.CHAIN_ID_HEX = config.chainIdHex;
+      
+      // Update token addresses berdasarkan jaringan
+      if (this.currentNetwork === 'vana') {
+        window.WVANA = config.contracts.wvana;
+        window.VANS = config.contracts.vans;
+        window.USDC = config.contracts.usdc;
+      } else { // zerog
+        window.WVANA = config.contracts.w0g;
+        window.VANS = config.contracts.vans;
+        window.USDC = config.contracts.usdc;
       }
+      
+      console.log('Global config updated for:', config.name, {
+        ROUTER: window.ROUTER,
+        FACTORY: window.FACTORY,
+        WVANA: window.WVANA,
+        RPC: window.RPC
+      });
     }
     
-    reloadPageForNetwork() {
-      // Reset form and reload data for new network
-      const fromAmount = document.getElementById('fromAmount');
-      const toAmount = document.getElementById('toAmount');
-      if (fromAmount) fromAmount.value = '';
-      if (toAmount) toAmount.value = '';
-      
-      // Reset display values
-      const status = document.getElementById('status');
-      const txLink = document.getElementById('txLink');
-      if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
-      if (txLink) txLink.innerHTML = '';
-      
-      // Re-initialize contracts and data for new network
-      setTimeout(() => {
-        location.reload();
-      }, 500);
+    getWrappedNative() {
+      return this.currentNetwork === 'vana' 
+        ? NETWORK_CONFIG.vana.contracts.wvana 
+        : NETWORK_CONFIG.zerog.contracts.w0g;
     }
   }
 
-  // Global instance
-  const networkManager = new NetworkManager();
+  // =============================================
+  // INIT GLOBAL VARIABLES
+  // =============================================
+  let ROUTER, FACTORY, WVANA, VANS, USDC, RPC, CHAIN_ID_HEX;
+  const BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
 
-  // CONFIG - Will be overridden by network selection
-  let ROUTER = NETWORK_CONFIG.vana.contracts.router;
-  let FACTORY = NETWORK_CONFIG.vana.contracts.factory;
-  let WVANA = NETWORK_CONFIG.vana.contracts.wvana;
-  let VANS = NETWORK_CONFIG.vana.contracts.vans;
-  let USDC = NETWORK_CONFIG.vana.contracts.usdc;
-  let BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
-  let RPC = NETWORK_CONFIG.vana.rpcUrl;
-  let CHAIN_ID_HEX = NETWORK_CONFIG.vana.chainIdHex;
+  // Initialize configuration manager
+  const configManager = new ConfigurationManager();
 
-  // PERBAIKAN: Gunakan DexScreener untuk harga real-time
-  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens/';
-  
-  // Token addresses untuk DexScreener
-  const DEXSCREENER_TOKENS = {
-    'VANA': NETWORK_CONFIG.vana.contracts.wvana,
-    'VANS': NETWORK_CONFIG.vana.contracts.vans,
-    'BERY': BERY,
-    'USDC': NETWORK_CONFIG.vana.contracts.usdc,
-    '0G': NETWORK_CONFIG.zerog.contracts.w0g,
-    'W0G': NETWORK_CONFIG.zerog.contracts.w0g
-  };
-
+  // =============================================
+  // CONTRACT ABIs
+  // =============================================
   const ROUTER_ABI = [
     'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
     'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
@@ -627,7 +614,24 @@
     'function name() external view returns (string memory)'
   ];
 
-  // STATE
+  // =============================================
+  // DEXSCREENER PRICE API
+  // =============================================
+  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens/';
+  const DEXSCREENER_TOKENS = {
+    'VANA': NETWORK_CONFIG.vana.contracts.wvana,
+    'VANS': NETWORK_CONFIG.vana.contracts.vans,
+    'BERY': BERY,
+    'USDC': NETWORK_CONFIG.vana.contracts.usdc,
+    '0G': NETWORK_CONFIG.zerog.contracts.w0g,
+    'W0G': NETWORK_CONFIG.zerog.contracts.w0g,
+    'PANDA': NETWORK_CONFIG.zerog.contracts.panda,
+    'WVANS': NETWORK_CONFIG.zerog.contracts.wvans
+  };
+
+  // =============================================
+  // APPLICATION STATE
+  // =============================================
   let provider = null;
   let signer = null;
   let account = null;
@@ -639,7 +643,7 @@
   let currentRemovePercentage = 0;
   let tokenPrices = {};
 
-  // Token lists will be set based on network
+  // Token management
   function getTokensForNetwork(network) {
     const config = NETWORK_CONFIG[network];
     
@@ -673,35 +677,18 @@
 
   const $ = id => document.getElementById(id);
 
-  // Initialize network-specific configuration
+  // =============================================
+  // INITIALIZATION FUNCTIONS
+  // =============================================
   function initNetworkConfig() {
-    const currentNetwork = networkManager.getCurrentNetwork();
-    const config = NETWORK_CONFIG[currentNetwork];
-    
-    // Update global config variables
-    ROUTER = config.contracts.router;
-    FACTORY = config.contracts.factory;
-    RPC = config.rpcUrl;
-    CHAIN_ID_HEX = config.chainIdHex;
-    
-    // Set network-specific contracts
-    if (currentNetwork === 'vana') {
-      WVANA = config.contracts.wvana;
-      VANS = config.contracts.vans;
-      USDC = config.contracts.usdc;
-    } else { // zerog
-      WVANA = config.contracts.w0g; // Use W0G for 0G network
-      VANS = config.contracts.vans;
-      USDC = config.contracts.usdc;
-    }
-    
-    // Initialize tokens for current network
-    tokens = getTokensForNetwork(currentNetwork);
+    // Load tokens for current network
+    tokens = getTokensForNetwork(configManager.getCurrentNetwork());
     selectedFrom = tokens[0];
     selectedTo = tokens[2]; // USDC
     
     // Update UI
     updateTokenDisplay();
+    updateNetworkUI();
   }
 
   function updateTokenDisplay() {
@@ -715,7 +702,17 @@
     }
   }
 
-  // NETWORK SELECTOR INITIALIZATION - COMPACT VERSION
+  function updateNetworkUI() {
+    const config = configManager.getCurrentConfig();
+    const networkDisplay = document.getElementById('networkDisplay');
+    if (networkDisplay) {
+      networkDisplay.textContent = config.name;
+    }
+  }
+
+  // =============================================
+  // NETWORK SELECTOR - DIPERBAIKI
+  // =============================================
   function initNetworkSelector() {
     const connectBtn = document.getElementById('connectBtn');
     const dropdown = document.getElementById('walletNetworkDropdown');
@@ -727,10 +724,8 @@
       e.stopPropagation();
       
       if (!account) {
-        // Jika belum connect, langsung connect wallet
         connectWallet();
       } else {
-        // Jika sudah connect, show network dropdown
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
       }
     });
@@ -740,8 +735,18 @@
       option.addEventListener('click', (e) => {
         e.stopPropagation();
         const network = option.getAttribute('data-network');
-        networkManager.setNetwork(network);
+        
+        // Update network dan reload data
+        configManager.setNetwork(network);
+        initNetworkConfig();
+        
+        // Re-initialize contracts
+        if (provider) {
+          initializeContracts();
+        }
+        
         dropdown.style.display = 'none';
+        showToast(`Switched to ${NETWORK_CONFIG[network].name}`);
       });
     });
 
@@ -759,12 +764,7 @@
       dropdown.style.display = 'none';
     });
 
-    // Update UI when network changes
-    networkManager.addListener((network) => {
-      updateNetworkUI();
-    });
-
-    // Update when account changes
+    // Update wallet display
     function updateWalletDisplay() {
       if (account) {
         walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
@@ -775,23 +775,34 @@
 
     // Set initial state
     updateWalletDisplay();
-    updateNetworkUI();
   }
 
-  function updateNetworkUI() {
-    const config = networkManager.getCurrentConfig();
-    const networkDisplay = document.getElementById('networkDisplay');
-    if (networkDisplay) {
-      networkDisplay.textContent = config.name;
+  function initializeContracts() {
+    if (provider) {
+      router = new ethers.Contract(ROUTER, ROUTER_ABI, signer || provider);
+      factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
     }
   }
 
+  // =============================================
+  // UTILITY FUNCTIONS
+  // =============================================
   function showToast(msg, t = 2400){
-    const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
-    el.style.position = 'fixed'; el.style.bottom = '20px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
-    el.style.background = 'var(--primary)'; el.style.color = 'white'; el.style.padding = '12px 20px';
-    el.style.borderRadius = '8px'; el.style.zIndex = '9999'; el.style.fontWeight = '600';
-    el.style.opacity = '0'; el.style.transition = 'opacity .18s';
+    const el = document.createElement('div'); 
+    el.className = 'toast'; 
+    el.textContent = msg;
+    el.style.position = 'fixed'; 
+    el.style.bottom = '20px'; 
+    el.style.left = '50%'; 
+    el.style.transform = 'translateX(-50%)';
+    el.style.background = 'var(--primary)'; 
+    el.style.color = 'white'; 
+    el.style.padding = '12px 20px';
+    el.style.borderRadius = '8px'; 
+    el.style.zIndex = '9999'; 
+    el.style.fontWeight = '600';
+    el.style.opacity = '0'; 
+    el.style.transition = 'opacity .18s';
     document.body.appendChild(el);
     setTimeout(()=> el.style.opacity = '1', 10);
     setTimeout(()=> { el.style.opacity = '0'; setTimeout(()=> el.remove(), 300); }, t);
@@ -800,9 +811,8 @@
   function setStatus(s){ $('status').textContent = s }
 
   // =============================================
-  // HARGA REAL DARI DEXSCREENER
+  // PRICE FUNCTIONS
   // =============================================
-
   async function getRealTokenPrice(tokenSymbol) {
     if (tokenPrices[tokenSymbol] && (Date.now() - tokenPrices[tokenSymbol].timestamp) < 30000) {
       return tokenPrices[tokenSymbol].price;
@@ -839,7 +849,6 @@
   // =============================================
   // VIEW MANAGEMENT
   // =============================================
-
   function switchToMyPoolsView() {
     $('myPoolsTab').classList.add('active');
     $('addTab').classList.remove('active');
@@ -888,7 +897,6 @@
   // =============================================
   // MENU & DROPDOWNS
   // =============================================
-
   const menuBtn = $('menuBtn');
   const menuDropdown = $('menuDropdown');
   menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menuDropdown.classList.toggle('show'); });
@@ -902,6 +910,9 @@
   });
   document.addEventListener('click', ()=> menuDropdown.classList.remove('show'));
 
+  // =============================================
+  // TOKEN MANAGEMENT
+  // =============================================
   function buildTokenListHtml(type){
     const listEl = (type==='from') ? $('fromList') : $('toList');
     listEl.innerHTML = '';
@@ -910,6 +921,7 @@
     listEl.appendChild(search);
     const header = document.createElement('div'); header.style.color = 'var(--muted)'; header.style.fontSize='13px'; header.style.marginBottom = '8px'; header.textContent = `Select Token (${tokens.length})`;
     listEl.appendChild(header);
+    
     for(const t of tokens){
       const opt = document.createElement('div'); opt.className = 'token-option'; opt.setAttribute('data-addr', t.address);
       let statusBadge = '';
@@ -917,8 +929,6 @@
         statusBadge = '<span class="token-verified">✓ Verified</span>';
       } else if (t.custom) {
         statusBadge = '<span class="token-imported">Imported</span>';
-      } else if (t.warning) {
-        statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
       }
 
       opt.innerHTML = `<img src="${t.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
@@ -931,152 +941,12 @@
       listEl.appendChild(opt);
     }
 
-    const addTokenBtn = document.createElement('div');
-    addTokenBtn.className = 'add-token-btn';
-    addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
-    addTokenBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showAddTokenForm(type);
-    });
-    listEl.appendChild(addTokenBtn);
-
-    if(tokens.length===0){ const no = document.createElement('div'); no.className='token-addr'; no.style.padding='12px'; no.textContent='No tokens'; listEl.appendChild(no); }
-    listEl.style.display = 'block'; listEl.style.pointerEvents = 'auto';
-  }
-
-  function showAddTokenForm(type) {
-    const listEl = (type==='from') ? $('fromList') : $('toList');
-
-    if (listEl.querySelector('.add-token-form')) {
-      return;
+    if(tokens.length===0){ 
+      const no = document.createElement('div'); no.className='token-addr'; no.style.padding='12px'; no.textContent='No tokens'; listEl.appendChild(no); 
     }
-
-    const form = document.createElement('div');
-    form.className = 'add-token-form';
-    form.innerHTML = `
-      <div class="form-group">
-        <label class="form-label">Token Contract Address</label>
-        <input type="text" class="form-input" id="tokenAddressInput" placeholder="0x..." />
-      </div>
-      <div class="warning-box">
-        <div class="warning-header">
-          <span>⚠️</span>
-          <span>Security Warning</span>
-        </div>
-        <div class="warning-text">
-          Anyone can create ERC-20 tokens. Verify the token contract address before adding it. 
-          Fake tokens may look similar to legitimate ones. Always double-check the contract address from official sources.
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-secondary" id="cancelAddToken">Cancel</button>
-        <button class="btn btn-primary" id="importToken">Import Token</button>
-      </div>
-    `;
-
-    listEl.appendChild(form);
-
-    setTimeout(() => {
-      const input = form.querySelector('#tokenAddressInput');
-      if (input) input.focus();
-    }, 100);
-
-    form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
-      e.stopPropagation();
-      form.remove();
-    });
-
-    form.querySelector('#importToken').addEventListener('click', (e) => {
-      e.stopPropagation();
-      importCustomToken(type, form.querySelector('#tokenAddressInput').value);
-    });
-
-    form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.stopPropagation();
-        importCustomToken(type, form.querySelector('#tokenAddressInput').value);
-      }
-    });
-  }
-
-  async function importCustomToken(type, address) {
-    if (!address || address.trim() === '') {
-      showToast('Please enter a token address');
-      return;
-    }
-
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
-      showToast('Invalid token address format');
-      return;
-    }
-
-    const existingToken = tokens.find(t => 
-      t.address.toLowerCase() === address.trim().toLowerCase()
-    );
-
-    if (existingToken) {
-      showToast('Token already in list');
-      selectToken(type, existingToken);
-      return;
-    }
-
-    try {
-      setStatus('Importing token...');
-
-      if (!provider) {
-        provider = new ethers.providers.JsonRpcProvider(RPC);
-      }
-
-      const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
-
-      const [symbol, decimals] = await Promise.all([
-        tokenContract.symbol(),
-        tokenContract.decimals()
-      ]);
-
-      const newToken = {
-        symbol: symbol,
-        address: address,
-        decimals: decimals,
-        logo: 'https://vanswap.xyz/assets/unknown.png',
-        custom: true,
-        verified: false
-      };
-
-      tokens.push(newToken);
-      saveCustomTokens();
-      selectToken(type, newToken);
-      buildTokenListHtml(type);
-
-      showToast(`Token ${symbol} imported successfully`);
-      setStatus('Token imported');
-
-    } catch (error) {
-      console.error('Error importing token:', error);
-      showToast('Failed to import token. Check the address and try again.');
-      setStatus('Import failed');
-    }
-  }
-
-  function saveCustomTokens() {
-    const customTokens = tokens.filter(t => t.custom);
-    localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
-  }
-
-  function loadCustomTokens() {
-    try {
-      const stored = localStorage.getItem('vanswap_custom_tokens');
-      if (stored) {
-        const customTokens = JSON.parse(stored);
-        customTokens.forEach(ct => {
-          if (!tokens.some(t => t.address.toLowerCase() === ct.address.toLowerCase())) {
-            tokens.push(ct);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error loading custom tokens:', error);
-    }
+    
+    listEl.style.display = 'block'; 
+    listEl.style.pointerEvents = 'auto';
   }
 
   window.filterTokens = function(type, term){ 
@@ -1144,16 +1014,12 @@
   }
 
   // =============================================
-  // WALLET & CHAIN HANDLING
+  // WALLET & CHAIN HANDLING - DIPERBAIKI
   // =============================================
-
-  const connectBtn = $('connectBtn');
-  
   async function ensureCorrectChain(){
     if(!window.ethereum) return false;
     try{
-      const currentNetwork = networkManager.getCurrentNetwork();
-      const config = NETWORK_CONFIG[currentNetwork];
+      const config = configManager.getCurrentConfig();
       
       const net = await window.ethereum.request({ method: 'eth_chainId' });
       if(net !== config.chainIdHex){
@@ -1194,12 +1060,16 @@
         walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
       }
       
+      // PERBAIKAN: Pastikan config ter-update sebelum initialize contracts
+      configManager.updateGlobalConfig();
+      
       provider = new ethers.providers.Web3Provider(window.ethereum);
       signer = provider.getSigner();
-      router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-      factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
       
-      setStatus('Connected');
+      // PERBAIKAN: Initialize contracts dengan config terbaru
+      initializeContracts();
+      
+      setStatus('Connected to ' + configManager.getCurrentConfig().name);
       await updateBalances(); 
       await updateDropdownBalances(); 
       updateActionBtn(); 
@@ -1212,14 +1082,11 @@
     }
   }
 
-  // Tambahkan fungsi disconnect
   function disconnectWallet() {
     account = null;
     signer = null;
-    const connectBtn = document.getElementById('connectBtn');
     const walletText = document.getElementById('walletText');
     
-    if (connectBtn) connectBtn.textContent = 'Connect Wallet';
     if (walletText) walletText.textContent = 'Connect Wallet';
     
     // Reset balances and form
@@ -1242,7 +1109,9 @@
       );
       
       if (targetNetwork) {
-        networkManager.setNetwork(targetNetwork);
+        configManager.setNetwork(targetNetwork);
+        initNetworkConfig();
+        initializeContracts();
       } else {
         setStatus('Unsupported chain - please switch to Vana or 0G');
       }
@@ -1273,7 +1142,6 @@
   // =============================================
   // BALANCES & MAX
   // =============================================
-
   async function updateBalances(){
     if(!provider || !account) return;
     try{
@@ -1348,7 +1216,6 @@
   // =============================================
   // USD VALUES & LIQUIDITY INFO
   // =============================================
-
   async function updateUSDValues() {
     if (!provider) return;
 
@@ -1491,22 +1358,12 @@
       }
     } catch (error) {
       console.error('Error updating liquidity info:', error);
-      $('pooledTokenA').textContent = '0';
-      $('pooledTokenB').textContent = '0';
-      $('priceA').textContent = '0';
-      $('priceB').textContent = '0';
-      $('poolSharePercent').textContent = '0%';
-      $('poolShareValue').textContent = '0%';
-      $('poolTokens').textContent = '0';
-      $('totalLiquidity').textContent = '$0';
-      $('dailyVolume').textContent = '$0';
     }
   }
 
   // =============================================
   // TVL STATS
   // =============================================
-
   async function updateTVLStats() {
     if (!provider) return;
 
@@ -1574,7 +1431,6 @@
   // =============================================
   // USER POOLS
   // =============================================
-
   async function loadUserPools() {
     if (!account || !provider) {
       $('noPoolsMessage').style.display = 'block';
@@ -1710,9 +1566,8 @@
   }
 
   // =============================================
-  // ADD LIQUIDITY
+  // ADD LIQUIDITY - DIPERBAIKI
   // =============================================
-
   async function addLiquidity() {
     if (!account || !signer) {
       await connectWallet();
@@ -1733,10 +1588,8 @@
       btn.innerHTML = '<span class="spinner"></span>Processing...';
       setStatus('Preparing add liquidity...');
 
-      if (typeof selectedFrom.decimals === 'undefined' || typeof selectedTo.decimals === 'undefined') {
-        showToast('Token decimals belum terdeteksi, coba refresh atau pilih token lain');
-        return;
-      }
+      // PERBAIKAN: Pastikan config ter-update
+      configManager.updateGlobalConfig();
 
       const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
       const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
@@ -1748,44 +1601,14 @@
       const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
       const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
-      if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
-        try {
-          const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
-          const [reserve0, reserve1] = await pairContract.getReserves();
-          const token0 = await pairContract.token0();
-
-          let reserveA, reserveB;
-          if (token0.toLowerCase() === addressA.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-          } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-          }
-
-          const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
-          const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
-
-          if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
-            const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
-            if (!confirmRemove) {
-              btn.disabled = false;
-              btn.textContent = 'Add Liquidity';
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('Error validating ratio:', error);
-        }
-      }
-
+      
       let finalPairAddr = pairAddr;
-      if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
+      if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero) {
         showToast('Creating new pool...');
         setStatus('Creating new pool...');
         try {
           const txCreate = await factoryWithSigner.createPair(addressA, addressB);
-          const explorerUrl = networkManager.getCurrentConfig().explorer;
+          const explorerUrl = configManager.getCurrentConfig().explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txCreate.hash}" target="_blank" style="color:var(--accent)">Creating Pair...</a>`;
           await txCreate.wait();
           showToast('Pool created successfully!');
@@ -1815,7 +1638,7 @@
           deadline,
           { value: amountADesired, gasLimit: 3000000 }
         );
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
+        const explorerUrl = configManager.getCurrentConfig().explorer;
         $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
 
@@ -1831,7 +1654,7 @@
           deadline,
           { value: amountBDesired, gasLimit: 3000000 }
         );
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
+        const explorerUrl = configManager.getCurrentConfig().explorer;
         $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
 
@@ -1850,7 +1673,7 @@
           deadline,
           { gasLimit: 3000000 }
         );
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
+        const explorerUrl = configManager.getCurrentConfig().explorer;
         $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         await tx.wait();
       }
@@ -1937,9 +1760,8 @@
   }
 
   // =============================================
-  // REMOVE LIQUIDITY - FIXED VERSION
+  // REMOVE LIQUIDITY - DIPERBAIKI SECARA MENYELURUH
   // =============================================
-
   async function checkLPAllowance(pairAddress) {
     if (!account || !signer) return false;
 
@@ -1960,7 +1782,7 @@
 
     try {
       const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
-      const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+      const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256, { gasLimit: 100000 });
       await txApprove.wait();
       return true;
     } catch (error) {
@@ -1970,40 +1792,69 @@
   }
 
   async function showRemoveModal(poolAddress) {
-    currentRemovePool = null;
+    currentRemovePool = poolAddress;
     currentRemovePercentage = 0;
 
     try {
-      const pool = userPools.find(p => p.address === poolAddress);
-      if (!pool) {
-        showToast('Pool not found');
-        return;
-      }
+      // PERBAIKAN: Pastikan config ter-update
+      configManager.updateGlobalConfig();
+      
+      const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const token0 = await pairContract.token0();
+      const token1 = await pairContract.token1();
+      const userBalance = await pairContract.balanceOf(account);
+      const totalSupply = await pairContract.totalSupply();
 
-      const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, signer);
+      const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
+      const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+
+      const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
+        token0Contract.symbol(),
+        token1Contract.symbol(),
+        token0Contract.decimals(),
+        token1Contract.decimals()
+      ]);
+
+      // PERBAIKAN: Deteksi native token yang benar
+      const wrappedNative = configManager.getWrappedNative();
+      const token0IsNative = token0.toLowerCase() === wrappedNative.toLowerCase();
+      const token1IsNative = token1.toLowerCase() === wrappedNative.toLowerCase();
+
       const hasAllowance = await checkLPAllowance(poolAddress);
 
       $('removePoolInfo').innerHTML = `
         <div style="text-align:center;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
-            <img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" alt="${pool.tokenA}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-            <span style="font-weight:600">${pool.tokenA}</span>
+            <img src="https://vanswap.xyz/assets/${symbol0.toLowerCase()}.png" alt="${symbol0}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+            <span style="font-weight:600">${symbol0}</span>
             <span>+</span>
-            <img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" alt="${pool.tokenB}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
-            <span style="font-weight:600">${pool.tokenB}</span>
+            <img src="https://vanswap.xyz/assets/${symbol1.toLowerCase()}.png" alt="${symbol1}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+            <span style="font-weight:600">${symbol1}</span>
           </div>
-          <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${pool.balance}</div>
+          <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6)}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:4px">${token0IsNative ? symbol0 + ' is native' : ''} ${token1IsNative ? symbol1 + ' is native' : ''}</div>
           ${!hasAllowance ? '<div style="color:var(--warning);font-size:12px;margin-top:8px">⚠️ Approval required</div>' : ''}
         </div>
       `;
 
-      $('removeTokenASymbol').textContent = pool.tokenA;
-      $('removeTokenBSymbol').textContent = pool.tokenB;
+      $('removeTokenASymbol').textContent = symbol0;
+      $('removeTokenBSymbol').textContent = symbol1;
 
       currentRemovePool = {
-        ...pool,
-        pairContract: pairContract,
-        hasAllowance: hasAllowance
+        address: poolAddress,
+        token0: token0,
+        token1: token1,
+        symbol0: symbol0,
+        symbol1: symbol1,
+        decimals0: decimals0,
+        decimals1: decimals1,
+        userBalance: userBalance,
+        totalSupply: totalSupply,
+        reserves: [reserve0, reserve1],
+        hasAllowance: hasAllowance,
+        token0IsNative: token0IsNative,
+        token1IsNative: token1IsNative
       };
 
       document.querySelectorAll('.percentage-btn').forEach(btn => {
@@ -2056,14 +1907,42 @@
     }
 
     try {
-      setStatus('Removing liquidity...');
+      console.log('=== START REMOVE LIQUIDITY ===');
+      setStatus('Preparing to remove liquidity...');
       const btn = $('confirmRemoveBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Processing...';
+      btn.innerHTML = '<span class="spinner"></span>Preparing...';
+
+      // PERBAIKAN: Pastikan wallet terhubung dan config ter-update
+      if (!account || !signer) {
+        await connectWallet();
+        if (!account || !signer) {
+          throw new Error('Wallet not connected');
+        }
+      }
+
+      configManager.updateGlobalConfig();
+      
+      // PERBAIKAN: Re-initialize router dengan config terbaru
+      router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
 
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+      
+      console.log('Remove Configuration:', {
+        network: configManager.getCurrentNetwork(),
+        router: ROUTER,
+        pool: currentRemovePool.address,
+        token0: currentRemovePool.symbol0,
+        token1: currentRemovePool.symbol1,
+        token0IsNative: currentRemovePool.token0IsNative,
+        token1IsNative: currentRemovePool.token1IsNative,
+        liquidityAmount: ethers.utils.formatEther(liquidityAmount),
+        percentage: currentRemovePercentage + '%'
+      });
 
+      // PERBAIKAN: Check allowance dengan detail
       if (!currentRemovePool.hasAllowance) {
+        console.log('Approving LP tokens...');
         setStatus('Approving LP tokens...');
         btn.innerHTML = '<span class="spinner"></span>Approving...';
 
@@ -2071,87 +1950,64 @@
         if (!approved) {
           throw new Error('Failed to approve LP tokens');
         }
-
         currentRemovePool.hasAllowance = true;
-        setStatus('Approval successful, removing liquidity...');
-        btn.innerHTML = '<span class="spinner"></span>Removing...';
+        
+        // Tunggu sebentar untuk memastikan approval diproses
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
-      const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
+      // Calculate min amounts dengan slippage 5%
+      const amount0Min = currentRemovePool.reserves[0]
+        .mul(liquidityAmount)
+        .div(currentRemovePool.totalSupply)
+        .mul(95) // 5% slippage
+        .div(100);
+        
+      const amount1Min = currentRemovePool.reserves[1]
+        .mul(liquidityAmount)
+        .div(currentRemovePool.totalSupply)
+        .mul(95) // 5% slippage
+        .div(100);
 
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-      setStatus('Removing liquidity...');
-
-      // PERBAIKAN UTAMA: Deteksi token native dengan benar untuk semua jaringan
-      const currentNetwork = networkManager.getCurrentNetwork();
-      const config = NETWORK_CONFIG[currentNetwork];
-      
-      // Gunakan wrapped native token yang sesuai
-      const wrappedNative = currentNetwork === 'vana' ? 
-        NETWORK_CONFIG.vana.contracts.wvana : 
-        NETWORK_CONFIG.zerog.contracts.w0g;
-      
-      const token0IsNative = currentRemovePool.token0.toLowerCase() === wrappedNative.toLowerCase();
-      const token1IsNative = currentRemovePool.token1.toLowerCase() === wrappedNative.toLowerCase();
-
-      console.log('Remove liquidity details:', {
-        pool: currentRemovePool.address,
-        token0: currentRemovePool.tokenA,
-        token1: currentRemovePool.tokenB,
-        token0Address: currentRemovePool.token0,
-        token1Address: currentRemovePool.token1,
-        wrappedNative: wrappedNative,
-        token0IsNative: token0IsNative,
-        token1IsNative: token1IsNative,
-        liquidityAmount: liquidityAmount.toString(),
-        amount0Min: amount0Min.toString(),
-        amount1Min: amount1Min.toString()
+      console.log('Min Amounts:', {
+        amount0Min: ethers.utils.formatUnits(amount0Min, currentRemovePool.decimals0),
+        amount1Min: ethers.utils.formatUnits(amount1Min, currentRemovePool.decimals1)
       });
 
       let tx;
+      setStatus('Removing liquidity...');
+      btn.innerHTML = '<span class="spinner"></span>Removing...';
 
-      // PERBAIKAN: Gunakan fungsi yang tepat berdasarkan apakah ada token native
-      if (token0IsNative || token1IsNative) {
-        // Remove liquidity dengan native token (menggunakan removeLiquidityETH)
-        const token = token0IsNative ? currentRemovePool.token1Address : currentRemovePool.token0Address;
-        const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
-        const amountETHMin = token0IsNative ? amount0Min : amount1Min;
-
-        console.log('Calling removeLiquidityETH:', {
-          token: token,
-          liquidity: liquidityAmount.toString(),
-          amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString(),
-          to: account,
-          deadline: deadline
-        });
-
+      // PERBAIKAN: Logic remove yang lebih robust
+      if (currentRemovePool.token0IsNative) {
+        console.log('Executing: removeLiquidityETH (token0 is native)');
         tx = await router.removeLiquidityETH(
-          token,
+          currentRemovePool.token1, // token
           liquidityAmount,
-          amountTokenMin,
-          amountETHMin,
+          amount1Min, // amountTokenMin
+          amount0Min, // amountETHMin
+          account,
+          deadline,
+          { gasLimit: 5000000 }
+        );
+      } else if (currentRemovePool.token1IsNative) {
+        console.log('Executing: removeLiquidityETH (token1 is native)');
+        tx = await router.removeLiquidityETH(
+          currentRemovePool.token0, // token
+          liquidityAmount,
+          amount0Min, // amountTokenMin  
+          amount1Min, // amountETHMin
           account,
           deadline,
           { gasLimit: 5000000 }
         );
       } else {
-        // Remove liquidity untuk token ERC20 biasa (menggunakan removeLiquidity)
-        console.log('Calling removeLiquidity:', {
-          tokenA: currentRemovePool.token0Address,
-          tokenB: currentRemovePool.token1Address,
-          liquidity: liquidityAmount.toString(),
-          amountAMin: amount0Min.toString(),
-          amountBMin: amount1Min.toString(),
-          to: account,
-          deadline: deadline
-        });
-
+        console.log('Executing: removeLiquidity (both ERC20)');
         tx = await router.removeLiquidity(
-          currentRemovePool.token0Address,
-          currentRemovePool.token1Address,
+          currentRemovePool.token0,
+          currentRemovePool.token1,
           liquidityAmount,
           amount0Min,
           amount1Min,
@@ -2161,45 +2017,46 @@
         );
       }
 
-      const explorerUrl = config.explorer;
+      console.log('Remove TX Hash:', tx.hash);
+      const explorerUrl = configManager.getCurrentConfig().explorer;
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
-      setStatus('Waiting for transaction confirmation...');
-      await tx.wait();
+      setStatus('Waiting for confirmation...');
+      const receipt = await tx.wait();
 
-      showToast('Liquidity removed successfully');
-      setStatus('Liquidity removed successfully!');
+      console.log('Remove liquidity successful!');
+      showToast('Liquidity removed successfully!');
+      setStatus('Liquidity removed successfully');
 
       closeRemoveModal();
       
       // Refresh data
       await updateBalances();
-      await updateDropdownBalances();
       await updateLiquidityInfo();
       await loadUserPools();
 
     } catch (err) {
-      console.error('removeLiquidity error:', err);
+      console.error('=== REMOVE LIQUIDITY ERROR ===', err);
       
-      // PERBAIKAN: Berikan error message yang lebih spesifik
       let errorMessage = 'Remove liquidity failed: ';
       
-      if (err.message) {
-        if (err.message.includes('user rejected transaction')) {
-          errorMessage += 'Transaction rejected by user';
-        } else if (err.message.includes('insufficient')) {
-          errorMessage += 'Insufficient liquidity or balance';
-        } else if (err.message.includes('deadline')) {
-          errorMessage += 'Transaction expired, please try again';
-        } else {
-          errorMessage += err.message;
-        }
+      if (err.code === 4001) {
+        errorMessage = 'Transaction rejected by user';
+      } else if (err.message.includes('INSUFFICIENT_LIQUIDITY')) {
+        errorMessage = 'Insufficient liquidity in pool';
+      } else if (err.message.includes('INSUFFICIENT_A_AMOUNT') || err.message.includes('INSUFFICIENT_B_AMOUNT')) {
+        errorMessage = 'Insufficient output amount. Try increasing slippage tolerance.';
+      } else if (err.message.includes('TRANSFER_FROM_FAILED')) {
+        errorMessage = 'Transfer failed. Please check LP token approval.';
+      } else if (err.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient funds for gas fee';
       } else {
-        errorMessage += 'Unknown error occurred';
+        errorMessage += err.message || 'Unknown error occurred';
       }
       
       showToast(errorMessage);
       setStatus('Remove liquidity failed');
+      
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
@@ -2210,7 +2067,6 @@
   // =============================================
   // IMPORT POOL
   // =============================================
-
   async function importPool() {
     const tokenAInput = $('tokenAInput').value.trim();
     const tokenBInput = $('tokenBInput').value.trim();
@@ -2283,8 +2139,6 @@
         tokens.push(tokenBObj);
       }
 
-      saveCustomTokens();
-
       // Switch to add liquidity view with imported tokens
       selectedFrom = tokenAObj;
       selectedTo = tokenBObj;
@@ -2310,7 +2164,6 @@
   // =============================================
   // APPROVAL HANDLING
   // =============================================
-
   async function ensureApproved(tokenAddress, amount) {
     if (!account || !signer) return false;
     
@@ -2323,9 +2176,11 @@
       
       if (allowance.lt(amount)) {
         setStatus('Approving token...');
-        const txApprove = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
+        const txApprove = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256, { gasLimit: 100000 });
+        
+        const explorerUrl = configManager.getCurrentConfig().explorer;
         $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txApprove.hash}" target="_blank" style="color:var(--accent)">Approving...</a>`;
+        
         await txApprove.wait();
         setStatus('Approval successful');
         return true;
@@ -2338,9 +2193,8 @@
   }
 
   // =============================================
-  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
+  // AUTO-CALCULATION
   // =============================================
-
   async function calculateOptimalAmountB() {
     if (!provider || !account || isCalculatingB) return;
 
@@ -2357,7 +2211,7 @@
 
       const pairAddress = await factory.getPair(tokenA, tokenB);
 
-      // HANYA untuk pool yang sudah ada
+      // Hanya untuk pool yang sudah ada
       if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
         const [reserve0, reserve1] = await pairContract.getReserves();
@@ -2389,7 +2243,6 @@
         const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
         $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
       }
-      // Untuk pool baru: TIDAK ADA auto-calculation
 
       updateUSDValues();
       updateActionBtn();
@@ -2416,7 +2269,7 @@
 
       const pairAddress = await factory.getPair(tokenA, tokenB);
 
-      // HANYA untuk pool yang sudah ada
+      // Hanya untuk pool yang sudah ada
       if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
         const [reserve0, reserve1] = await pairContract.getReserves();
@@ -2448,7 +2301,6 @@
         const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
         $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
       }
-      // Untuk pool baru: TIDAK ADA auto-calculation
 
       updateUSDValues();
       updateActionBtn();
@@ -2462,7 +2314,6 @@
   // =============================================
   // EVENT LISTENERS & INITIALIZATION
   // =============================================
-
   $('fromAmount').addEventListener('input', async function() {
     if (isCalculatingB) return;
     updateUSDValues();
@@ -2479,14 +2330,72 @@
 
   $('actionBtn').addEventListener('click', addLiquidity);
 
-  // Initialize the application
+  // =============================================
+  // DEBUG FUNCTIONS
+  // =============================================
+  async function debugRemoveLiquidity(poolAddress) {
+    try {
+      console.log('=== DEBUG REMOVE LIQUIDITY ===');
+      
+      const currentNetwork = configManager.getCurrentNetwork();
+      const config = NETWORK_CONFIG[currentNetwork];
+      const wrappedNative = configManager.getWrappedNative();
+      
+      console.log('Network:', currentNetwork);
+      console.log('Wrapped Native:', wrappedNative);
+      console.log('Router:', ROUTER);
+      
+      const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const token0 = await pairContract.token0();
+      const token1 = await pairContract.token1();
+      const userBalance = await pairContract.balanceOf(account);
+      const totalSupply = await pairContract.totalSupply();
+      
+      const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
+      const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+      
+      const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
+        token0Contract.symbol(),
+        token1Contract.symbol(),
+        token0Contract.decimals(),
+        token1Contract.decimals()
+      ]);
+      
+      console.log('Pool Details:', {
+        poolAddress: poolAddress,
+        token0: token0,
+        token1: token1,
+        symbol0: symbol0,
+        symbol1: symbol1,
+        token0IsNative: token0.toLowerCase() === wrappedNative.toLowerCase(),
+        token1IsNative: token1.toLowerCase() === wrappedNative.toLowerCase(),
+        userBalance: ethers.utils.formatEther(userBalance),
+        totalSupply: ethers.utils.formatEther(totalSupply)
+      });
+      
+      // Check allowance
+      const allowance = await pairContract.allowance(account, ROUTER);
+      console.log('LP Token Allowance:', {
+        allowance: ethers.utils.formatEther(allowance),
+        userBalance: ethers.utils.formatEther(userBalance),
+        hasSufficientAllowance: allowance.gte(userBalance)
+      });
+      
+      console.log('=== END DEBUG ===');
+      
+    } catch (error) {
+      console.error('Debug error:', error);
+    }
+  }
+
+  // =============================================
+  // MAIN INITIALIZATION
+  // =============================================
   async function init() {
     try {
-      // Initialize network configuration first
+      // Initialize network configuration
       initNetworkConfig();
-      
-      // Load custom tokens
-      loadCustomTokens();
       
       // Initialize network selector
       initNetworkSelector();
@@ -2494,16 +2403,15 @@
       // Set initial view
       switchToMyPoolsView();
       
-      // Try to auto-connect if previously connected
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        await connectWallet();
-      }
-      
       // Initialize provider for read-only operations
       if (!provider) {
         provider = new ethers.providers.JsonRpcProvider(RPC);
-        router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
-        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        initializeContracts();
+      }
+      
+      // Try to auto-connect if previously connected
+      if (window.ethereum && window.ethereum.selectedAddress) {
+        await connectWallet();
       }
       
       // Load initial data
@@ -2537,6 +2445,7 @@
   window.connectWallet = connectWallet;
   window.disconnectWallet = disconnectWallet;
   window.filterTokens = filterTokens;
+  window.debugRemoveLiquidity = debugRemoveLiquidity;
   </script>
 </body>
 </html>
