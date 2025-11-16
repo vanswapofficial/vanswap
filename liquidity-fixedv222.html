@@ -481,8 +481,8 @@
       explorer: "https://chainscan.0g.ai",
       logo: "https://vanswap.xyz/assets/0g.png",
       contracts: {
-        router: '0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d',
-        factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
+        router: '0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C',
+        factory: '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D',
         w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
         vans: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199',
         panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',
@@ -1977,7 +1977,7 @@
     btn.disabled = false;
   }
 
-  // REMOVE LIQUIDITY - FIXED VERSION
+  // REMOVE LIQUIDITY - COMPLETELY FIXED VERSION
   async function checkLPAllowance(pairAddress) {
     if (!account || !signer) return false;
 
@@ -2091,12 +2091,25 @@
     if (currentRemovePool) {
       const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
 
-      // FIXED CALCULATION: Use proper decimal handling
-      const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
-      const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+      // FIXED CALCULATION - Gunakan approach yang sama dengan confirmRemoveLiquidity
+      const amount0Expected = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+      const amount1Expected = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
 
-      $('removeTokenAAmount').textContent = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
-      $('removeTokenBAmount').textContent = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
+      const amount0Formatted = parseFloat(ethers.utils.formatUnits(amount0Expected, currentRemovePool.decimals0));
+      const amount1Formatted = parseFloat(ethers.utils.formatUnits(amount1Expected, currentRemovePool.decimals1));
+
+      $('removeTokenAAmount').textContent = amount0Formatted.toFixed(6);
+      $('removeTokenBAmount').textContent = amount1Formatted.toFixed(6);
+
+      // Debug info
+      console.log('Remove percentage calculation:', {
+        percent,
+        liquidityAmount: liquidityAmount.toString(),
+        amount0Expected: amount0Expected.toString(),
+        amount1Expected: amount1Expected.toString(),
+        amount0Formatted,
+        amount1Formatted
+      });
     }
   }
 
@@ -2113,23 +2126,63 @@
     }
 
     try {
-      setStatus('Checking pool configuration...');
-      
-      const currentNetwork = networkManager.getCurrentNetwork();
-      if (currentNetwork !== 'zerog' && currentNetwork !== 'vana') {
-        throw new Error('Please ensure you are on supported network');
-      }
-
-      if (!ROUTER || !FACTORY) {
-        throw new Error('Router/Factory not properly initialized');
-      }
-
-      setStatus('Removing liquidity...');
+      setStatus('Calculating amounts...');
       const btn = $('confirmRemoveBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Removing...';
+      btn.innerHTML = '<span class="spinner"></span>Calculating...';
 
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+
+      // VALIDASI LIQUIDITY AMOUNT
+      if (liquidityAmount.isZero()) {
+        throw new Error('Liquidity amount is zero');
+      }
+
+      if (liquidityAmount.gt(currentRemovePool.userBalance)) {
+        throw new Error('Liquidity amount exceeds balance');
+      }
+
+      // FIXED CALCULATION: Gunakan approach yang lebih aman
+      const reserve0 = currentRemovePool.reserves[0];
+      const reserve1 = currentRemovePool.reserves[1];
+      const totalSupply = currentRemovePool.totalSupply;
+
+      console.log('Pool details:', {
+        reserve0: reserve0.toString(),
+        reserve1: reserve1.toString(),
+        totalSupply: totalSupply.toString(),
+        liquidityAmount: liquidityAmount.toString(),
+        decimals0: currentRemovePool.decimals0,
+        decimals1: currentRemovePool.decimals1
+      });
+
+      // Calculate expected amounts dengan decimal handling yang benar
+      const amount0Expected = reserve0.mul(liquidityAmount).div(totalSupply);
+      const amount1Expected = reserve1.mul(liquidityAmount).div(totalSupply);
+
+      console.log('Expected amounts:', {
+        amount0Expected: amount0Expected.toString(),
+        amount1Expected: amount1Expected.toString()
+      });
+
+      // VALIDASI: Pastikan amounts reasonable
+      if (amount0Expected.gt(reserve0) || amount1Expected.gt(reserve1)) {
+        throw new Error('Calculated amounts exceed pool reserves');
+      }
+
+      // Apply 5% slippage tolerance
+      const amount0Min = amount0Expected.mul(95).div(100);
+      const amount1Min = amount1Expected.mul(95).div(100);
+
+      console.log('Minimum amounts after slippage:', {
+        amount0Min: amount0Min.toString(),
+        amount1Min: amount1Min.toString()
+      });
+
+      // VALIDASI FINAL: Pastikan amounts tidak nol dan reasonable
+      if (amount0Min.isZero() && amount1Min.isZero()) {
+        throw new Error('Minimum amounts are zero');
+      }
 
       if (!currentRemovePool.hasAllowance) {
         setStatus('Approving LP tokens...');
@@ -2141,34 +2194,22 @@
         }
 
         currentRemovePool.hasAllowance = true;
-        setStatus('Approval successful, removing liquidity...');
-        btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      // FIXED CALCULATION: Use proper decimal handling for minimum amounts
-      const amount0Min = currentRemovePool.reserves[0]
-        .mul(liquidityAmount)
-        .div(currentRemovePool.totalSupply)
-        .mul(95).div(100); // 5% slippage
-
-      const amount1Min = currentRemovePool.reserves[1]
-        .mul(liquidityAmount)
-        .div(currentRemovePool.totalSupply)
-        .mul(95).div(100); // 5% slippage
-
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
       setStatus('Removing liquidity...');
+      btn.innerHTML = '<span class="spinner"></span>Removing...';
 
       const currentNetworkName = networkManager.getCurrentNetwork();
-      const nativeToken = currentNetworkName === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
+      const nativeToken = currentNetworkName === 'vana' ? 
+          NETWORK_CONFIG.vana.contracts.wvana : 
+          NETWORK_CONFIG.zerog.contracts.w0g;
       
       const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeToken.toLowerCase();
       const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeToken.toLowerCase();
 
-      let tx;
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-      console.log('Remove liquidity details:', {
+      console.log('Final transaction details:', {
         network: currentNetworkName,
         token0: currentRemovePool.symbol0,
         token1: currentRemovePool.symbol1,
@@ -2177,25 +2218,31 @@
         liquidityAmount: liquidityAmount.toString(),
         amount0Min: amount0Min.toString(),
         amount1Min: amount1Min.toString(),
-        decimals0: currentRemovePool.decimals0,
-        decimals1: currentRemovePool.decimals1
+        amount0Expected: amount0Expected.toString(),
+        amount1Expected: amount1Expected.toString()
       });
 
-      // Validate amounts are reasonable
-      if (amount0Min.gt(currentRemovePool.reserves[0]) || amount1Min.gt(currentRemovePool.reserves[1])) {
-        throw new Error('Calculated minimum amounts exceed pool reserves');
-      }
+      let tx;
 
       if (token0IsNative || token1IsNative) {
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
 
-        console.log('Using removeLiquidityETH with:', {
+        console.log('Using removeLiquidityETH:', {
           token,
           amountTokenMin: amountTokenMin.toString(),
           amountETHMin: amountETHMin.toString()
         });
+
+        // EXTRA VALIDATION untuk amounts
+        if (amountTokenMin.gt(ethers.constants.MaxUint256.div(2))) {
+          throw new Error('Token amount too large, possible calculation error');
+        }
+
+        if (amountETHMin.gt(ethers.constants.MaxUint256.div(2))) {
+          throw new Error('ETH amount too large, possible calculation error');
+        }
 
         tx = await router.removeLiquidityETH(
           token,
@@ -2204,15 +2251,24 @@
           amountETHMin,
           account,
           deadline,
-          { gasLimit: 500000 }
+          { gasLimit: 600000 } // Increased gas limit
         );
       } else {
-        console.log('Using removeLiquidity with:', {
+        console.log('Using removeLiquidity:', {
           token0: currentRemovePool.token0,
           token1: currentRemovePool.token1,
           amount0Min: amount0Min.toString(),
           amount1Min: amount1Min.toString()
         });
+
+        // EXTRA VALIDATION untuk amounts
+        if (amount0Min.gt(ethers.constants.MaxUint256.div(2))) {
+          throw new Error('Amount0 too large, possible calculation error');
+        }
+
+        if (amount1Min.gt(ethers.constants.MaxUint256.div(2))) {
+          throw new Error('Amount1 too large, possible calculation error');
+        }
 
         tx = await router.removeLiquidity(
           currentRemovePool.token0,
@@ -2222,7 +2278,7 @@
           amount1Min,
           account,
           deadline,
-          { gasLimit: 500000 }
+          { gasLimit: 600000 } // Increased gas limit
         );
       }
 
@@ -2230,7 +2286,7 @@
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
       setStatus('Transaction confirmed, waiting...');
-      await tx.wait();
+      const receipt = await tx.wait();
 
       showToast('Liquidity removed successfully');
       setStatus('Liquidity removed successfully!');
@@ -2245,27 +2301,30 @@
     } catch (err) {
       console.error('removeLiquidity error:', err);
       
-      if (err.message.includes('revert')) {
-        showToast('Remove failed: Contract reverted. Check amounts and try again');
-        setStatus('Revert error - check amounts');
+      // Specific error messages
+      if (err.message.includes('too large')) {
+        showToast('Calculation error: Amounts too large. Please try with smaller percentage.');
+        setStatus('Calculation error - try smaller amount');
+      } else if (err.message.includes('revert')) {
+        showToast('Transaction reverted. Possible causes: insufficient liquidity, price change, or contract issue.');
+        setStatus('Transaction reverted');
       } else if (err.message.includes('INSUFFICIENT')) {
-        showToast('Remove failed: Insufficient liquidity or incorrect amounts');
+        showToast('Insufficient liquidity or amount error.');
         setStatus('Insufficient liquidity');
       } else if (err.message.includes('user rejected')) {
-        showToast('Transaction rejected by user');
-        setStatus('Transaction rejected');
+        showToast('Transaction cancelled by user.');
+        setStatus('Transaction cancelled');
       } else if (err.message.includes('exceed pool reserves')) {
-        showToast('Remove failed: Amount calculation error');
+        showToast('Amount calculation error. Please refresh and try again.');
         setStatus('Calculation error');
       } else {
-        showToast('Remove liquidity failed: ' + (err.message || err));
-        setStatus('Remove liquidity failed');
+        showToast('Remove failed: ' + (err.message || err));
+        setStatus('Remove failed');
       }
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
       btn.textContent = 'Remove Liquidity';
-      setStatus('Ready');
     }
   }
 
