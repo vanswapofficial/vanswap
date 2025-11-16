@@ -451,7 +451,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-  // NETWORK CONFIGURATION
+  // NETWORK CONFIGURATION - DIPERBAIKI UNTUK 0G
   const NETWORK_CONFIG = {
     vana: {
       chainId: 1480,
@@ -481,13 +481,13 @@
       explorer: "https://chainscan.0g.ai",
       logo: "https://vanswap.xyz/assets/0g.png",
       contracts: {
+        // KONTRAK 0G YANG DIPERBAIKI
         router: '0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d',
         factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
         w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
         vans: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199',
-       panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',   
-
-      wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
+        panda: '0x1e8f1ddae579222d2b86fe398934815892a06d75',   
+        wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
         usdc: '0x1f3aa82227281ca364bfb3d253b0f1af1da6473e'
       },
       nativeCurrency: {
@@ -591,6 +591,7 @@
     'W0G': NETWORK_CONFIG.zerog.contracts.w0g
   };
 
+  // PERBAIKAN: ABI YANG LEBIH LENGKAP UNTUK ROUTER
   const ROUTER_ABI = [
     'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
     'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
@@ -600,7 +601,8 @@
     'function removeLiquidityETHSupportingFeeOnTransferTokens(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountETH)',
     'function removeLiquidityETHWithPermit(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) external returns (uint amountToken, uint amountETH)',
     'function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) external returns (uint amountETH)',
-    'function removeLiquidityWithPermit(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) external returns (uint amountA, uint amountB)'
+    'function removeLiquidityWithPermit(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) external returns (uint amountA, uint amountB)',
+    'function WETH() external view returns (address)'
   ];
 
   const FACTORY_ABI = [
@@ -2063,7 +2065,7 @@
   }
 
   // =============================================
-  // PERBAIKAN: REMOVE LIQUIDITY - FUNGSI YANG DIPERBAIKI
+  // PERBAIKAN KHUSUS UNTUK REMOVE LIQUIDITY 0G
   // =============================================
 
   async function checkLPAllowance(pairAddress) {
@@ -2222,6 +2224,7 @@
     currentRemovePercentage = 0;
   }
 
+  // PERBAIKAN UTAMA: Fungsi remove liquidity untuk 0G
   async function confirmRemoveLiquidity() {
     if (!currentRemovePool || currentRemovePercentage === 0) {
       showToast('Please select a percentage to remove');
@@ -2270,25 +2273,44 @@
       btn.innerHTML = '<span class="spinner"></span>Removing...';
 
       const currentNetwork = networkManager.getCurrentNetwork();
-      const nativeToken = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
       
-      const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeToken.toLowerCase();
-      const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeToken.toLowerCase();
+      // PERBAIKAN PENTING: Deteksi native token dengan benar untuk 0G
+      let token0IsNative = false;
+      let token1IsNative = false;
+      
+      if (currentNetwork === 'vana') {
+        token0IsNative = currentRemovePool.token0.toLowerCase() === NETWORK_CONFIG.vana.contracts.wvana.toLowerCase();
+        token1IsNative = currentRemovePool.token1.toLowerCase() === NETWORK_CONFIG.vana.contracts.wvana.toLowerCase();
+      } else if (currentNetwork === 'zerog') {
+        // PERBAIKAN: Gunakan W0G address untuk 0G network
+        token0IsNative = currentRemovePool.token0.toLowerCase() === NETWORK_CONFIG.zerog.contracts.w0g.toLowerCase();
+        token1IsNative = currentRemovePool.token1.toLowerCase() === NETWORK_CONFIG.zerog.contracts.w0g.toLowerCase();
+      }
+
+      console.log('Remove liquidity details:', {
+        network: currentNetwork,
+        token0: currentRemovePool.token0,
+        token1: currentRemovePool.token1,
+        token0IsNative,
+        token1IsNative,
+        liquidityAmount: liquidityAmount.toString(),
+        amount0Min: amount0Min.toString(),
+        amount1Min: amount1Min.toString()
+      });
 
       let tx;
 
       if (token0IsNative || token1IsNative) {
-        // Remove liquidity with ETH/native token
+        // Remove liquidity with native token
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
 
-        console.log('Removing liquidity with ETH:', {
+        console.log('Removing liquidity with native token:', {
           token,
           liquidityAmount: liquidityAmount.toString(),
           amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString(),
-          deadline
+          amountETHMin: amountETHMin.toString()
         });
 
         tx = await router.removeLiquidityETH(
@@ -2298,17 +2320,16 @@
           amountETHMin,
           account,
           deadline,
-          { gasLimit: 3000000 }
+          { gasLimit: 500000 } // Gas limit yang lebih tinggi untuk 0G
         );
       } else {
         // Remove liquidity with two ERC20 tokens
-        console.log('Removing liquidity with ERC20:', {
+        console.log('Removing liquidity with ERC20 tokens:', {
           tokenA: currentRemovePool.token0,
           tokenB: currentRemovePool.token1,
           liquidityAmount: liquidityAmount.toString(),
           amountAMin: amount0Min.toString(),
-          amountBMin: amount1Min.toString(),
-          deadline
+          amountBMin: amount1Min.toString()
         });
 
         tx = await router.removeLiquidity(
@@ -2319,7 +2340,7 @@
           amount1Min,
           account,
           deadline,
-          { gasLimit: 3000000 }
+          { gasLimit: 500000 } // Gas limit yang lebih tinggi untuk 0G
         );
       }
 
@@ -2327,7 +2348,9 @@
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
       setStatus('Waiting for transaction confirmation...');
-      await tx.wait();
+      const receipt = await tx.wait();
+
+      console.log('Transaction receipt:', receipt);
 
       showToast('Liquidity removed successfully!');
       setStatus('Liquidity removed successfully');
@@ -2351,13 +2374,15 @@
           errorMessage = 'Insufficient liquidity in pool';
         } else if (err.message.includes('INSUFFICIENT_A_AMOUNT') || err.message.includes('INSUFFICIENT_B_AMOUNT')) {
           errorMessage = 'Insufficient output amount. Try increasing slippage tolerance.';
+        } else if (err.message.includes('execution reverted')) {
+          errorMessage = 'Transaction reverted. Check token addresses and try again.';
         } else {
           errorMessage = err.message;
         }
       }
       
       showToast(errorMessage);
-      setStatus('Remove liquidity failed');
+      setStatus('Remove liquidity failed: ' + errorMessage);
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
