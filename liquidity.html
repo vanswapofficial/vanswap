@@ -424,7 +424,7 @@
       explorer: "https://vanascan.io",
       logo: "https://vanswap.xyz/assets/vana.png",
       contracts: {
-        router: '0xECd5BFE40FCE39c55AC3280E4eedB9c5d733D35C',
+        router: '0xECd5BFE9044640D19dFd2Cdd4F360551d8E3E34C',
         factory: '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D',
         wvana: '0x00eddd9621fb08436d0331c149d1690909a5906d',
         vans: '0x82741ff5937933244eb562A4b396f8079F1de914',
@@ -535,17 +535,29 @@
   let WVANA = NETWORK_CONFIG.vana.contracts.wvana;
   let VANS = NETWORK_CONFIG.vana.contracts.vans;
   let USDC = NETWORK_CONFIG.vana.contracts.usdc;
+  let BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
   let RPC = NETWORK_CONFIG.vana.rpcUrl;
   let CHAIN_ID_HEX = NETWORK_CONFIG.vana.chainIdHex;
+
+  // PERBAIKAN: Gunakan DexScreener untuk harga real-time
+  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens/';
+  
+  // Token addresses untuk DexScreener
+  const DEXSCREENER_TOKENS = {
+    'VANA': NETWORK_CONFIG.vana.contracts.wvana,
+    'VANS': NETWORK_CONFIG.vana.contracts.vans,
+    'BERY': BERY,
+    'USDC': NETWORK_CONFIG.vana.contracts.usdc,
+    '0G': NETWORK_CONFIG.zerog.contracts.w0g,
+    'W0G': NETWORK_CONFIG.zerog.contracts.w0g
+  };
 
   const ROUTER_ABI = [
     'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
     'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
     'function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)',
     'function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)',
-    'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)',
-    'function removeLiquidityETHSupportingFeeOnTransferTokens(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountETH)',
-    'function removeLiquidityETHWithPermit(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) external returns (uint amountToken, uint amountETH)'
+    'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)'
   ];
 
   const FACTORY_ABI = [
@@ -563,8 +575,7 @@
     'function balanceOf(address) view returns (uint256)',
     'function symbol() view returns (string)',
     'function approve(address spender, uint256 amount) external returns (bool)',
-    'function allowance(address owner, address spender) external view returns (uint256)',
-    'function burn(address to) external returns (uint amount0, uint amount1)'
+    'function allowance(address owner, address spender) external view returns (uint256)'
   ];
 
   const ERC20_ABI = [
@@ -598,7 +609,8 @@
         { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true },
         { symbol: 'WVANA', address: config.contracts.wvana, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true },
         { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-        { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
+        { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
+        { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true }
       ];
     } else { // zerog
       return [
@@ -638,7 +650,7 @@
       VANS = config.contracts.vans;
       USDC = config.contracts.usdc;
     } else { // zerog
-      WVANA = config.contracts.w0g;
+      WVANA = config.contracts.w0g; // Use W0G for 0G network
       VANS = config.contracts.vans;
       USDC = config.contracts.usdc;
     }
@@ -663,7 +675,7 @@
     }
   }
 
-  // NETWORK SELECTOR INITIALIZATION
+  // NETWORK SELECTOR INITIALIZATION - COMPACT VERSION
   function initNetworkSelector() {
     const connectBtn = document.getElementById('connectBtn');
     const dropdown = document.getElementById('walletNetworkDropdown');
@@ -675,8 +687,10 @@
       e.stopPropagation();
       
       if (!account) {
+        // Jika belum connect, langsung connect wallet
         connectWallet();
       } else {
+        // Jika sudah connect, show network dropdown
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
       }
     });
@@ -732,6 +746,10 @@
     }
   }
 
+  // =============================================
+  // UTILITY FUNCTIONS
+  // =============================================
+
   function showToast(msg, t = 2400){
     const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
     el.style.position = 'fixed'; el.style.bottom = '20px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
@@ -745,6 +763,17 @@
 
   function setStatus(s){ $('status').textContent = s }
 
+  // PERBAIKAN: Fungsi untuk mendapatkan wrapped native address yang FIXED
+  function getWrappedNativeAddress() {
+    const currentNetwork = networkManager.getCurrentNetwork();
+    // Gunakan hardcoded addresses untuk menghindari masalah case sensitivity
+    if (currentNetwork === 'vana') {
+        return '0x00eddd9621fb08436d0331c149d1690909a5906d'; // WVANA
+    } else {
+        return '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c'; // W0G
+    }
+  }
+
   // =============================================
   // HARGA REAL DARI DEXSCREENER
   // =============================================
@@ -755,17 +784,31 @@
     }
 
     try {
-      // Fallback prices untuk testing
-      const fallbackPrices = {
-        'VANA': 0.15, 'WVANA': 0.15, 'USDC': 1.0, 'VANS': 0.25,
-        '0G': 0.08, 'W0G': 0.08, 'PANDA': 0.02
-      };
-      
-      return fallbackPrices[tokenSymbol] || 0;
+      const tokenAddress = DEXSCREENER_TOKENS[tokenSymbol];
+      if (!tokenAddress) {
+        console.warn(`No DexScreener address for ${tokenSymbol}`);
+        return 0;
+      }
+
+      const response = await fetch(`${DEXSCREENER_API}${tokenAddress}`);
+      const data = await response.json();
+
+      if (data && data.pairs && data.pairs.length > 0) {
+        const price = parseFloat(data.pairs[0].priceUsd);
+        
+        if (price && price > 0) {
+          tokenPrices[tokenSymbol] = {
+            price: price,
+            timestamp: Date.now()
+          };
+          return price;
+        }
+      }
     } catch (error) {
-      console.error(`Error fetching price for ${tokenSymbol}:`, error);
-      return 0;
+      console.error(`Error fetching DexScreener price for ${tokenSymbol}:`, error);
     }
+
+    return 0;
   }
 
   // =============================================
@@ -847,6 +890,10 @@
       let statusBadge = '';
       if (t.verified) {
         statusBadge = '<span class="token-verified">✓ Verified</span>';
+      } else if (t.custom) {
+        statusBadge = '<span class="token-imported">Imported</span>';
+      } else if (t.warning) {
+        statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
       }
 
       opt.innerHTML = `<img src="${t.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
@@ -859,8 +906,152 @@
       listEl.appendChild(opt);
     }
 
+    const addTokenBtn = document.createElement('div');
+    addTokenBtn.className = 'add-token-btn';
+    addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
+    addTokenBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showAddTokenForm(type);
+    });
+    listEl.appendChild(addTokenBtn);
+
     if(tokens.length===0){ const no = document.createElement('div'); no.className='token-addr'; no.style.padding='12px'; no.textContent='No tokens'; listEl.appendChild(no); }
     listEl.style.display = 'block'; listEl.style.pointerEvents = 'auto';
+  }
+
+  function showAddTokenForm(type) {
+    const listEl = (type==='from') ? $('fromList') : $('toList');
+
+    if (listEl.querySelector('.add-token-form')) {
+      return;
+    }
+
+    const form = document.createElement('div');
+    form.className = 'add-token-form';
+    form.innerHTML = `
+      <div class="form-group">
+        <label class="form-label">Token Contract Address</label>
+        <input type="text" class="form-input" id="tokenAddressInput" placeholder="0x..." />
+      </div>
+      <div class="warning-box">
+        <div class="warning-header">
+          <span>⚠️</span>
+          <span>Security Warning</span>
+        </div>
+        <div class="warning-text">
+          Anyone can create ERC-20 tokens. Verify the token contract address before adding it. 
+          Fake tokens may look similar to legitimate ones. Always double-check the contract address from official sources.
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" id="cancelAddToken">Cancel</button>
+        <button class="btn btn-primary" id="importToken">Import Token</button>
+      </div>
+    `;
+
+    listEl.appendChild(form);
+
+    setTimeout(() => {
+      const input = form.querySelector('#tokenAddressInput');
+      if (input) input.focus();
+    }, 100);
+
+    form.querySelector('#cancelAddToken').addEventListener('click', (e) => {
+      e.stopPropagation();
+      form.remove();
+    });
+
+    form.querySelector('#importToken').addEventListener('click', (e) => {
+      e.stopPropagation();
+      importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+    });
+
+    form.querySelector('#tokenAddressInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.stopPropagation();
+        importCustomToken(type, form.querySelector('#tokenAddressInput').value);
+      }
+    });
+  }
+
+  async function importCustomToken(type, address) {
+    if (!address || address.trim() === '') {
+      showToast('Please enter a token address');
+      return;
+    }
+
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
+      showToast('Invalid token address format');
+      return;
+    }
+
+    const existingToken = tokens.find(t => 
+      t.address.toLowerCase() === address.trim().toLowerCase()
+    );
+
+    if (existingToken) {
+      showToast('Token already in list');
+      selectToken(type, existingToken);
+      return;
+    }
+
+    try {
+      setStatus('Importing token...');
+
+      if (!provider) {
+        provider = new ethers.providers.JsonRpcProvider(RPC);
+      }
+
+      const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+
+      const [symbol, decimals] = await Promise.all([
+        tokenContract.symbol(),
+        tokenContract.decimals()
+      ]);
+
+      const newToken = {
+        symbol: symbol,
+        address: address,
+        decimals: decimals,
+        logo: 'https://vanswap.xyz/assets/unknown.png',
+        custom: true,
+        verified: false
+      };
+
+      tokens.push(newToken);
+      saveCustomTokens();
+      selectToken(type, newToken);
+      buildTokenListHtml(type);
+
+      showToast(`Token ${symbol} imported successfully`);
+      setStatus('Token imported');
+
+    } catch (error) {
+      console.error('Error importing token:', error);
+      showToast('Failed to import token. Check the address and try again.');
+      setStatus('Import failed');
+    }
+  }
+
+  function saveCustomTokens() {
+    const customTokens = tokens.filter(t => t.custom);
+    localStorage.setItem('vanswap_custom_tokens', JSON.stringify(customTokens));
+  }
+
+  function loadCustomTokens() {
+    try {
+      const stored = localStorage.getItem('vanswap_custom_tokens');
+      if (stored) {
+        const customTokens = JSON.parse(stored);
+        customTokens.forEach(ct => {
+          if (!tokens.some(t => t.address.toLowerCase() === ct.address.toLowerCase())) {
+            tokens.push(ct);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading custom tokens:', error);
+    }
   }
 
   window.filterTokens = function(type, term){ 
@@ -996,6 +1187,7 @@
     }
   }
 
+  // Tambahkan fungsi disconnect
   function disconnectWallet() {
     account = null;
     signer = null;
@@ -1019,6 +1211,7 @@
   if(window.ethereum){
     window.ethereum.on('chainChanged', async (chainId) => {
       console.log('chainChanged', chainId);
+      // Check if the chain matches any of our networks
       const targetNetwork = Object.keys(NETWORK_CONFIG).find(
         network => NETWORK_CONFIG[network].chainIdHex === chainId
       );
@@ -1120,6 +1313,7 @@
       } 
       updateLiquidityInfo();
       updateUSDValues();
+      calculateOptimalAmountB();
     }catch(e){ console.error('setMax', e); showToast('Failed to read balance'); } 
   }
   
@@ -1272,6 +1466,15 @@
       }
     } catch (error) {
       console.error('Error updating liquidity info:', error);
+      $('pooledTokenA').textContent = '0';
+      $('pooledTokenB').textContent = '0';
+      $('priceA').textContent = '0';
+      $('priceB').textContent = '0';
+      $('poolSharePercent').textContent = '0%';
+      $('poolShareValue').textContent = '0%';
+      $('poolTokens').textContent = '0';
+      $('totalLiquidity').textContent = '$0';
+      $('dailyVolume').textContent = '$0';
     }
   }
 
@@ -1286,8 +1489,53 @@
       let totalTVL = 0;
       const totalPairs = await factory.allPairsLength();
 
-      // Simplified TVL calculation for demo
-      totalTVL = totalPairs * 1000; // Placeholder
+      const majorPairs = [
+        { tokenA: 'VANA', tokenB: 'USDC' },
+        { tokenA: 'VANA', tokenB: 'VANS' },
+        { tokenA: 'WVANA', tokenB: 'USDC' },
+        { tokenA: 'USDC', tokenB: 'VANS' }
+      ];
+
+      for (const pair of majorPairs) {
+        try {
+          const tokenA = tokens.find(t => t.symbol === pair.tokenA);
+          const tokenB = tokens.find(t => t.symbol === pair.tokenB);
+
+          if (!tokenA || !tokenB) continue;
+
+          const tokenAAddr = tokenA.address === 'VANA_NATIVE' || tokenA.address === '0G_NATIVE' ? WVANA : tokenA.address;
+          const tokenBAddr = tokenB.address === 'VANA_NATIVE' || tokenB.address === '0G_NATIVE' ? WVANA : tokenB.address;
+
+          const pairAddress = await factory.getPair(tokenAAddr, tokenBAddr);
+          if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') continue;
+
+          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
+
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === tokenAAddr.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+
+          const [priceA, priceB] = await Promise.all([
+            getRealTokenPrice(tokenA.symbol),
+            getRealTokenPrice(tokenB.symbol)
+          ]);
+
+          const reserveAValue = parseFloat(ethers.utils.formatUnits(reserveA, tokenA.decimals)) * priceA;
+          const reserveBValue = parseFloat(ethers.utils.formatUnits(reserveB, tokenB.decimals)) * priceB;
+
+          totalTVL += reserveAValue + reserveBValue;
+
+        } catch (error) {
+          console.error(`Error calculating TVL for ${pair.tokenA}-${pair.tokenB}:`, error);
+        }
+      }
 
       $('totalTVL').textContent = formatUSD(totalTVL);
       $('totalPairs').textContent = totalPairs.toString();
@@ -1316,7 +1564,7 @@
       const totalPairs = await factory.allPairsLength();
       $('totalPairs').textContent = totalPairs.toString();
 
-      for (let i = 0; i < Math.min(totalPairs, 50); i++) {
+      for (let i = 0; i < Math.min(totalPairs, 100); i++) {
         try {
           const pairAddress = await factory.allPairs(i);
           const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
@@ -1365,14 +1613,12 @@
               value: userValue,
               reserves: [reserve0, reserve1],
               token0: token0,
-              token1: token1,
               decimals0: decimals0,
-              decimals1: decimals1,
-              totalSupply: totalSupply,
-              userBalance: userBalance
+              decimals1: decimals1
             });
           }
         } catch (error) {
+          console.error('Error checking pair:', error);
           continue;
         }
       }
@@ -1462,6 +1708,11 @@
       btn.innerHTML = '<span class="spinner"></span>Processing...';
       setStatus('Preparing add liquidity...');
 
+      if (typeof selectedFrom.decimals === 'undefined' || typeof selectedTo.decimals === 'undefined') {
+        showToast('Token decimals belum terdeteksi, coba refresh atau pilih token lain');
+        return;
+      }
+
       const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
       const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
 
@@ -1469,6 +1720,59 @@
       const addressB = (selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE') ? WVANA : selectedTo.address;
 
       const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+      const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
+
+      const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+      if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
+        try {
+          const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
+
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === addressA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+
+          const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
+          const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
+
+          if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
+            const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
+            if (!confirmRemove) {
+              btn.disabled = false;
+              btn.textContent = 'Add Liquidity';
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error validating ratio:', error);
+        }
+      }
+
+      let finalPairAddr = pairAddr;
+      if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
+        showToast('Creating new pool...');
+        setStatus('Creating new pool...');
+        try {
+          const txCreate = await factoryWithSigner.createPair(addressA, addressB);
+          const explorerUrl = networkManager.getCurrentConfig().explorer;
+          $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txCreate.hash}" target="_blank" style="color:var(--accent)">Creating Pair...</a>`;
+          await txCreate.wait();
+          showToast('Pool created successfully!');
+          setStatus('Pool created successfully!');
+          finalPairAddr = await factoryWithSigner.getPair(addressA, addressB);
+        } catch(e) {
+          console.error('Failed to create pair', e);
+          showToast('Failed to create pool: ' + (e.message || e));
+          setStatus('Create pool failed');
+          return;
+        }
+      }
 
       const amountAMin = amountADesired.mul(99).div(100);
       const amountBMin = amountBDesired.mul(99).div(100);
@@ -1476,7 +1780,7 @@
 
       if ((selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE') && (selectedTo.address !== 'VANA_NATIVE' && selectedTo.address !== '0G_NATIVE')) {
         await ensureApproved(selectedTo.address, amountBDesired);
-        setStatus('Sending addLiquidityETH...');
+        setStatus('Sending addLiquidityETH (native -> token)...');
         const tx = await routerWithSigner.addLiquidityETH(
           selectedTo.address,
           amountBDesired,
@@ -1492,7 +1796,7 @@
 
       } else if ((selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE') && (selectedFrom.address !== 'VANA_NATIVE' && selectedFrom.address !== '0G_NATIVE')) {
         await ensureApproved(selectedFrom.address, amountADesired);
-        setStatus('Sending addLiquidityETH...');
+        setStatus('Sending addLiquidityETH (token -> native)...');
         const tx = await routerWithSigner.addLiquidityETH(
           selectedFrom.address,
           amountADesired,
@@ -1509,7 +1813,7 @@
       } else {
         await ensureApproved(selectedFrom.address, amountADesired);
         await ensureApproved(selectedTo.address, amountBDesired);
-        setStatus('Sending addLiquidity...');
+        setStatus('Sending addLiquidity (ERC20 <-> ERC20)...');
         const tx = await routerWithSigner.addLiquidity(
           selectedFrom.address,
           selectedTo.address,
@@ -1608,22 +1912,16 @@
   }
 
   // =============================================
-  // REMOVE LIQUIDITY - FIXED VERSION
+  // REMOVE LIQUIDITY - PERBAIKAN UTAMA
   // =============================================
 
   async function checkLPAllowance(pairAddress) {
     if (!account || !signer) return false;
 
     try {
-      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
       const userBalance = await pairContract.balanceOf(account);
       const allowance = await pairContract.allowance(account, ROUTER);
-
-      console.log('LP Allowance Check:', {
-        userBalance: userBalance.toString(),
-        allowance: allowance.toString(),
-        sufficient: allowance.gte(userBalance)
-      });
 
       return allowance.gte(userBalance);
     } catch (error) {
@@ -1647,7 +1945,7 @@
   }
 
   async function showRemoveModal(poolAddress) {
-    currentRemovePool = null;
+    currentRemovePool = poolAddress;
     currentRemovePercentage = 0;
 
     try {
@@ -1744,6 +2042,7 @@
     currentRemovePercentage = 0;
   }
 
+  // PERBAIKAN UTAMA: Fungsi remove liquidity yang sudah diperbaiki
   async function confirmRemoveLiquidity() {
     if (!currentRemovePool || currentRemovePercentage === 0) {
       showToast('Please select a percentage to remove');
@@ -1751,19 +2050,13 @@
     }
 
     try {
-      console.log('=== REMOVE LIQUIDITY DEBUG ===');
-      console.log('Network:', networkManager.getCurrentNetwork());
-      console.log('Pool:', currentRemovePool.symbol0, '-', currentRemovePool.symbol1);
-      
       setStatus('Removing liquidity...');
       const btn = $('confirmRemoveBtn');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span>Removing...';
 
       const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
-      console.log('Liquidity to remove:', liquidityAmount.toString());
 
-      // Check and approve if needed
       if (!currentRemovePool.hasAllowance) {
         setStatus('Approving LP tokens...');
         btn.innerHTML = '<span class="spinner"></span>Approving...';
@@ -1773,96 +2066,58 @@
           throw new Error('Failed to approve LP tokens');
         }
 
-        // Wait for approval to be confirmed
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Re-check allowance
-        const finalAllowance = await checkLPAllowance(currentRemovePool.address);
-        if (!finalAllowance) {
-          throw new Error('Allowance still insufficient after approval');
-        }
-        
         currentRemovePool.hasAllowance = true;
         setStatus('Approval successful, removing liquidity...');
         btn.innerHTML = '<span class="spinner"></span>Removing...';
       }
 
-      // Calculate minimum amounts with 5% slippage
-      const amount0Min = currentRemovePool.reserves[0]
-        .mul(liquidityAmount)
-        .div(currentRemovePool.totalSupply)
-        .mul(95)
-        .div(100);
-        
-      const amount1Min = currentRemovePool.reserves[1]
-        .mul(liquidityAmount)
-        .div(currentRemovePool.totalSupply)
-        .mul(95)
-        .div(100);
+      const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
+      const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
 
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-      console.log('Remove parameters:', {
-        amount0Min: amount0Min.toString(),
-        amount1Min: amount1Min.toString(),
-        deadline: deadline
-      });
+      setStatus('Removing liquidity...');
 
-      const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-
-      // Determine if this is a native token pair
-      const currentNetwork = networkManager.getCurrentNetwork();
-      const nativeWrapped = currentNetwork === 'vana' ? WVANA : NETWORK_CONFIG.zerog.contracts.w0g;
+      // PERBAIKAN KRITIS: Gunakan logika yang sama seperti file Vana only
+      const wrappedNative = getWrappedNativeAddress();
       
-      const token0IsNative = currentRemovePool.token0.toLowerCase() === nativeWrapped.toLowerCase();
-      const token1IsNative = currentRemovePool.token1.toLowerCase() === nativeWrapped.toLowerCase();
+      // LOGIKA SEDERHANA SEPERTI FILE VANA ONLY - TANPA .toLowerCase()
+      const token0IsNative = currentRemovePool.token0 === wrappedNative;
+      const token1IsNative = currentRemovePool.token1 === wrappedNative;
 
-      console.log('Native token detection:', {
-        nativeWrapped: nativeWrapped,
+      console.log('Remove Liquidity Debug:', {
+        token0: currentRemovePool.token0,
+        token1: currentRemovePool.token1,
+        wrappedNative: wrappedNative,
         token0IsNative: token0IsNative,
-        token1IsNative: token1IsNative
+        token1IsNative: token1IsNative,
+        liquidityAmount: liquidityAmount.toString()
       });
 
       let tx;
 
+      // PERBAIKAN: Gunakan logika yang sama seperti file Vana only
       if (token0IsNative || token1IsNative) {
-        console.log('Using removeLiquidityETH for native token pair');
-        
         const token = token0IsNative ? currentRemovePool.token1 : currentRemovePool.token0;
         const amountTokenMin = token0IsNative ? amount1Min : amount0Min;
         const amountETHMin = token0IsNative ? amount0Min : amount1Min;
 
-        console.log('removeLiquidityETH params:', {
-          token: token,
-          liquidity: liquidityAmount.toString(),
-          amountTokenMin: amountTokenMin.toString(),
-          amountETHMin: amountETHMin.toString()
-        });
+        console.log('Using removeLiquidityETH for native pair');
 
-        tx = await routerWithSigner.removeLiquidityETH(
+        tx = await router.removeLiquidityETH(
           token,
           liquidityAmount,
           amountTokenMin,
           amountETHMin,
           account,
           deadline,
-          { 
-            gasLimit: 5000000,
-            gasPrice: ethers.utils.parseUnits('20', 'gwei')
-          }
+          { gasLimit: 500000 } // Increased gas limit
         );
       } else {
-        console.log('Using removeLiquidity for token-token pair');
-        
-        console.log('removeLiquidity params:', {
-          tokenA: currentRemovePool.token0,
-          tokenB: currentRemovePool.token1,
-          liquidity: liquidityAmount.toString(),
-          amountAMin: amount0Min.toString(),
-          amountBMin: amount1Min.toString()
-        });
+        // Untuk token-token biasa
+        console.log('Using removeLiquidity for token pair');
 
-        tx = await routerWithSigner.removeLiquidity(
+        tx = await router.removeLiquidity(
           currentRemovePool.token0,
           currentRemovePool.token1,
           liquidityAmount,
@@ -1870,49 +2125,42 @@
           amount1Min,
           account,
           deadline,
-          { 
-            gasLimit: 5000000,
-            gasPrice: ethers.utils.parseUnits('20', 'gwei')
-          }
+          { gasLimit: 500000 }
         );
       }
 
-      console.log('Transaction sent:', tx.hash);
-      
       const explorerUrl = networkManager.getCurrentConfig().explorer;
       $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
       
-      setStatus('Waiting for confirmation...');
-      await tx.wait();
+      setStatus('Submitted — waiting confirmation...');
 
-      showToast('Liquidity removed successfully');
-      setStatus('Liquidity removed successfully!');
+      const receipt = await tx.wait();
+
+      showToast('Liquidity removed successfully!');
+      setStatus('Liquidity removed');
 
       closeRemoveModal();
-      
       await updateBalances();
       await updateDropdownBalances();
-      await updateLiquidityInfo();
-      await loadUserPools();
+      loadUserPools();
+      updateTVLStats();
 
-    } catch (err) {
-      console.error('removeLiquidity error:', err);
-      console.error('Error details:', err.message);
-      console.error('Error code:', err.code);
-      
-      let errorMsg = 'Remove liquidity failed';
-      if (err.message) {
-        if (err.message.includes('INSUFFICIENT_LIQUIDITY')) {
-          errorMsg = 'Insufficient liquidity in pool';
-        } else if (err.message.includes('INSUFFICIENT_A_AMOUNT') || err.message.includes('INSUFFICIENT_B_AMOUNT')) {
-          errorMsg = 'Slippage too low, try increasing slippage tolerance';
-        } else if (err.message.includes('TRANSFER_FROM_FAILED')) {
-          errorMsg = 'Token transfer failed, check allowance';
-        }
+    } catch (error) {
+      console.error('Error removing liquidity:', error);
+
+      if (error.message && error.message.includes('INSUFFICIENT_A_AMOUNT')) {
+        showToast('Failed: Insufficient amount. Try with higher slippage tolerance.');
+        setStatus('Failed: Increase slippage tolerance');
+      } else if (error.message && error.message.includes('INSUFFICIENT_B_AMOUNT')) {
+        showToast('Failed: Insufficient amount. Try with higher slippage tolerance.');
+        setStatus('Failed: Increase slippage tolerance');
+      } else if (error.message && error.message.includes('user rejected')) {
+        showToast('Transaction rejected by user');
+        setStatus('Transaction rejected');
+      } else {
+        showToast('Failed to remove liquidity: ' + (error.message || error));
+        setStatus('Remove liquidity failed');
       }
-      
-      showToast(errorMsg + ': ' + (err.message || err));
-      setStatus('Remove liquidity failed');
     } finally {
       const btn = $('confirmRemoveBtn');
       btn.disabled = false;
@@ -1934,42 +2182,219 @@
       return;
     }
 
-    if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAInput) || !/^0x[a-fA-F0-9]{40}$/.test(tokenBInput)) {
-      showToast('Invalid token address format');
-      return;
-    }
+    try {
+      setStatus('Importing pool...');
 
-    showToast('Import pool feature coming soon');
-    setStatus('Import pool - development in progress');
+      if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAInput) || !/^0x[a-fA-F0-9]{40}$/.test(tokenBInput)) {
+        showToast('Invalid token address format');
+        return;
+      }
+
+      const pairAddress = await factory.getPair(tokenAInput, tokenBInput);
+      if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+        showToast('Pool does not exist for these tokens');
+        return;
+      }
+
+      const tokenAContract = new ethers.Contract(tokenAInput, ERC20_ABI, provider);
+      const tokenBContract = new ethers.Contract(tokenBInput, ERC20_ABI, provider);
+
+      const [symbolA, symbolB, decimalsA, decimalsB] = await Promise.all([
+        tokenAContract.symbol(),
+        tokenBContract.symbol(),
+        tokenAContract.decimals(),
+        tokenBContract.decimals()
+      ]);
+
+      const tokenAObj = {
+        symbol: symbolA,
+        address: tokenAInput,
+        decimals: decimalsA,
+        logo: `https://vanswap.xyz/assets/${symbolA.toLowerCase()}.png`,
+        custom: true,
+        verified: false
+      };
+
+      const tokenBObj = {
+        symbol: symbolB,
+        address: tokenBInput,
+        decimals: decimalsB,
+        logo: `https://vanswap.xyz/assets/${symbolB.toLowerCase()}.png`,
+        custom: true,
+        verified: false
+      };
+
+      if (!tokens.some(t => t.address.toLowerCase() === tokenAInput.toLowerCase())) {
+        tokens.push(tokenAObj);
+      }
+
+      if (!tokens.some(t => t.address.toLowerCase() === tokenBInput.toLowerCase())) {
+        tokens.push(tokenBObj);
+      }
+
+      saveCustomTokens();
+
+      selectedFrom = tokenAObj;
+      selectedTo = tokenBObj;
+
+      $('fromLogo').src = selectedFrom.logo;
+      $('fromSymbol').textContent = selectedFrom.symbol;
+      $('toLogo').src = selectedTo.logo;
+      $('toSymbol').textContent = selectedTo.symbol;
+
+      switchToAddView();
+      updateLiquidityInfo();
+
+      showToast(`Pool ${symbolA}-${symbolB} imported successfully!`);
+      setStatus('Pool imported');
+
+    } catch (error) {
+      console.error('Error importing pool:', error);
+      showToast('Failed to import pool: ' + (error.message || error));
+      setStatus('Import failed');
+    }
   }
 
   // =============================================
-  // APPROVAL HANDLING
+  // HELPER FUNCTIONS
   // =============================================
 
-  async function ensureApproved(tokenAddress, amount) {
-    if (!account || !signer) return false;
-    
-    // Skip approval for native tokens
-    if (tokenAddress === 'VANA_NATIVE' || tokenAddress === '0G_NATIVE') return true;
-    
+  async function ensureApproved(tokenAddress, neededAmount) {
+    if (!tokenAddress || tokenAddress === 'VANA_NATIVE' || tokenAddress === '0G_NATIVE') return;
+
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
       const allowance = await tokenContract.allowance(account, ROUTER);
-      
-      if (allowance.lt(amount)) {
-        setStatus('Approving token...');
-        const txApprove = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
-        $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txApprove.hash}" target="_blank" style="color:var(--accent)">Approving...</a>`;
-        await txApprove.wait();
-        setStatus('Approval successful');
-        return true;
+      if (ethers.BigNumber.from(allowance).lt(neededAmount)) {
+        setStatus('Approving token ' + (tokenAddress) + ' ...');
+        const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await tx.wait();
       }
-      return true;
+    } catch (err) {
+      console.error('ensureApproved error for', tokenAddress, err);
+      throw err;
+    }
+  }
+
+  // =============================================
+  // AUTO-CALCULATION HANYA UNTUK POOL YANG SUDAH ADA
+  // =============================================
+
+  async function calculateOptimalAmountB() {
+    if (!provider || !account || isCalculatingB) return;
+
+    const fromAmt = $('fromAmount').value;
+    if (!fromAmt || parseFloat(fromAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingB = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBOptimal = amountADesired.mul(reserveB).div(reserveA);
+
+        if (amountBOptimal.isZero()) {
+          isCalculatingB = false;
+          return;
+        }
+
+        const toAmountFormatted = parseFloat(ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals));
+        $('toAmount').value = toAmountFormatted.toFixed(selectedTo.decimals > 6 ? 6 : selectedTo.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
     } catch (error) {
-      console.error('Approval error:', error);
-      throw new Error('Token approval failed: ' + (error.message || error));
+      console.error('Error calculating optimal amount B:', error);
+    } finally {
+      setTimeout(() => { isCalculatingB = false; }, 100);
+    }
+  }
+
+  async function calculateOptimalAmountA() {
+    if (!provider || !account || isCalculatingA) return;
+
+    const toAmt = $('toAmount').value;
+    if (!toAmt || parseFloat(toAmt) <= 0) {
+      return;
+    }
+
+    isCalculatingA = true;
+
+    try {
+      const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+      const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+      const pairAddress = await factory.getPair(tokenA, tokenB);
+
+      // HANYA untuk pool yang sudah ada
+      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+
+        let reserveA, reserveB;
+
+        if (token0.toLowerCase() === tokenA.toLowerCase()) {
+          reserveA = reserve0;
+          reserveB = reserve1;
+        } else {
+          reserveA = reserve1;
+          reserveB = reserve0;
+        }
+
+        if (reserveA.isZero() || reserveB.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(reserveA).div(reserveB);
+
+        if (amountAOptimal.isZero()) {
+          isCalculatingA = false;
+          return;
+        }
+
+        const fromAmountFormatted = parseFloat(ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals));
+        $('fromAmount').value = fromAmountFormatted.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+      }
+      // Untuk pool baru: TIDAK ADA auto-calculation
+
+      updateUSDValues();
+      updateActionBtn();
+    } catch (error) {
+      console.error('Error calculating optimal amount A:', error);
+    } finally {
+      setTimeout(() => { isCalculatingA = false; }, 100);
     }
   }
 
@@ -1978,13 +2403,17 @@
   // =============================================
 
   $('fromAmount').addEventListener('input', async function() {
+    if (isCalculatingB) return;
     updateUSDValues();
     updateActionBtn();
+    await calculateOptimalAmountB();
   });
 
   $('toAmount').addEventListener('input', async function() {
+    if (isCalculatingA) return;
     updateUSDValues();
     updateActionBtn();
+    await calculateOptimalAmountA();
   });
 
   $('actionBtn').addEventListener('click', addLiquidity);
@@ -1994,6 +2423,9 @@
     try {
       // Initialize network configuration first
       initNetworkConfig();
+      
+      // Load custom tokens
+      loadCustomTokens();
       
       // Initialize network selector
       initNetworkSelector();
