@@ -3,7 +3,7 @@
     xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-    
+
     <!-- Halaman Utama & Fitur Inti -->
     <url>
         <loc>https://vanswap.xyz/</loc>
@@ -19,7 +19,9 @@
     </url>
     <url>
         <loc>https://vanswap.xyz/liquidity</loc>
-        <lastmod>2025-11-15T16:21:32+00:00</changefreq>
+        <lastmod>2025-11-15T16:21:32+00:00</lastmod>
+        <priority>0.90</priority>
+        <changefreq>weekly</changefreq>
     </url>
     <url>
         <loc>https://vanswap.xyz/staking</loc>
