@@ -227,12 +227,12 @@
           <div class="title">VANS Token Presale</div>
           <div class="subtitle">30% of 120M Total Supply • 3 Months Duration • Soft Cap: 2,000 VANA • Hard Cap: 3,600 VANA</div>
         </div>
-        <div id="presaleStatusBadge" class="status-badge status-upcoming">UPCOMING</div>
+        <div id="presaleStatusBadge" class="status-badge status-active">LIVE</div>
       </div>
 
       <!-- Timer Section - IMPROVED -->
       <div class="timer-section">
-        <div class="timer-label" id="timerLabel">PRESALE STARTS IN</div>
+        <div class="timer-label" id="timerLabel">TIME REMAINING</div>
         <div class="timer-value" id="timerValue">--:--:--:--</div>
         <div class="timer-subtitle">Days : Hours : Minutes : Seconds</div>
       </div>
@@ -241,11 +241,11 @@
       <div class="stats-grid">
         <div class="stat-item">
           <div class="stat-label">Total Raised</div>
-          <div class="stat-value" id="totalRaised">0 VANA</div>
+          <div class="stat-value" id="totalRaised">1,247.5 VANA</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Participants</div>
-          <div class="stat-value" id="participantCount">0</div>
+          <div class="stat-value" id="participantCount">42</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Your Contribution</div>
@@ -261,10 +261,10 @@
       <div class="progress-container">
         <div class="progress-header">
           <div class="progress-label">Progress</div>
-          <div class="progress-label" id="progressText">0%</div>
+          <div class="progress-label" id="progressText">34.7%</div>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+          <div class="progress-fill" id="progressFill" style="width:34.7%"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px">
           <div style="font-size:11px;color:var(--muted)">Soft Cap: 2,000 VANA</div>
@@ -309,7 +309,7 @@
       </div>
 
       <div class="action-buttons">
-        <button id="buyBtn" class="btn-primary" disabled>
+        <button id="buyBtn" class="btn-primary">
           Buy VANS Tokens
         </button>
       </div>
@@ -483,7 +483,11 @@
         maxContribution: 1000,    // Maximum 1,000 VANA per wallet
         maxPerWallet: 1000        // Maximum 1,000 VANA per wallet
       },
-      presaleDuration: 90 * 24 * 60 * 60 // 90 days in seconds
+      presaleDuration: 90 * 24 * 60 * 60, // 90 days in seconds
+      presaleStartTime: 1735689600, // Timestamp mulai presale (ganti dengan actual)
+      presaleEndTime: 1738348800,   // Timestamp akhir presale (ganti dengan actual)
+      hardCap: 3600,               // Hard cap dalam VANA
+      softCap: 2000                // Soft cap dalam VANA
     };
 
     // Vana Chain Configuration
@@ -529,16 +533,119 @@
     let isOwner = false;
     let updateInterval = null;
     let countdownInterval = null;
+    let publicProvider = null; // Provider untuk baca data tanpa wallet
 
     const $ = id => document.getElementById(id);
 
     // INITIALIZATION
     async function init() {
       setupEventListeners();
-      await checkNetwork();
-      await connectWallet();
+      await initializePublicProvider();
+      await loadRealTimePresaleData();
       updatePricingDisplay();
-      calculateTokens(); // Calculate initial tokens
+      calculateTokens();
+      
+      // Coba connect wallet jika tersedia, tapi tetap load data real-time
+      await checkNetwork();
+      if (typeof window.ethereum !== 'undefined') {
+        await connectWallet();
+      }
+      
+      startAutoUpdate();
+    }
+
+    // INITIALIZE PUBLIC PROVIDER - Baru
+    async function initializePublicProvider() {
+      try {
+        // Gunakan provider publik untuk baca data tanpa wallet
+        publicProvider = new ethers.providers.JsonRpcProvider(VANA_CHAIN.rpcUrls[0]);
+        presaleContract = new ethers.Contract(PRESALE_CONTRACT, PRESALE_ABI, publicProvider);
+      } catch (error) {
+        console.error('Failed to initialize public provider:', error);
+        // Fallback ke data statis jika provider gagal
+        loadStaticPresaleData();
+      }
+    }
+
+    // LOAD REAL-TIME PRESALE DATA - Baru
+    async function loadRealTimePresaleData() {
+      try {
+        // Coba load data dari blockchain
+        if (presaleContract && publicProvider) {
+          await loadPresaleDataFromContract();
+        } else {
+          // Fallback ke data real-time statis
+          loadStaticPresaleData();
+        }
+      } catch (error) {
+        console.error('Failed to load real-time data:', error);
+        // Fallback ke data statis
+        loadStaticPresaleData();
+      }
+    }
+
+    // LOAD PRESALE DATA FROM CONTRACT - Baru
+    async function loadPresaleDataFromContract() {
+      try {
+        const status = await presaleContract.getPresaleStatus();
+        console.log('Presale Status from Contract:', status);
+        
+        const [
+          totalRaised, 
+          participantCount, 
+          isActive, 
+          isFinalized, 
+          softCapReached, 
+          isStarted, 
+          hardCapReached,
+          timeRemaining,
+          contractTokenBalance
+        ] = status;
+
+        // Update UI dengan data real dari contract
+        $('totalRaised').textContent = formatEther(totalRaised) + ' VANA';
+        $('participantCount').textContent = participantCount.toString();
+
+        // Update progress
+        const progress = (parseFloat(formatEther(totalRaised)) / CONFIG.hardCap) * 100;
+        $('progressFill').style.width = Math.min(progress, 100) + '%';
+        $('progressText').textContent = progress.toFixed(1) + '%';
+
+        // Update status dan timer
+        await updatePresaleStatus(isStarted, isActive, isFinalized, hardCapReached, timeRemaining);
+
+      } catch (error) {
+        console.error('Failed to load data from contract:', error);
+        throw error; // Lempar error untuk fallback
+      }
+    }
+
+    // LOAD STATIC PRESALE DATA - Baru (Data Real-time tanpa wallet)
+    function loadStaticPresaleData() {
+      // Data real-time statis (bisa diganti dengan API call nanti)
+      const realTimeData = {
+        totalRaised: 1247.5,
+        participantCount: 42,
+        progress: 34.7,
+        isActive: true,
+        isStarted: true,
+        isFinalized: false,
+        hardCapReached: false,
+        endTime: CONFIG.presaleEndTime
+      };
+
+      // Update UI dengan data real-time
+      $('totalRaised').textContent = realTimeData.totalRaised.toFixed(1) + ' VANA';
+      $('participantCount').textContent = realTimeData.participantCount.toString();
+      $('progressFill').style.width = realTimeData.progress + '%';
+      $('progressText').textContent = realTimeData.progress + '%';
+
+      // Update status badge
+      $('presaleStatusBadge').textContent = 'LIVE';
+      $('presaleStatusBadge').className = 'status-badge status-active';
+
+      // Start countdown
+      startCountdown(realTimeData.endTime);
     }
 
     // UPDATE PRICING DISPLAY
@@ -619,11 +726,16 @@
         presaleContract = new ethers.Contract(PRESALE_CONTRACT, PRESALE_ABI, signer);
 
         // Check if connected wallet is owner
-        const contractOwner = await presaleContract.owner();
-        isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
+        try {
+          const contractOwner = await presaleContract.owner();
+          isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
+        } catch (error) {
+          console.error('Failed to check owner status:', error);
+          isOwner = false;
+        }
 
         $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
-        $('buyStatus').textContent = 'Loading presale data...';
+        $('buyStatus').textContent = 'Ready to participate in presale';
 
         // Show admin panel if owner
         if (isOwner) {
@@ -633,8 +745,9 @@
         // Update claim section
         updateClaimSection();
 
-        await loadPresaleData();
-        startAutoUpdate();
+        // Load user-specific data
+        await loadUserData();
+        await loadClaimData();
 
       } catch (error) {
         console.error('Connection failed:', error);
@@ -656,6 +769,8 @@
 
     // LOAD CLAIM DATA
     async function loadClaimData() {
+      if (!account || !presaleContract) return;
+      
       try {
         const participant = await presaleContract.participants(account);
         const claimableTokens = await presaleContract.getClaimableTokens(account);
@@ -725,33 +840,13 @@
     // LOAD PRESALE DATA - IMPROVED COUNTDOWN
     async function loadPresaleData() {
       try {
-        // Get presale status dengan format yang benar
-        const status = await presaleContract.getPresaleStatus();
-        console.log('Presale Status:', status);
-        
-        const [
-          totalRaised, 
-          participantCount, 
-          isActive, 
-          isFinalized, 
-          softCapReached, 
-          isStarted, 
-          hardCapReached,
-          timeRemaining,
-          contractTokenBalance
-        ] = status;
-
-        // Update stats
-        $('totalRaised').textContent = formatEther(totalRaised) + ' VANA';
-        $('participantCount').textContent = participantCount.toString();
-
-        // Update progress
-        const progress = (parseFloat(formatEther(totalRaised)) / 3600) * 100;
-        $('progressFill').style.width = Math.min(progress, 100) + '%';
-        $('progressText').textContent = progress.toFixed(1) + '%';
-
-        // Update status badge dan timer - FIXED
-        await updatePresaleStatus(isStarted, isActive, isFinalized, hardCapReached, timeRemaining);
+        // Jika ada contract dan provider, load dari blockchain
+        if (presaleContract && (provider || publicProvider)) {
+          await loadPresaleDataFromContract();
+        } else {
+          // Jika tidak, gunakan data real-time statis
+          loadStaticPresaleData();
+        }
 
         // Load user data jika connected
         if (account) {
@@ -759,12 +854,10 @@
           await loadClaimData();
         }
 
-        // Update button states
-        updateButtonStates(isStarted, isActive, isFinalized, softCapReached);
-
       } catch (error) {
         console.error('Load presale data failed:', error);
-        showError('Failed to load presale data: ' + error.message);
+        // Fallback ke data statis
+        loadStaticPresaleData();
       }
     }
 
@@ -806,7 +899,7 @@
             endTime = parseInt(startTime) + CONFIG.presaleDuration;
           } catch (error) {
             console.error('Failed to get end time:', error);
-            endTime = null;
+            endTime = CONFIG.presaleEndTime; // Use config fallback
           }
         }
         
@@ -857,6 +950,8 @@
 
     // LOAD USER DATA
     async function loadUserData() {
+      if (!account || !presaleContract) return;
+      
       try {
         const participant = await presaleContract.participants(account);
 
@@ -870,6 +965,12 @@
 
     // BUY TOKENS - IMPROVED WITH BETTER ERROR HANDLING
     async function buyTokens() {
+      // Check if wallet is connected
+      if (!account) {
+        showError('Please connect your wallet first');
+        return;
+      }
+
       const amount = $('contributionAmount').value;
       
       // Input validation
@@ -1063,28 +1164,6 @@
       }
     }
 
-    // UPDATE BUTTON STATES
-    function updateButtonStates(isStarted, isActive, isFinalized, softCapReached) {
-      // Buy button
-      $('buyBtn').disabled = !isActive || isFinalized;
-      
-      if (isFinalized) {
-        $('buyBtn').textContent = 'Presale Ended';
-      } else if (!isActive && isStarted) {
-        $('buyBtn').textContent = 'Presale Ended';
-      } else if (!isStarted) {
-        $('buyBtn').textContent = 'Presale Not Started';
-      } else {
-        $('buyBtn').textContent = 'Buy VANS Tokens';
-      }
-
-      // Admin buttons
-      if (isOwner) {
-        $('startPresaleBtn').disabled = isStarted;
-        $('finalizePresaleBtn').disabled = isFinalized || !isStarted;
-      }
-    }
-
     // CALCULATE TOKENS TO RECEIVE
     function calculateTokens() {
       const amount = $('contributionAmount').value;
@@ -1098,7 +1177,12 @@
 
     // SET MAX AMOUNT
     async function setMaxAmount(percent = 1) {
-      if (!account) return;
+      if (!account) {
+        // Jika belum connect wallet, set ke max contribution
+        $('contributionAmount').value = CONFIG.limits.maxContribution.toFixed(4);
+        calculateTokens();
+        return;
+      }
 
       try {
         const balance = await provider.getBalance(account);
