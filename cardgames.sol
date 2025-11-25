@@ -6,24 +6,29 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VansGameTreasury is ReentrancyGuard, Ownable {
-    // ============ STATE VARIABLES ============
+    // ============ HARDCODED TOKEN ADDRESSES (VANA CHAIN) ============
     
-    // Token Contracts
-    IERC20 public vanaToken;
-    IERC20 public usdcToken;
-    IERC20 public vansToken;
+    // USDC Token on VANA Chain
+    IERC20 public constant USDC_TOKEN = IERC20(0xF1815bd50389c46847f0Bda824eC8da914045D14);
     
-    // Constants
+    // VANS Token on VANA Chain  
+    IERC20 public constant VANS_TOKEN = IERC20(0x82741ff5937933244eb562A4b396f8079F1de914);
+
+    // VANA adalah NATIVE token di VANA Chain
+
+    // ============ CONSTANTS ============
     uint256 public constant MIN_CLAIM_VANS = 100 * 10**18;     // 100 VANS
     
-    // Chance Packages & Prices
+    // Chance Packages & Prices (dalam VANA NATIVE token)
     uint256[] public chancePackages = [3, 10, 25, 50];
-    uint256[] public vanaPrices = [
-        1 * 10**16,    // 0.01 VANA for 3 chances
-        3 * 10**16,    // 0.03 VANA for 10 chances  
-        7 * 10**16,    // 0.07 VANA for 25 chances
-        13 * 10**16    // 0.13 VANA for 50 chances
+    uint256[] public nativePrices = [
+        3 * 10**16,    // 0.03 VANA for 3 chances
+        8 * 10**16,    // 0.08 VANA for 10 chances  
+        18 * 10**16,   // 0.18 VANA for 25 chances
+        35 * 10**16    // 0.35 VANA for 50 chances
     ];
+
+    // USDC Prices (6 decimals)
     uint256[] public usdcPrices = [
         3 * 10**4,     // 0.03 USDC for 3 chances
         8 * 10**4,     // 0.08 USDC for 10 chances
@@ -31,43 +36,29 @@ contract VansGameTreasury is ReentrancyGuard, Ownable {
         35 * 10**4     // 0.35 USDC for 50 chances
     ];
 
-    // User Balances (HANYA untuk VANS yang diklaim dari game)
+    // ============ STATE VARIABLES ============
     mapping(address => uint256) public vansBalances;
     
-    // Tracking
     uint256 public totalVansClaimed;
     uint256 public totalChancesSold;
-    uint256 public totalRevenueVANA;
+    uint256 public totalRevenueNative; // VANA native token revenue
     uint256 public totalRevenueUSDC;
 
     // ============ EVENTS ============
-    
     event VansClaimed(address indexed user, uint256 amount);
     event ChancesPurchased(address indexed user, address token, uint256 packageIndex, uint256 chances, uint256 price);
     event RevenueWithdrawn(address indexed owner, address token, uint256 amount);
-    event PricesUpdated(address indexed updater);
+    event PricesUpdated();
 
     // ============ MODIFIERS ============
-    
     modifier validPackage(uint256 packageIndex) {
         require(packageIndex < chancePackages.length, "Invalid package");
         _;
     }
 
     // ============ CONSTRUCTOR ============
-    
-    constructor(
-        address _vanaToken,
-        address _usdcToken, 
-        address _vansToken
-    ) {
-        require(_vanaToken != address(0), "Invalid VANA token");
-        require(_usdcToken != address(0), "Invalid USDC token");
-        require(_vansToken != address(0), "Invalid VANS token");
-        
-        vanaToken = IERC20(_vanaToken);
-        usdcToken = IERC20(_usdcToken);
-        vansToken = IERC20(_vansToken);
+    constructor() Ownable(msg.sender) {
+        // No need to initialize tokens - they are hardcoded
     }
 
     // ============ USER FUNCTIONS ============
@@ -77,37 +68,38 @@ contract VansGameTreasury is ReentrancyGuard, Ownable {
      */
     function claimVans(uint256 amount) external nonReentrant {
         require(amount >= MIN_CLAIM_VANS, "Below minimum claim");
-        require(vansToken.balanceOf(address(this)) >= amount, "Insufficient VANS in contract");
+        require(VANS_TOKEN.balanceOf(address(this)) >= amount, "Insufficient VANS in contract");
         
-        // Update user balance
         vansBalances[msg.sender] += amount;
         totalVansClaimed += amount;
         
-        // Transfer VANS to user
-        require(vansToken.transfer(msg.sender, amount), "VANS transfer failed");
-        
+        require(VANS_TOKEN.transfer(msg.sender, amount), "VANS transfer failed");
         emit VansClaimed(msg.sender, amount);
     }
 
     /**
-     * @dev Purchase chances with VANA tokens
+     * @dev Purchase chances with VANA NATIVE token
      */
-    function purchaseChancesWithVANA(uint256 packageIndex) 
+    function purchaseChancesWithNative(uint256 packageIndex) 
         external 
+        payable 
         nonReentrant 
         validPackage(packageIndex) 
     {
-        uint256 price = vanaPrices[packageIndex];
+        uint256 price = nativePrices[packageIndex];
         uint256 chances = chancePackages[packageIndex];
         
-        // Transfer VANA from user to contract
-        require(vanaToken.transferFrom(msg.sender, address(this), price), "VANA transfer failed");
+        require(msg.value >= price, "Insufficient VANA sent");
         
-        // Update tracking
-        totalRevenueVANA += price;
+        // Refund excess native tokens
+        if (msg.value > price) {
+            payable(msg.sender).transfer(msg.value - price);
+        }
+        
+        totalRevenueNative += price;
         totalChancesSold += chances;
         
-        emit ChancesPurchased(msg.sender, address(vanaToken), packageIndex, chances, price);
+        emit ChancesPurchased(msg.sender, address(0), packageIndex, chances, price);
     }
 
     /**
@@ -121,62 +113,64 @@ contract VansGameTreasury is ReentrancyGuard, Ownable {
         uint256 price = usdcPrices[packageIndex];
         uint256 chances = chancePackages[packageIndex];
         
-        // Transfer USDC from user to contract
-        require(usdcToken.transferFrom(msg.sender, address(this), price), "USDC transfer failed");
+        require(USDC_TOKEN.transferFrom(msg.sender, address(this), price), "USDC transfer failed");
         
-        // Update tracking
         totalRevenueUSDC += price;
         totalChancesSold += chances;
         
-        emit ChancesPurchased(msg.sender, address(usdcToken), packageIndex, chances, price);
+        emit ChancesPurchased(msg.sender, address(USDC_TOKEN), packageIndex, chances, price);
     }
 
     // ============ OWNER FUNCTIONS ============
 
     /**
-     * @dev Withdraw revenue in VANA tokens
+     * @dev Withdraw all VANA native tokens
      */
-    function withdrawVANARevenue(uint256 amount) external onlyOwner nonReentrant {
-        require(amount <= totalRevenueVANA, "Exceeds VANA revenue");
-        require(vanaToken.transfer(owner(), amount), "VANA transfer failed");
+    function withdrawAllNative() external onlyOwner nonReentrant {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No VANA to withdraw");
         
-        totalRevenueVANA -= amount;
-        emit RevenueWithdrawn(owner(), address(vanaToken), amount);
+        payable(owner()).transfer(balance);
+        totalRevenueNative = 0;
+        
+        emit RevenueWithdrawn(owner(), address(0), balance);
     }
 
     /**
-     * @dev Withdraw revenue in USDC tokens
+     * @dev Withdraw all USDC revenue
      */
-    function withdrawUSDCRevenue(uint256 amount) external onlyOwner nonReentrant {
-        require(amount <= totalRevenueUSDC, "Exceeds USDC revenue");
-        require(usdcToken.transfer(owner(), amount), "USDC transfer failed");
+    function withdrawAllUSDC() external onlyOwner nonReentrant {
+        uint256 balance = USDC_TOKEN.balanceOf(address(this));
+        require(balance > 0, "No USDC to withdraw");
         
-        totalRevenueUSDC -= amount;
-        emit RevenueWithdrawn(owner(), address(usdcToken), amount);
+        require(USDC_TOKEN.transfer(owner(), balance), "USDC transfer failed");
+        totalRevenueUSDC = 0;
+        
+        emit RevenueWithdrawn(owner(), address(USDC_TOKEN), balance);
     }
 
     /**
-     * @dev Withdraw excess VANS tokens from contract
+     * @dev Withdraw excess VANS tokens
      */
     function withdrawExcessVANS(uint256 amount) external onlyOwner nonReentrant {
-        require(vansToken.transfer(owner(), amount), "VANS transfer failed");
-        emit RevenueWithdrawn(owner(), address(vansToken), amount);
+        require(VANS_TOKEN.transfer(owner(), amount), "VANS transfer failed");
+        emit RevenueWithdrawn(owner(), address(VANS_TOKEN), amount);
     }
 
     /**
-     * @dev Update prices (owner only)
+     * @dev Update prices
      */
     function updatePrices(
-        uint256[] calldata newVanaPrices, 
+        uint256[] calldata newNativePrices, 
         uint256[] calldata newUsdcPrices
     ) external onlyOwner {
-        require(newVanaPrices.length == chancePackages.length, "Invalid VANA prices length");
+        require(newNativePrices.length == chancePackages.length, "Invalid native prices length");
         require(newUsdcPrices.length == chancePackages.length, "Invalid USDC prices length");
         
-        vanaPrices = newVanaPrices;
+        nativePrices = newNativePrices;
         usdcPrices = newUsdcPrices;
         
-        emit PricesUpdated(msg.sender);
+        emit PricesUpdated();
     }
 
     // ============ VIEW FUNCTIONS ============
@@ -190,51 +184,51 @@ contract VansGameTreasury is ReentrancyGuard, Ownable {
         validPackage(packageIndex) 
         returns (
             uint256 chances,
-            uint256 vanaPrice,
+            uint256 nativePrice, 
             uint256 usdcPrice
         ) 
     {
-        return (
-            chancePackages[packageIndex],
-            vanaPrices[packageIndex],
-            usdcPrices[packageIndex]
-        );
+        return (chancePackages[packageIndex], nativePrices[packageIndex], usdcPrices[packageIndex]);
     }
 
     /**
-     * @dev Get user's VANS balance in contract
+     * @dev Get contract balances
      */
-    function getUserVansBalance(address user) external view returns (uint256) {
-        return vansBalances[user];
+    function getContractBalances() external view returns (
+        uint256 nativeBalance,  // VANA balance
+        uint256 usdcBalance,
+        uint256 vansBalance
+    ) {
+        return (
+            address(this).balance,
+            USDC_TOKEN.balanceOf(address(this)),
+            VANS_TOKEN.balanceOf(address(this))
+        );
     }
 
     /**
      * @dev Get contract statistics
      */
-    function getContractStats() external view returns (
-        uint256 vansClaimed,
-        uint256 chancesSold,
-        uint256 vanaRevenue,
-        uint256 usdcRevenue,
-        uint256 contractVansBalance,
-        uint256 contractVanaBalance,
-        uint256 contractUsdcBalance
+    function getStats() external view returns (
+        uint256 totalClaims,
+        uint256 totalChances,
+        uint256 nativeRevenue,  // VANA revenue
+        uint256 usdcRevenue
     ) {
-        return (
-            totalVansClaimed,
-            totalChancesSold,
-            totalRevenueVANA,
-            totalRevenueUSDC,
-            vansToken.balanceOf(address(this)),
-            vanaToken.balanceOf(address(this)),
-            usdcToken.balanceOf(address(this))
-        );
+        return (totalVansClaimed, totalChancesSold, totalRevenueNative, totalRevenueUSDC);
     }
 
     /**
-     * @dev Check if user can claim specific amount
+     * @dev Check if user can claim
      */
-    function canClaimVans(uint256 amount) external view returns (bool) {
-        return amount >= MIN_CLAIM_VANS && vansToken.balanceOf(address(this)) >= amount;
+    function canClaim(uint256 amount) external view returns (bool) {
+        return amount >= MIN_CLAIM_VANS && VANS_TOKEN.balanceOf(address(this)) >= amount;
     }
+
+    // ============ RECEIVE FUNCTION ============
+    
+    /**
+     * @dev Allow contract to receive VANA native tokens
+     */
+    receive() external payable {}
 }
