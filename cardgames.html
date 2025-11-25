@@ -92,6 +92,23 @@
             text-align: right;
         }
         
+        .wallet-balance {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        
+        .balance-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .balance-icon {
+            font-size: 0.7rem;
+        }
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -737,8 +754,16 @@
             </div>
             <div class="wallet-section">
                 <div class="wallet-info" id="wallet-info">
-                    <div>VANA: <span id="vana-balance">0</span></div>
-                    <div>USDC: <span id="usdc-balance">0</span></div>
+                    <div class="wallet-balance">
+                        <div class="balance-item">
+                            <span class="balance-icon">💎</span>
+                            <span id="vana-balance">0</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="balance-icon">💵</span>
+                            <span id="usdc-balance">0</span>
+                        </div>
+                    </div>
                 </div>
                 <button class="wallet-btn" id="connect-wallet">Connect</button>
             </div>
@@ -1428,7 +1453,8 @@
             try {
                 // Get real VANA balance
                 const vanaBalance = await provider.getBalance(userAccount);
-                elements.vanaBalance.textContent = parseFloat(ethers.utils.formatEther(vanaBalance)).toFixed(4);
+                const formattedVana = parseFloat(ethers.utils.formatEther(vanaBalance)).toFixed(4);
+                elements.vanaBalance.textContent = formattedVana;
                 
                 // Reset USDC balance to 0 (no demo data)
                 elements.usdcBalance.textContent = '0';
@@ -1632,6 +1658,7 @@
 
                 elements.claimStatus.innerHTML = '🔄 Processing claim transaction...';
                 
+                // FIX: Gunakan parseUnits untuk menghindari overflow
                 const amountWei = ethers.utils.parseUnits(tokens.toString(), 18);
                 const tx = await gameContract.claimVans(amountWei);
                 
