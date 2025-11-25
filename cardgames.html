@@ -720,10 +720,33 @@
                 transform: translateX(-50%) translateY(0);
             }
         }
+
+        /* Welcome Bonus Banner */
+        .welcome-banner {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #2c3e50;
+            padding: 12px 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Welcome Bonus Banner -->
+        <div class="welcome-banner" id="welcome-banner" style="display: none;">
+            🎁 Welcome! You received 15 VANS to start playing!
+        </div>
+
         <!-- Professional Header -->
         <div class="header">
             <div class="logo-section">
@@ -966,7 +989,7 @@
         const CHAIN_ID = 1480;
         const GAME_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-        // Game variables
+        // Game variables - DIPISAHKAN STATE GAME DAN PURCHASE
         let tokens = 0;
         let chances = 3;
         let gamesPlayed = 0;
@@ -977,7 +1000,8 @@
         let gameActive = false;
         let walletConnected = false;
         let selectedPurchaseOption = null;
-        let isProcessing = false;
+        let gameProcessing = false; // DIPISAH: untuk game
+        let purchaseProcessing = false; // DIPISAH: untuk purchase
         let newUserBonusGiven = false;
         let userGotCryptoReward = false;
         let web3;
@@ -991,7 +1015,8 @@
             GAMES_PLAYED: 'vans_game_played',
             WELCOME_BONUS: 'vans_welcome_bonus',
             WALLET_CONNECTED: 'vans_wallet_connected',
-            USER_ACCOUNT: 'vans_user_account'
+            USER_ACCOUNT: 'vans_user_account',
+            FIRST_VISIT: 'vans_first_visit'
         };
 
         // DOM Elements
@@ -1014,6 +1039,7 @@
         const vanaBalance = document.getElementById('vana-balance');
         const usdcBalance = document.getElementById('usdc-balance');
         const notification = document.getElementById('notification');
+        const welcomeBanner = document.getElementById('welcome-banner');
         
         // Popup elements
         const alertPopupOverlay = document.getElementById('alert-popup-overlay');
@@ -1047,7 +1073,6 @@
             notification.textContent = message;
             notification.style.display = 'block';
             
-            // Set color based on type
             if (type === 'success') {
                 notification.style.background = 'rgba(39, 174, 96, 0.9)';
             } else if (type === 'error') {
@@ -1082,6 +1107,7 @@
             const savedWelcomeBonus = localStorage.getItem(STORAGE_KEYS.WELCOME_BONUS);
             const savedWalletConnected = localStorage.getItem(STORAGE_KEYS.WALLET_CONNECTED);
             const savedUserAccount = localStorage.getItem(STORAGE_KEYS.USER_ACCOUNT);
+            const firstVisit = localStorage.getItem(STORAGE_KEYS.FIRST_VISIT);
 
             if (savedTokens) tokens = parseInt(savedTokens);
             if (savedChances) chances = parseInt(savedChances);
@@ -1090,7 +1116,32 @@
             if (savedWalletConnected) walletConnected = savedWalletConnected === 'true';
             if (savedUserAccount) userAccount = savedUserAccount;
 
+            if (!firstVisit) {
+                localStorage.setItem(STORAGE_KEYS.FIRST_VISIT, 'true');
+                giveWelcomeBonus();
+            }
+
             updateDisplay();
+        }
+
+        // Welcome Bonus Function
+        function giveWelcomeBonus() {
+            if (!newUserBonusGiven && tokens === 0) {
+                tokens += 15;
+                newUserBonusGiven = true;
+                
+                welcomeBanner.style.display = 'block';
+                showNotification('🎁 Welcome! You received 15 VANS to start playing!', 'success');
+                
+                saveGameState();
+                updateDisplay();
+                
+                setTimeout(() => {
+                    welcomeBanner.style.display = 'none';
+                }, 5000);
+                
+                console.log("Welcome bonus given: 15 VANS");
+            }
         }
 
         // Initialize Web3 and Contract
@@ -1098,11 +1149,9 @@
             if (typeof window.ethereum !== 'undefined') {
                 web3 = new Web3(window.ethereum);
                 try {
-                    // Request account access
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     userAccount = accounts[0];
                     
-                    // Check if connected to Vana Chain
                     const chainId = await web3.eth.getChainId();
                     if (chainId !== CHAIN_ID) {
                         try {
@@ -1130,24 +1179,35 @@
                         }
                     }
                     
-                    // Initialize contract
                     gameContract = new web3.eth.Contract(GAME_CONTRACT_ABI, GAME_CONTRACT_ADDRESS);
-                    
                     return true;
                 } catch (error) {
                     console.error("Error connecting to blockchain:", error);
                     return false;
                 }
             } else {
-                // Fallback to RPC provider (read-only)
                 web3 = new Web3(new Web3.providers.HttpProvider(VANA_CHAIN_RPC));
                 gameContract = new web3.eth.Contract(GAME_CONTRACT_ABI, GAME_CONTRACT_ADDRESS);
                 return true;
             }
         }
 
-        // Event listeners
+        // Event listeners - DIPERBAIKI: Hindari event listener ganda
         function initializeEventListeners() {
+            // Hapus event listener lama jika ada
+            gameOptions.removeEventListener('click', handleOptionSelect);
+            startGameButton.removeEventListener('click', startGame);
+            revealCardsButton.removeEventListener('click', revealCards);
+            buyChancesButton.removeEventListener('click', showPurchasePopup);
+            connectWalletButton.removeEventListener('click', connectWallet);
+            showWalletButton.removeEventListener('click', showWalletPopup);
+            closeWalletPopup.removeEventListener('click', hideWalletPopup);
+            closePurchasePopup.removeEventListener('click', hidePurchasePopup);
+            purchasePopupVana.removeEventListener('click', purchaseVanaHandler);
+            purchasePopupUsdc.removeEventListener('click', purchaseUsdcHandler);
+            purchasePopupVans.removeEventListener('click', purchaseVansHandler);
+            
+            // Tambah event listener baru
             gameOptions.addEventListener('click', handleOptionSelect);
             startGameButton.addEventListener('click', startGame);
             revealCardsButton.addEventListener('click', revealCards);
@@ -1156,9 +1216,12 @@
             showWalletButton.addEventListener('click', showWalletPopup);
             closeWalletPopup.addEventListener('click', hideWalletPopup);
             closePurchasePopup.addEventListener('click', hidePurchasePopup);
-            purchasePopupVana.addEventListener('click', () => purchaseChances('VANA'));
-            purchasePopupUsdc.addEventListener('click', () => purchaseChances('USDC'));
-            purchasePopupVans.addEventListener('click', () => purchaseChances('VANS'));
+            
+            // Handler terpisah untuk setiap tombol purchase
+            purchasePopupVana.addEventListener('click', purchaseVanaHandler);
+            purchasePopupUsdc.addEventListener('click', purchaseUsdcHandler);
+            purchasePopupVans.addEventListener('click', purchaseVansHandler);
+            
             withdrawVans.addEventListener('click', () => withdrawToken('VANS', tokens, 100));
             withdrawVana.addEventListener('click', () => withdrawToken('VANA', parseFloat(vanaBalance.textContent), 0.5));
             withdrawUsdc.addEventListener('click', () => withdrawToken('USDC', parseFloat(usdcBalance.textContent), 1));
@@ -1178,26 +1241,26 @@
                 if (e.target === alertPopupOverlay) hideAlert();
             });
             
-            // Purchase option selection
+            // Purchase option selection - DIPERBAIKI: sekali inisialisasi
             document.querySelectorAll('.purchase-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    document.querySelectorAll('.purchase-option').forEach(opt => {
-                        opt.classList.remove('selected');
-                    });
-                    this.classList.add('selected');
-                    selectedPurchaseOption = this;
-                });
+                option.removeEventListener('click', purchaseOptionHandler);
+                option.addEventListener('click', purchaseOptionHandler);
             });
-
-            // Auto-select first purchase option
-            setTimeout(() => {
-                const firstOption = document.querySelector('.purchase-option');
-                if (firstOption && !selectedPurchaseOption) {
-                    firstOption.classList.add('selected');
-                    selectedPurchaseOption = firstOption;
-                }
-            }, 100);
         }
+
+        // Handler terpisah untuk purchase options
+        function purchaseOptionHandler() {
+            document.querySelectorAll('.purchase-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            this.classList.add('selected');
+            selectedPurchaseOption = this;
+        }
+
+        // Handler terpisah untuk setiap tombol purchase
+        function purchaseVanaHandler() { purchaseChances('VANA'); }
+        function purchaseUsdcHandler() { purchaseChances('USDC'); }
+        function purchaseVansHandler() { purchaseChances('VANS'); }
 
         // Custom alert functions
         let alertCallback = null;
@@ -1259,7 +1322,7 @@
             walletPopupOverlay.style.display = 'none';
         }
         
-        // Fungsi show purchase popup - IMPROVED
+        // Fungsi show purchase popup - DIPERBAIKI
         function showPurchasePopup() {
             console.log("Buy Chances button clicked");
             
@@ -1295,10 +1358,10 @@
         function hidePurchasePopup() {
             purchasePopupOverlay.style.display = 'none';
             selectedPurchaseOption = null;
-            isProcessing = false;
+            purchaseProcessing = false; // Reset purchase processing
         }
         
-        // Purchase chances - IMPROVED
+        // Purchase chances - DIPERBAIKI: State terpisah
         async function purchaseChances(currency) {
             if (!selectedPurchaseOption) {
                 showNotification('Please select a chances package first!', 'warning');
@@ -1311,8 +1374,14 @@
                 return;
             }
 
+            // Cek apakah sedang processing
+            if (purchaseProcessing) {
+                showNotification('Please wait for current transaction to complete', 'warning');
+                return;
+            }
+
             try {
-                isProcessing = true;
+                purchaseProcessing = true;
                 purchaseStatus.style.display = 'block';
                 purchaseStatus.textContent = '🔄 Processing transaction...';
 
@@ -1320,7 +1389,6 @@
                 let cost;
 
                 if (currency === 'VANS') {
-                    // Purchase with VANS (off-chain) - NO WALLET REQUIRED
                     chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
                     cost = parseInt(selectedPurchaseOption.dataset.vans || '5');
                     
@@ -1343,7 +1411,6 @@
                     }, 1500);
 
                 } else if (currency === 'VANA') {
-                    // Purchase with VANA (on-chain)
                     const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
                     cost = parseFloat(selectedPurchaseOption.dataset.vana);
                     chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
@@ -1356,7 +1423,7 @@
                         throw new Error(`Insufficient VANA. Need ${cost}, have ${parseFloat(vanaBalanceEth).toFixed(4)}`);
                     }
 
-                    // Simulate transaction (replace with actual contract call)
+                    // Simulate transaction
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     
                     chances += chancesCount;
@@ -1372,18 +1439,16 @@
                     }, 1500);
 
                 } else if (currency === 'USDC') {
-                    // Purchase with USDC (on-chain)
                     const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
                     cost = parseFloat(selectedPurchaseOption.dataset.usdc);
                     chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
                     
-                    // Check USDC balance (simulated)
                     const currentUsdc = parseFloat(usdcBalance.textContent);
                     if (currentUsdc < cost) {
                         throw new Error(`Insufficient USDC. Need ${cost}, have ${currentUsdc}`);
                     }
 
-                    // Simulate transaction (replace with actual contract call)
+                    // Simulate transaction
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     
                     chances += chancesCount;
@@ -1404,7 +1469,7 @@
                 showNotification(`❌ Purchase failed: ${error.message}`, 'error');
                 purchaseStatus.innerHTML = `❌ Transaction failed: ${error.message}`;
             } finally {
-                isProcessing = false;
+                purchaseProcessing = false;
             }
         }
         
@@ -1418,7 +1483,6 @@
             try {
                 showNotification('🔄 Claiming VANS tokens...', 'info');
                 
-                // Simulate blockchain transaction
                 await new Promise(resolve => setTimeout(resolve, 3000));
                 
                 tokens -= amount;
@@ -1440,7 +1504,7 @@
             walletPopupUsdc.textContent = usdcBalance.textContent;
         }
         
-        // Fungsi connect wallet - IMPROVED
+        // Fungsi connect wallet
         async function connectWallet() {
             if (walletConnected) return;
             
@@ -1456,28 +1520,16 @@
                     connectWalletButton.textContent = 'Connected';
                     connectWalletButton.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
                     
-                    // Get real user balances from blockchain
                     try {
-                        // Get VANA balance (native token)
                         const vanaBalanceWei = await web3.eth.getBalance(userAccount);
                         const vanaBalanceEth = web3.utils.fromWei(vanaBalanceWei, 'ether');
                         vanaBalance.textContent = parseFloat(vanaBalanceEth).toFixed(4);
-                        
-                        // Get USDC balance (simulated for now)
                         usdcBalance.textContent = '0.00';
                         
                     } catch (error) {
                         console.error("Error fetching balances:", error);
                         vanaBalance.textContent = '0.0000';
                         usdcBalance.textContent = '0.00';
-                    }
-                    
-                    // Give new user bonus only once per wallet
-                    if (!newUserBonusGiven) {
-                        tokens += 15;
-                        newUserBonusGiven = true;
-                        showNotification('🎁 Welcome! You received 15 VANS bonus!', 'success');
-                        updateDisplay();
                     }
                     
                     updateWalletPopup();
@@ -1513,7 +1565,7 @@
             }
         }
 
-        // Game functions
+        // Game functions - DIPERBAIKI: State terpisah
         function handleOptionSelect(e) {
             const optionCard = e.target.closest('.option-card');
             if (!optionCard) return;
@@ -1534,7 +1586,7 @@
         }
         
         function startGame() {
-            if (!selectedOption || chances <= 0 || isProcessing) {
+            if (!selectedOption || chances <= 0 || gameProcessing) {
                 if (chances <= 0) {
                     showNotification('No chances left! Buy more to continue playing.', 'warning');
                     showPurchasePopup();
@@ -1542,7 +1594,7 @@
                 return;
             }
             
-            isProcessing = true;
+            gameProcessing = true;
             gameOptions.style.display = 'none';
             startRound();
         }
@@ -1554,7 +1606,7 @@
             
             gamesPlayed++;
             gameActive = true;
-            isProcessing = false;
+            gameProcessing = false;
             
             updateDisplay();
             saveGameState();
@@ -1576,11 +1628,9 @@
             const totalCards = selectedOption.cards;
             const trapCount = selectedOption.traps || 0;
             
-            // Determine rewards based on game count
             let rewards = [];
             
             if (gamesPlayed === 1) {
-                // First game - give good rewards including crypto
                 rewards = [
                     { type: 'bomb', value: 0 },
                     { type: 'vana', value: 0.1 },
@@ -1590,7 +1640,6 @@
                 ];
                 userGotCryptoReward = true;
             } else if (gamesPlayed === 2) {
-                // Second game - still good rewards
                 rewards = [
                     { type: 'bomb', value: 0 },
                     { type: 'usdc', value: 0.2 },
@@ -1599,7 +1648,6 @@
                     { type: 'vans', value: 2 }
                 ];
             } else {
-                // Subsequent games - mostly bombs with small chance of reward
                 const hasReward = Math.random() < 0.3;
                 const hasCrypto = !userGotCryptoReward && Math.random() < 0.1;
                 
@@ -1625,14 +1673,12 @@
                 }
             }
             
-            // Shuffle and trim to totalCards
             for (let i = rewards.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [rewards[i], rewards[j]] = [rewards[j], rewards[i]];
             }
             rewards = rewards.slice(0, totalCards);
             
-            // Create card elements
             for (let i = 0; i < totalCards; i++) {
                 const cardValue = rewards[i];
                 const card = document.createElement('div');
@@ -1651,7 +1697,7 @@
         }
         
         function selectCard(index) {
-            if (!gameActive || cards[index].classList.contains('revealed') || isProcessing) return;
+            if (!gameActive || cards[index].classList.contains('revealed') || gameProcessing) return;
             
             cards.forEach(card => card.classList.remove('selected'));
             
@@ -1662,9 +1708,9 @@
         }
         
         function revealCards() {
-            if (!gameActive || selectedCard === null || isProcessing) return;
+            if (!gameActive || selectedCard === null || gameProcessing) return;
             
-            isProcessing = true;
+            gameProcessing = true;
             gameActive = false;
             revealCardsButton.disabled = true;
             
@@ -1672,7 +1718,6 @@
             let tokensWon = 0;
             let cryptoBonus = null;
             
-            // Apply the card result
             if (selectedCardValue.type === 'bomb') {
                 cards[selectedCard].classList.add('bomb');
                 cards[selectedCard].innerHTML = '💣';
@@ -1720,7 +1765,6 @@
                 }
             }
             
-            // Reveal all cards with delay
             cards.forEach((card, index) => {
                 setTimeout(() => {
                     if (index !== selectedCard) {
@@ -1746,7 +1790,7 @@
                 resultDiv.style.display = 'block';
                 startGameButton.style.display = 'block';
                 startGameButton.textContent = chances > 0 ? 'PLAY AGAIN' : 'BUY CHANCES';
-                isProcessing = false;
+                gameProcessing = false;
                 
                 updateDisplay();
                 updateWalletPopup();
@@ -1759,9 +1803,8 @@
             chancesCountElement.textContent = chances;
             gamesPlayedElement.textContent = gamesPlayed;
             
-            startGameButton.disabled = !selectedOption || chances <= 0 || isProcessing;
+            startGameButton.disabled = !selectedOption || chances <= 0 || gameProcessing;
             
-            // Update button text based on chances
             if (chances <= 0) {
                 startGameButton.textContent = 'BUY CHANCES';
             }
@@ -1773,7 +1816,6 @@
             initializeEventListeners();
             updateDisplay();
             
-            // Auto connect wallet if previously connected
             if (walletConnected && userAccount) {
                 connectWallet();
             }
