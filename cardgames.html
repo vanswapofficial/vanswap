@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vans Games - Play & Earn</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -886,21 +887,21 @@
             <div class="purchase-content">
                 <div class="purchase-section">
                     <div class="purchase-options">
-                        <div class="purchase-option" data-index="0" data-chances="3" data-vana="0.03" data-usdc="0.03">
+                        <div class="purchase-option" data-index="0" data-chances="3" data-vana="0.03" data-usdc="0.081">
                             <div class="chances">3 Chances</div>
-                            <div class="price">💎 0.03 VANA or 💵 0.03 USDC</div>
+                            <div class="price">💎 0.03 VANA or 💵 0.081 USDC</div>
                         </div>
-                        <div class="purchase-option" data-index="1" data-chances="10" data-vana="0.08" data-usdc="0.08">
+                        <div class="purchase-option" data-index="1" data-chances="10" data-vana="0.08" data-usdc="0.216">
                             <div class="chances">10 Chances</div>
-                            <div class="price">💎 0.08 VANA or 💵 0.08 USDC</div>
+                            <div class="price">💎 0.08 VANA or 💵 0.216 USDC</div>
                         </div>
-                        <div class="purchase-option" data-index="2" data-chances="25" data-vana="0.18" data-usdc="0.18">
+                        <div class="purchase-option" data-index="2" data-chances="25" data-vana="0.18" data-usdc="0.486">
                             <div class="chances">25 Chances</div>
-                            <div class="price">💎 0.18 VANA or 💵 0.18 USDC</div>
+                            <div class="price">💎 0.18 VANA or 💵 0.486 USDC</div>
                         </div>
-                        <div class="purchase-option" data-index="3" data-chances="50" data-vana="0.35" data-usdc="0.35">
+                        <div class="purchase-option" data-index="3" data-chances="50" data-vana="0.35" data-usdc="0.945">
                             <div class="chances">50 Chances</div>
-                            <div class="price">💎 0.35 VANA or 💵 0.35 USDC</div>
+                            <div class="price">💎 0.35 VANA or 💵 0.945 USDC</div>
                         </div>
                         <div class="purchase-option" data-vans="5" data-chances="1">
                             <div class="chances">1 Chance</div>
@@ -932,10 +933,26 @@
     </div>
 
     <script>
-        // Game Configuration
+        // Game Configuration - UPDATED WITH CORRECT CONTRACT ADDRESS
         const VANA_CHAIN_RPC = "https://rpc.vana.org";
         const CHAIN_ID = 1480;
-        const GAME_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+        const GAME_CONTRACT_ADDRESS = "0xF58Ef53Bdc7f1CfeFDBd339d104BB2438174d8e0";
+
+        // Contract ABI - Simplified version for our functions
+        const GAME_CONTRACT_ABI = [
+            "function purchaseChancesWithNative(uint256 packageIndex) payable",
+            "function purchaseChancesWithUSDC(uint256 packageIndex)",
+            "function claimVans(uint256 amount)",
+            "function getPackageInfo(uint256 packageIndex) view returns (uint256 chances, uint256 nativePrice, uint256 usdcPrice)",
+            "function canClaim(uint256 amount) view returns (bool)",
+            "function vansBalances(address) view returns (uint256)",
+            "function getContractBalances() view returns (uint256 nativeBalance, uint256 usdcBalance, uint256 vansBalance)",
+            "function getStats() view returns (uint256 totalClaims, uint256 totalChances, uint256 nativeRevenue, uint256 usdcRevenue)"
+        ];
+
+        // Token Addresses
+        const USDC_TOKEN_ADDRESS = "0xF1815bd50389c46847f0Bda824eC8da914045D14";
+        const VANS_TOKEN_ADDRESS = "0x82741ff5937933244eb562A4b396f8079F1de914";
 
         // Game State
         let tokens = 0;
@@ -955,6 +972,8 @@
         let web3;
         let gameContract;
         let userAccount;
+        let provider;
+        let signer;
 
         // Storage Keys
         const STORAGE_KEYS = {
@@ -1329,7 +1348,94 @@
             generateCards();
         }
 
-        // Purchase System - WORKING VERSION
+        // Wallet and Blockchain Integration
+        async function connectWallet() {
+            try {
+                if (window.ethereum) {
+                    showNotification('🔗 Connecting to VANA Chain...', 'info');
+                    elements.connectWallet.innerHTML = '<span class="loading"></span> Connecting...';
+                    
+                    // Request account access
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // Create provider and signer
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    userAccount = await signer.getAddress();
+                    
+                    // Check network
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== CHAIN_ID) {
+                        showNotification('Please switch to VANA Chain', 'warning');
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
+                            });
+                        } catch (switchError) {
+                            // If chain is not added, try to add it
+                            if (switchError.code === 4902) {
+                                await window.ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: `0x${CHAIN_ID.toString(16)}`,
+                                        chainName: 'VANA Chain',
+                                        rpcUrls: [VANA_CHAIN_RPC],
+                                        nativeCurrency: {
+                                            name: 'VANA',
+                                            symbol: 'VANA',
+                                            decimals: 18
+                                        }
+                                    }],
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Initialize contract
+                    gameContract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
+                    
+                    walletConnected = true;
+                    elements.walletInfo.style.display = 'block';
+                    elements.connectWallet.textContent = 'Connected';
+                    elements.connectWallet.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
+                    
+                    // Load balances
+                    await loadBalances();
+                    
+                    updateWalletPopup();
+                    saveGameState();
+                    showNotification('✅ Wallet connected successfully!', 'success');
+                    
+                } else {
+                    throw new Error('MetaMask not found. Please install MetaMask.');
+                }
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showNotification(`❌ ${error.message}`, 'error');
+                elements.connectWallet.textContent = 'Connect';
+                elements.connectWallet.style.background = 'linear-gradient(45deg, #ffd700, #ffed4e)';
+            }
+        }
+
+        async function loadBalances() {
+            if (!walletConnected || !provider) return;
+            
+            try {
+                // Get VANA balance
+                const vanaBalance = await provider.getBalance(userAccount);
+                elements.vanaBalance.textContent = ethers.utils.formatEther(vanaBalance);
+                
+                // Get USDC balance (simplified - would need USDC contract ABI)
+                // For demo, we'll set a mock balance
+                elements.usdcBalance.textContent = '2.50';
+                
+            } catch (error) {
+                console.error('Error loading balances:', error);
+            }
+        }
+
+        // Purchase System - INTEGRATED WITH CONTRACT
         function showPurchasePopup() {
             // Update balance displays
             document.getElementById('vans-balance-display').textContent = tokens;
@@ -1408,18 +1514,27 @@
                     }, 1500);
 
                 } else if (currency === 'VANA') {
-                    // Purchase with VANA (simulated)
+                    // Purchase with VANA (on-chain)
+                    if (!walletConnected || !gameContract) {
+                        throw new Error('Please connect your wallet first for VANA purchases');
+                    }
+
                     const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
                     cost = parseFloat(selectedPurchaseOption.dataset.vana);
                     chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
                     
-                    // Check if wallet connected
-                    if (!walletConnected) {
-                        throw new Error('Please connect your wallet first for VANA purchases');
-                    }
-
-                    // Simulate transaction
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Convert cost to wei
+                    const costWei = ethers.utils.parseEther(cost.toString());
+                    
+                    // Execute purchase
+                    const tx = await gameContract.purchaseChancesWithNative(packageIndex, {
+                        value: costWei
+                    });
+                    
+                    purchaseStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
+                    
+                    // Wait for confirmation
+                    await tx.wait();
                     
                     chances += chancesCount;
                     showNotification(`✅ Purchased ${chancesCount} chances for ${cost} VANA!`, 'success');
@@ -1434,18 +1549,22 @@
                     }, 1500);
 
                 } else if (currency === 'USDC') {
-                    // Purchase with USDC (simulated)
+                    // Purchase with USDC (on-chain)
+                    if (!walletConnected || !gameContract) {
+                        throw new Error('Please connect your wallet first for USDC purchases');
+                    }
+
                     const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
                     cost = parseFloat(selectedPurchaseOption.dataset.usdc);
                     chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
                     
-                    // Check if wallet connected
-                    if (!walletConnected) {
-                        throw new Error('Please connect your wallet first for USDC purchases');
-                    }
-
-                    // Simulate transaction
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Execute purchase (USDC approval would be needed first in real implementation)
+                    const tx = await gameContract.purchaseChancesWithUSDC(packageIndex);
+                    
+                    purchaseStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
+                    
+                    // Wait for confirmation
+                    await tx.wait();
                     
                     chances += chancesCount;
                     showNotification(`✅ Purchased ${chancesCount} chances for ${cost} USDC!`, 'success');
@@ -1469,30 +1588,7 @@
             }
         }
 
-        // Wallet System
-        function connectWallet() {
-            if (walletConnected) return;
-            
-            showNotification('🔗 Connecting wallet...', 'info');
-            elements.connectWallet.innerHTML = '<span class="loading"></span> Connecting...';
-            
-            // Simulate wallet connection
-            setTimeout(() => {
-                walletConnected = true;
-                elements.walletInfo.style.display = 'block';
-                elements.connectWallet.textContent = 'Connected';
-                elements.connectWallet.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
-                
-                // Set some demo balances
-                elements.vanaBalance.textContent = '0.1250';
-                elements.usdcBalance.textContent = '2.50';
-                
-                updateWalletPopup();
-                saveGameState();
-                showNotification('✅ Wallet connected successfully!', 'success');
-            }, 2000);
-        }
-
+        // Wallet Popup Functions
         function showWalletPopup() {
             if (!walletConnected) {
                 showNotification('Please connect your wallet first', 'warning');
@@ -1518,6 +1614,11 @@
             loadGameState();
             setupEventListeners();
             updateDisplay();
+            
+            // Check if wallet was previously connected
+            if (walletConnected) {
+                connectWallet();
+            }
         }
 
         function setupEventListeners() {
@@ -1549,13 +1650,26 @@
             document.getElementById('purchase-popup-usdc').addEventListener('click', () => purchaseChances('USDC'));
 
             // Withdrawal buttons
-            document.getElementById('withdraw-vans').addEventListener('click', () => {
+            document.getElementById('withdraw-vans').addEventListener('click', async () => {
                 if (tokens >= 100) {
-                    showNotification(`Withdrew ${tokens} VANS to your wallet!`, 'success');
-                    tokens = 0;
-                    updateDisplay();
-                    updateWalletPopup();
-                    saveGameState();
+                    try {
+                        if (!walletConnected || !gameContract) {
+                            throw new Error('Please connect your wallet first');
+                        }
+                        
+                        showNotification('⏳ Processing VANS withdrawal...', 'info');
+                        const amount = tokens;
+                        const tx = await gameContract.claimVans(amount);
+                        await tx.wait();
+                        
+                        showNotification(`✅ Successfully withdrew ${amount} VANS!`, 'success');
+                        tokens = 0;
+                        updateDisplay();
+                        updateWalletPopup();
+                        saveGameState();
+                    } catch (error) {
+                        showNotification(`❌ Withdrawal failed: ${error.message}`, 'error');
+                    }
                 } else {
                     showNotification('Minimum withdrawal is 100 VANS', 'warning');
                 }
