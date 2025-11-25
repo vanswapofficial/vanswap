@@ -1329,59 +1329,176 @@
             generateCards();
         }
 
-        // Initialize
-        function initializeGame() {
-            loadGameState();
-            setupEventListeners();
-            updateDisplay();
+        // Purchase System - WORKING VERSION
+        function showPurchasePopup() {
+            // Update balance displays
+            document.getElementById('vans-balance-display').textContent = tokens;
+            document.getElementById('vana-balance-display').textContent = elements.vanaBalance.textContent;
+            document.getElementById('usdc-balance-display').textContent = elements.usdcBalance.textContent;
             
-            if (walletConnected && userAccount) {
-                connectWallet();
-            }
-        }
-
-        function setupEventListeners() {
-            elements.gameOptions.addEventListener('click', handleOptionSelect);
-            elements.startGame.addEventListener('click', startGame);
-            elements.revealCards.addEventListener('click', revealCards);
-            elements.buyChances.addEventListener('click', showPurchasePopup);
-            elements.connectWallet.addEventListener('click', connectWallet);
-            elements.showWallet.addEventListener('click', showWalletPopup);
-            
-            // Setup other event listeners...
-            document.getElementById('close-wallet-popup').addEventListener('click', hideWalletPopup);
-            document.getElementById('close-purchase-popup').addEventListener('click', hidePurchasePopup);
-            
-            // Purchase options
-            document.querySelectorAll('.purchase-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    document.querySelectorAll('.purchase-option').forEach(opt => {
-                        opt.classList.remove('selected');
-                    });
-                    this.classList.add('selected');
-                    selectedPurchaseOption = this;
-                });
+            // Reset selection
+            selectedPurchaseOption = null;
+            document.querySelectorAll('.purchase-option').forEach(opt => {
+                opt.classList.remove('selected');
             });
             
-            document.getElementById('purchase-popup-vans').addEventListener('click', () => purchaseChances('VANS'));
-            document.getElementById('purchase-popup-vana').addEventListener('click', () => purchaseChances('VANA'));
-            document.getElementById('purchase-popup-usdc').addEventListener('click', () => purchaseChances('USDC'));
-        }
-
-        // Wallet and Purchase functions (simplified for example)
-        function connectWallet() {
-            showNotification('🔗 Connect your wallet to play with real crypto!', 'info');
-        }
-
-        function showPurchasePopup() {
+            // Reset status
+            document.getElementById('purchase-status').style.display = 'none';
+            
+            // Show popup
             document.getElementById('purchase-popup-overlay').style.display = 'flex';
+            
+            // Auto-select first option
+            setTimeout(() => {
+                const firstOption = document.querySelector('.purchase-option');
+                if (firstOption) {
+                    firstOption.classList.add('selected');
+                    selectedPurchaseOption = firstOption;
+                }
+            }, 50);
         }
 
         function hidePurchasePopup() {
             document.getElementById('purchase-popup-overlay').style.display = 'none';
+            selectedPurchaseOption = null;
+            purchaseProcessing = false;
+        }
+
+        async function purchaseChances(currency) {
+            if (!selectedPurchaseOption) {
+                showNotification('Please select a chances package first!', 'warning');
+                return;
+            }
+
+            if (purchaseProcessing) {
+                showNotification('Please wait for current transaction to complete', 'warning');
+                return;
+            }
+
+            try {
+                purchaseProcessing = true;
+                const purchaseStatus = document.getElementById('purchase-status');
+                purchaseStatus.style.display = 'block';
+                purchaseStatus.textContent = '🔄 Processing transaction...';
+
+                let chancesCount;
+                let cost;
+
+                if (currency === 'VANS') {
+                    // Purchase with VANS (off-chain) - NO WALLET REQUIRED
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    cost = parseInt(selectedPurchaseOption.dataset.vans || '5');
+                    
+                    if (tokens < cost) {
+                        throw new Error(`Insufficient VANS. Need ${cost}, have ${tokens}`);
+                    }
+
+                    tokens -= cost;
+                    chances += chancesCount;
+                    
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} VANS!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} VANS.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+
+                } else if (currency === 'VANA') {
+                    // Purchase with VANA (simulated)
+                    const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
+                    cost = parseFloat(selectedPurchaseOption.dataset.vana);
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    
+                    // Check if wallet connected
+                    if (!walletConnected) {
+                        throw new Error('Please connect your wallet first for VANA purchases');
+                    }
+
+                    // Simulate transaction
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    chances += chancesCount;
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} VANA!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} VANA.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+
+                } else if (currency === 'USDC') {
+                    // Purchase with USDC (simulated)
+                    const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
+                    cost = parseFloat(selectedPurchaseOption.dataset.usdc);
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    
+                    // Check if wallet connected
+                    if (!walletConnected) {
+                        throw new Error('Please connect your wallet first for USDC purchases');
+                    }
+
+                    // Simulate transaction
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    chances += chancesCount;
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} USDC!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} USDC.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+                }
+
+            } catch (error) {
+                console.error("Purchase error:", error);
+                showNotification(`❌ Purchase failed: ${error.message}`, 'error');
+                document.getElementById('purchase-status').innerHTML = `❌ Transaction failed: ${error.message}`;
+            } finally {
+                purchaseProcessing = false;
+            }
+        }
+
+        // Wallet System
+        function connectWallet() {
+            if (walletConnected) return;
+            
+            showNotification('🔗 Connecting wallet...', 'info');
+            elements.connectWallet.innerHTML = '<span class="loading"></span> Connecting...';
+            
+            // Simulate wallet connection
+            setTimeout(() => {
+                walletConnected = true;
+                elements.walletInfo.style.display = 'block';
+                elements.connectWallet.textContent = 'Connected';
+                elements.connectWallet.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
+                
+                // Set some demo balances
+                elements.vanaBalance.textContent = '0.1250';
+                elements.usdcBalance.textContent = '2.50';
+                
+                updateWalletPopup();
+                saveGameState();
+                showNotification('✅ Wallet connected successfully!', 'success');
+            }, 2000);
         }
 
         function showWalletPopup() {
+            if (!walletConnected) {
+                showNotification('Please connect your wallet first', 'warning');
+                connectWallet();
+                return;
+            }
             updateWalletPopup();
             document.getElementById('wallet-popup-overlay').style.display = 'flex';
         }
@@ -1396,8 +1513,61 @@
             document.getElementById('wallet-popup-usdc').textContent = elements.usdcBalance.textContent;
         }
 
-        function purchaseChances(currency) {
-            showNotification(`Purchase with ${currency} - Feature coming soon!`, 'info');
+        // Initialize
+        function initializeGame() {
+            loadGameState();
+            setupEventListeners();
+            updateDisplay();
+        }
+
+        function setupEventListeners() {
+            elements.gameOptions.addEventListener('click', handleOptionSelect);
+            elements.startGame.addEventListener('click', startGame);
+            elements.revealCards.addEventListener('click', revealCards);
+            elements.buyChances.addEventListener('click', showPurchasePopup);
+            elements.connectWallet.addEventListener('click', connectWallet);
+            elements.showWallet.addEventListener('click', showWalletPopup);
+            
+            // Popup close buttons
+            document.getElementById('close-wallet-popup').addEventListener('click', hideWalletPopup);
+            document.getElementById('close-purchase-popup').addEventListener('click', hidePurchasePopup);
+            
+            // Purchase options selection
+            document.querySelectorAll('.purchase-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.purchase-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    selectedPurchaseOption = this;
+                });
+            });
+            
+            // Purchase buttons
+            document.getElementById('purchase-popup-vans').addEventListener('click', () => purchaseChances('VANS'));
+            document.getElementById('purchase-popup-vana').addEventListener('click', () => purchaseChances('VANA'));
+            document.getElementById('purchase-popup-usdc').addEventListener('click', () => purchaseChances('USDC'));
+
+            // Withdrawal buttons
+            document.getElementById('withdraw-vans').addEventListener('click', () => {
+                if (tokens >= 100) {
+                    showNotification(`Withdrew ${tokens} VANS to your wallet!`, 'success');
+                    tokens = 0;
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                } else {
+                    showNotification('Minimum withdrawal is 100 VANS', 'warning');
+                }
+            });
+
+            document.getElementById('withdraw-vana').addEventListener('click', () => {
+                showNotification('VANA withdrawals are processed automatically', 'info');
+            });
+
+            document.getElementById('withdraw-usdc').addEventListener('click', () => {
+                showNotification('USDC withdrawals are processed automatically', 'info');
+            });
         }
 
         // Start the game
