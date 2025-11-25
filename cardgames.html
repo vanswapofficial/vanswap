@@ -825,158 +825,7 @@
 
     <div id="notification" class="notification" style="display: none;"></div>
 
-    <div class="popup-overlay" id="alert-popup-overlay">
-        <div class="custom-alert slide-in">
-            <div class="alert-icon" id="alert-icon">⚠️</div>
-            <div class="alert-title" id="alert-title">Warning</div>
-            <div class="alert-message" id="alert-message">Alert message will appear here</div>
-            <div class="alert-buttons">
-                <button class="alert-button alert-cancel" id="alert-cancel-button">Cancel</button>
-                <button class="alert-button alert-confirm" id="alert-confirm-button">Confirm</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="popup-overlay" id="wallet-popup-overlay">
-        <div class="wallet-popup slide-in">
-            <div class="wallet-header">
-                <div class="wallet-title">👛 My Wallet</div>
-                <div class="wallet-subtitle">Manage your assets and tokens</div>
-            </div>
-            
-            <div class="wallet-content">
-                <div class="wallet-balances">
-                    <div class="balance-item">
-                        <div class="balance-info">
-                            <div class="balance-icon vans-icon">🪙</div>
-                            <div class="balance-details">
-                                <h4>VANS Token</h4>
-                                <span>Game Token</span>
-                            </div>
-                        </div>
-                        <div class="balance-amount" id="wallet-popup-vans">0</div>
-                    </div>
-                    
-                    <div class="balance-item">
-                        <div class="balance-info">
-                            <div class="balance-icon vana-icon">💎</div>
-                            <div class="balance-details">
-                                <h4>VANA</h4>
-                                <span>Utility Token</span>
-                            </div>
-                        </div>
-                        <div class="balance-amount" id="wallet-popup-vana">0</div>
-                    </div>
-                    
-                    <div class="balance-item">
-                        <div class="balance-info">
-                            <div class="balance-icon usdc-icon">💵</div>
-                            <div class="balance-details">
-                                <h4>USDC</h4>
-                                <span>Stablecoin</span>
-                            </div>
-                        </div>
-                        <div class="balance-amount" id="wallet-popup-usdc">0</div>
-                    </div>
-                </div>
-
-                <div class="claim-status" id="claim-status" style="display: none;"></div>
-            </div>
-            
-            <div class="withdrawal-section">
-                <div class="withdrawal-item">
-                    <div class="withdrawal-info-small">
-                        <div class="withdrawal-icon vans-icon">🪙</div>
-                        <div>
-                            <div style="font-weight: bold;">VANS Token</div>
-                            <div style="font-size: 0.8rem; opacity: 0.8;">Min. 100 VANS</div>
-                        </div>
-                    </div>
-                    <button class="withdrawal-btn" id="withdraw-vans">Withdraw</button>
-                </div>
-                
-                <div class="withdrawal-item">
-                    <div class="withdrawal-info-small">
-                        <div class="withdrawal-icon vana-icon">💎</div>
-                        <div>
-                            <div style="font-weight: bold;">VANA</div>
-                            <div style="font-size: 0.8rem; opacity: 0.8;">Min. 0.5 VANA</div>
-                        </div>
-                    </div>
-                    <button class="withdrawal-btn" id="withdraw-vana">Withdraw</button>
-                </div>
-                
-                <div class="withdrawal-item">
-                    <div class="withdrawal-info-small">
-                        <div class="withdrawal-icon usdc-icon">💵</div>
-                        <div>
-                            <div style="font-weight: bold;">USDC</div>
-                            <div style="font-size: 0.8rem; opacity: 0.8;">Min. 1 USDC</div>
-                        </div>
-                    </div>
-                    <button class="withdrawal-btn" id="withdraw-usdc">Withdraw</button>
-                </div>
-                
-                <button class="close-popup" id="close-wallet-popup">✕ Close Wallet</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="popup-overlay" id="purchase-popup-overlay">
-        <div class="purchase-popup slide-in">
-            <div class="purchase-header">
-                <div class="purchase-title">🔄 Buy Chances</div>
-                <div class="purchase-subtitle">Get more playing chances</div>
-            </div>
-            
-            <div class="purchase-content">
-                <div class="purchase-section">
-                    <div class="purchase-options">
-                        <div class="purchase-option" data-index="0" data-chances="3" data-vana="0.03" data-usdc="0.081">
-                            <div class="chances">3 Chances</div>
-                            <div class="price">💎 0.03 VANA or 💵 0.081 USDC</div>
-                        </div>
-                        <div class="purchase-option" data-index="1" data-chances="10" data-vana="0.08" data-usdc="0.216">
-                            <div class="chances">10 Chances</div>
-                            <div class="price">💎 0.08 VANA or 💵 0.216 USDC</div>
-                        </div>
-                        <div class="purchase-option" data-index="2" data-chances="25" data-vana="0.18" data-usdc="0.486">
-                            <div class="chances">25 Chances</div>
-                            <div class="price">💎 0.18 VANA or 💵 0.486 USDC</div>
-                        </div>
-                        <div class="purchase-option" data-index="3" data-chances="50" data-vana="0.35" data-usdc="0.945">
-                            <div class="chances">50 Chances</div>
-                            <div class="price">💎 0.35 VANA or 💵 0.945 USDC</div>
-                        </div>
-                        <div class="purchase-option" data-vans="5" data-chances="1">
-                            <div class="chances">1 Chance</div>
-                            <div class="price">🪙 5 VANS</div>
-                        </div>
-                    </div>
-                    
-                    <div class="purchase-buttons">
-                        <button class="purchase-btn vans-btn" id="purchase-popup-vans">
-                            🪙 Buy with VANS
-                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="vans-balance-display">0</span></div>
-                        </button>
-                        <button class="purchase-btn vana-btn" id="purchase-popup-vana">
-                            💎 Buy with VANA
-                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="vana-balance-display">0</span></div>
-                        </button>
-                        <button class="purchase-btn usdc-btn" id="purchase-popup-usdc">
-                            💵 Buy with USDC
-                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="usdc-balance-display">0</span></div>
-                        </button>
-                    </div>
-                    
-                    <div class="transaction-status" id="purchase-status" style="display: none;"></div>
-                    
-                    <button class="close-popup" id="close-purchase-popup">✕ Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- JavaScript Section -->
     <script>
         // Game Configuration
         const VANA_CHAIN_RPC = "https://rpc.vana.org";
@@ -1254,7 +1103,6 @@
                     elements.resultMessage.textContent = 'You won VANS Token!';
                     showNotification(`🎉 You won ${selectedCardValue.value} VANS!`, 'success');
                 } else if (selectedCardValue.type === 'vana') {
-                    // Remove demo balances - hanya tampilkan notifikasi
                     cards[selectedCard].innerHTML = `+${selectedCardValue.value} 💎`;
                     elements.resultTitle.textContent = '💎 CRYPTO BONUS!';
                     elements.resultTokens.textContent = `+${selectedCardValue.value} VANA`;
@@ -1264,7 +1112,6 @@
                     elements.cryptoBonus.style.display = 'block';
                     showNotification(`💎 You won ${selectedCardValue.value} VANA! Connect wallet to claim.`, 'success');
                 } else if (selectedCardValue.type === 'usdc') {
-                    // Remove demo balances - hanya tampilkan notifikasi
                     cards[selectedCard].innerHTML = `+${selectedCardValue.value} 💵`;
                     elements.resultTitle.textContent = '💵 CRYPTO BONUS!';
                     elements.resultTokens.textContent = `+${selectedCardValue.value} USDC`;
@@ -1626,6 +1473,7 @@
             document.getElementById('wallet-popup-usdc').textContent = elements.usdcBalance.textContent;
         }
 
+        // FIXED: Fungsi claimVans yang benar
         async function claimVans() {
             if (!walletConnected || !gameContract) {
                 showNotification('Please connect your wallet first', 'error');
@@ -1642,24 +1490,29 @@
                 elements.claimStatus.className = 'claim-status';
                 elements.claimStatus.innerHTML = '🔄 Checking contract status...';
                 
+                // Convert tokens to wei (VANS has 18 decimals)
+                // FIX: Gunakan parseEther untuk konversi yang aman
+                const amountWei = ethers.utils.parseEther(tokens.toString());
+                
                 // Check if contract has enough VANS
                 const contractBalances = await gameContract.getContractBalances();
                 const contractVansBalance = contractBalances[2]; // vansBalance is third return value
                 
-                if (contractVansBalance < tokens * 10**18) {
+                console.log("Contract VANS balance:", contractVansBalance.toString());
+                console.log("Claim amount:", amountWei.toString());
+                
+                if (contractVansBalance.lt(amountWei)) {
                     throw new Error('Contract has insufficient VANS tokens. Please try again later.');
                 }
 
                 // Check if user can claim
-                const canClaim = await gameContract.canClaim(tokens * 10**18);
+                const canClaim = await gameContract.canClaim(amountWei);
                 if (!canClaim) {
                     throw new Error('Cannot claim VANS at this time. Please try again later.');
                 }
 
                 elements.claimStatus.innerHTML = '🔄 Processing claim transaction...';
                 
-                // FIX: Gunakan parseUnits untuk menghindari overflow
-                const amountWei = ethers.utils.parseUnits(tokens.toString(), 18);
                 const tx = await gameContract.claimVans(amountWei);
                 
                 elements.claimStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
@@ -1687,6 +1540,8 @@
                     elements.claimStatus.innerHTML = '❌ Below minimum claim amount of 100 VANS';
                 } else if (error.message.includes('user rejected transaction')) {
                     elements.claimStatus.innerHTML = '❌ Transaction rejected by user';
+                } else if (error.message.includes('overflow')) {
+                    elements.claimStatus.innerHTML = '❌ Number too large. Please try with smaller amount.';
                 } else {
                     elements.claimStatus.innerHTML = `❌ Claim failed: ${error.message}`;
                 }
