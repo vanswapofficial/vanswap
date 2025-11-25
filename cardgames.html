@@ -866,6 +866,10 @@
         let provider;
         let signer;
 
+        // Tambahan state untuk crypto rewards dari game
+        let vanaRewards = 0;
+        let usdcRewards = 0;
+
         // Storage Keys
         const STORAGE_KEYS = {
             TOKENS: 'vans_game_tokens',
@@ -874,7 +878,9 @@
             WELCOME_BONUS: 'vans_welcome_bonus',
             WALLET_CONNECTED: 'vans_wallet_connected',
             USER_ACCOUNT: 'vans_user_account',
-            FIRST_VISIT: 'vans_first_visit'
+            FIRST_VISIT: 'vans_first_visit',
+            VANA_REWARDS: 'vans_vana_rewards',
+            USDC_REWARDS: 'vans_usdc_rewards'
         };
 
         // DOM Elements
@@ -928,6 +934,8 @@
             localStorage.setItem(STORAGE_KEYS.GAMES_PLAYED, gamesPlayed.toString());
             localStorage.setItem(STORAGE_KEYS.WELCOME_BONUS, newUserBonusGiven.toString());
             localStorage.setItem(STORAGE_KEYS.WALLET_CONNECTED, walletConnected.toString());
+            localStorage.setItem(STORAGE_KEYS.VANA_REWARDS, vanaRewards.toString());
+            localStorage.setItem(STORAGE_KEYS.USDC_REWARDS, usdcRewards.toString());
             if (userAccount) {
                 localStorage.setItem(STORAGE_KEYS.USER_ACCOUNT, userAccount);
             }
@@ -940,6 +948,8 @@
             const savedWelcomeBonus = localStorage.getItem(STORAGE_KEYS.WELCOME_BONUS);
             const savedWalletConnected = localStorage.getItem(STORAGE_KEYS.WALLET_CONNECTED);
             const savedUserAccount = localStorage.getItem(STORAGE_KEYS.USER_ACCOUNT);
+            const savedVanaRewards = localStorage.getItem(STORAGE_KEYS.VANA_REWARDS);
+            const savedUsdcRewards = localStorage.getItem(STORAGE_KEYS.USDC_REWARDS);
             const firstVisit = localStorage.getItem(STORAGE_KEYS.FIRST_VISIT);
 
             if (savedTokens) tokens = parseInt(savedTokens);
@@ -948,6 +958,8 @@
             if (savedWelcomeBonus) newUserBonusGiven = savedWelcomeBonus === 'true';
             if (savedWalletConnected) walletConnected = savedWalletConnected === 'true';
             if (savedUserAccount) userAccount = savedUserAccount;
+            if (savedVanaRewards) vanaRewards = parseFloat(savedVanaRewards);
+            if (savedUsdcRewards) usdcRewards = parseFloat(savedUsdcRewards);
 
             if (!firstVisit) {
                 localStorage.setItem(STORAGE_KEYS.FIRST_VISIT, 'true');
@@ -984,66 +996,53 @@
             const totalCards = selectedOption.cards;
             let rewards = [];
             
-            if (gamesPlayed < 3) {
-                const easyRewards = [
-                    { type: 'vans', value: getRandomVans(5, 15) },
-                    { type: 'vans', value: getRandomVans(3, 10) },
-                    { type: 'vans', value: getRandomVans(8, 20) },
-                    { type: 'vana', value: 0.1 },
-                    { type: 'usdc', value: 0.2 },
-                    { type: 'vans', value: getRandomVans(2, 8) }
-                ];
+            // Generate rewards based on game difficulty
+            for (let i = 0; i < totalCards; i++) {
+                const rand = Math.random();
                 
-                for (let i = 0; i < totalCards; i++) {
-                    if (i < easyRewards.length) {
-                        rewards.push(easyRewards[i]);
-                    } else {
-                        if (Math.random() < 0.3) {
-                            rewards.push({ type: 'bomb', value: 0 });
-                        } else {
-                            rewards.push({ type: 'vans', value: getRandomVans(1, 5) });
-                        }
-                    }
-                }
-            } else {
-                for (let i = 0; i < totalCards; i++) {
-                    const rand = Math.random();
+                if (rand < 0.3) { // 30% chance bomb
+                    rewards.push({ type: 'bomb', value: 0 });
+                } else if (rand < 0.5) { // 20% chance crypto rewards
+                    const cryptoType = Math.random() < 0.5 ? 'vana' : 'usdc';
+                    let cryptoValue;
                     
-                    if (rand < 0.3) {
-                        rewards.push({ type: 'bomb', value: 0 });
-                    } else if (rand < 0.5 && !userGotCryptoReward) {
-                        const cryptoType = Math.random() < 0.5 ? 'vana' : 'usdc';
-                        const cryptoValue = Math.random() < 0.5 ? 0.05 : 0.1;
-                        rewards.push({ type: cryptoType, value: cryptoValue });
-                        userGotCryptoReward = true;
+                    if (cryptoType === 'vana') {
+                        cryptoValue = Math.random() < 0.7 ? 0.05 : (Math.random() < 0.9 ? 0.1 : 0.2);
                     } else {
-                        let minVans, maxVans;
-                        if (totalCards === 3) {
-                            minVans = 1; maxVans = 10;
-                        } else if (totalCards === 5) {
-                            minVans = 3; maxVans = 15;
-                        } else {
-                            minVans = 5; maxVans = 20;
-                        }
-                        rewards.push({ type: 'vans', value: getRandomVans(minVans, maxVans) });
+                        cryptoValue = Math.random() < 0.7 ? 0.1 : (Math.random() < 0.9 ? 0.2 : 0.5);
                     }
-                }
-                
-                const hasGoodReward = rewards.some(reward => reward.type !== 'bomb');
-                if (!hasGoodReward && rewards.length > 0) {
-                    const replaceIndex = Math.floor(Math.random() * rewards.length);
-                    rewards[replaceIndex] = { 
-                        type: 'vans', 
-                        value: getRandomVans(8, 25) 
-                    };
+                    
+                    rewards.push({ type: cryptoType, value: cryptoValue });
+                } else { // 50% chance VANS
+                    let minVans, maxVans;
+                    if (totalCards === 3) {
+                        minVans = 1; maxVans = 10;
+                    } else if (totalCards === 5) {
+                        minVans = 11; maxVans = 20;
+                    } else {
+                        minVans = 21; maxVans = 50;
+                    }
+                    rewards.push({ type: 'vans', value: getRandomVans(minVans, maxVans) });
                 }
             }
             
+            // Ensure at least one good reward
+            const hasGoodReward = rewards.some(reward => reward.type !== 'bomb');
+            if (!hasGoodReward && rewards.length > 0) {
+                const replaceIndex = Math.floor(Math.random() * rewards.length);
+                rewards[replaceIndex] = { 
+                    type: 'vans', 
+                    value: getRandomVans(15, 30) 
+                };
+            }
+            
+            // Shuffle rewards
             for (let i = rewards.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [rewards[i], rewards[j]] = [rewards[j], rewards[i]];
             }
             
+            // Create card elements
             for (let i = 0; i < totalCards; i++) {
                 const cardValue = rewards[i];
                 const card = document.createElement('div');
@@ -1103,26 +1102,29 @@
                     elements.resultMessage.textContent = 'You won VANS Token!';
                     showNotification(`🎉 You won ${selectedCardValue.value} VANS!`, 'success');
                 } else if (selectedCardValue.type === 'vana') {
+                    vanaRewards += selectedCardValue.value;
                     cards[selectedCard].innerHTML = `+${selectedCardValue.value} 💎`;
                     elements.resultTitle.textContent = '💎 CRYPTO BONUS!';
                     elements.resultTokens.textContent = `+${selectedCardValue.value} VANA`;
                     elements.resultTokens.className = 'result-tokens';
-                    elements.resultMessage.textContent = 'Connect wallet to claim VANA!';
-                    elements.cryptoBonus.textContent = `Connect wallet to claim ${selectedCardValue.value} VANA!`;
+                    elements.resultMessage.textContent = 'VANA added to your rewards!';
+                    elements.cryptoBonus.textContent = `Total VANA rewards: ${vanaRewards.toFixed(4)}`;
                     elements.cryptoBonus.style.display = 'block';
-                    showNotification(`💎 You won ${selectedCardValue.value} VANA! Connect wallet to claim.`, 'success');
+                    showNotification(`💎 You won ${selectedCardValue.value} VANA!`, 'success');
                 } else if (selectedCardValue.type === 'usdc') {
+                    usdcRewards += selectedCardValue.value;
                     cards[selectedCard].innerHTML = `+${selectedCardValue.value} 💵`;
                     elements.resultTitle.textContent = '💵 CRYPTO BONUS!';
                     elements.resultTokens.textContent = `+${selectedCardValue.value} USDC`;
                     elements.resultTokens.className = 'result-tokens';
-                    elements.resultMessage.textContent = 'Connect wallet to claim USDC!';
-                    elements.cryptoBonus.textContent = `Connect wallet to claim ${selectedCardValue.value} USDC!`;
+                    elements.resultMessage.textContent = 'USDC added to your rewards!';
+                    elements.cryptoBonus.textContent = `Total USDC rewards: ${usdcRewards.toFixed(4)}`;
                     elements.cryptoBonus.style.display = 'block';
-                    showNotification(`💵 You won ${selectedCardValue.value} USDC! Connect wallet to claim.`, 'success');
+                    showNotification(`💵 You won ${selectedCardValue.value} USDC!`, 'success');
                 }
             }
             
+            // Reveal all cards
             cards.forEach((card, index) => {
                 setTimeout(() => {
                     if (index !== selectedCard) {
@@ -1223,7 +1225,7 @@
             generateCards();
         }
 
-        // Wallet and Blockchain Integration - FIXED
+        // Wallet and Blockchain Integration
         async function connectWallet() {
             try {
                 if (window.ethereum) {
@@ -1303,18 +1305,18 @@
                 const formattedVana = parseFloat(ethers.utils.formatEther(vanaBalance)).toFixed(4);
                 elements.vanaBalance.textContent = formattedVana;
                 
-                // Reset USDC balance to 0 (no demo data)
+                // For demo purposes, set USDC balance to 0
+                // In real implementation, you would query USDC token balance
                 elements.usdcBalance.textContent = '0';
                 
             } catch (error) {
                 console.error('Error loading balances:', error);
-                // Set to 0 if error
                 elements.vanaBalance.textContent = '0';
                 elements.usdcBalance.textContent = '0';
             }
         }
 
-        // Purchase System - FIXED
+        // Purchase System
         function showPurchasePopup() {
             document.getElementById('vans-balance-display').textContent = tokens;
             document.getElementById('vana-balance-display').textContent = elements.vanaBalance.textContent;
@@ -1451,13 +1453,8 @@
             }
         }
 
-        // Wallet Popup Functions - FIXED CLAIM FUNCTION
+        // Wallet Popup Functions
         function showWalletPopup() {
-            if (!walletConnected) {
-                showNotification('Please connect your wallet first', 'warning');
-                connectWallet();
-                return;
-            }
             updateWalletPopup();
             document.getElementById('wallet-popup-overlay').style.display = 'flex';
         }
@@ -1468,12 +1465,21 @@
         }
 
         function updateWalletPopup() {
+            // Update VANS (game tokens)
             document.getElementById('wallet-popup-vans').textContent = tokens;
-            document.getElementById('wallet-popup-vana').textContent = elements.vanaBalance.textContent;
-            document.getElementById('wallet-popup-usdc').textContent = elements.usdcBalance.textContent;
+            
+            // Update VANA (wallet balance + game rewards)
+            const vanaWalletBalance = parseFloat(elements.vanaBalance.textContent || '0');
+            const totalVana = vanaWalletBalance + vanaRewards;
+            document.getElementById('wallet-popup-vana').textContent = totalVana.toFixed(4);
+            
+            // Update USDC (wallet balance + game rewards)
+            const usdcWalletBalance = parseFloat(elements.usdcBalance.textContent || '0');
+            const totalUsdc = usdcWalletBalance + usdcRewards;
+            document.getElementById('wallet-popup-usdc').textContent = totalUsdc.toFixed(4);
         }
 
-        // FIXED: Fungsi claimVans yang benar
+        // Claim VANS function
         async function claimVans() {
             if (!walletConnected || !gameContract) {
                 showNotification('Please connect your wallet first', 'error');
@@ -1491,12 +1497,11 @@
                 elements.claimStatus.innerHTML = '🔄 Checking contract status...';
                 
                 // Convert tokens to wei (VANS has 18 decimals)
-                // FIX: Gunakan parseEther untuk konversi yang aman
                 const amountWei = ethers.utils.parseEther(tokens.toString());
                 
                 // Check if contract has enough VANS
                 const contractBalances = await gameContract.getContractBalances();
-                const contractVansBalance = contractBalances[2]; // vansBalance is third return value
+                const contractVansBalance = contractBalances[2];
                 
                 console.log("Contract VANS balance:", contractVansBalance.toString());
                 console.log("Claim amount:", amountWei.toString());
@@ -1589,15 +1594,15 @@
             document.getElementById('purchase-popup-vana').addEventListener('click', () => purchaseChances('VANA'));
             document.getElementById('purchase-popup-usdc').addEventListener('click', () => purchaseChances('USDC'));
 
-            // Withdrawal buttons - FIXED
+            // Withdrawal buttons
             document.getElementById('withdraw-vans').addEventListener('click', claimVans);
 
             document.getElementById('withdraw-vana').addEventListener('click', () => {
-                showNotification('VANA withdrawals are processed automatically from game rewards', 'info');
+                showNotification('VANA rewards will be distributed automatically', 'info');
             });
 
             document.getElementById('withdraw-usdc').addEventListener('click', () => {
-                showNotification('USDC withdrawals are processed automatically from game rewards', 'info');
+                showNotification('USDC rewards will be distributed automatically', 'info');
             });
         }
 
