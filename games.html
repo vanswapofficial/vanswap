@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vans Games - Play & Earn</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -28,7 +29,6 @@
             min-height: 100vh;
         }
         
-        /* Professional Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -91,7 +91,23 @@
             text-align: right;
         }
         
-        /* Stats Compact */
+        .wallet-balance {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        
+        .balance-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .balance-icon {
+            font-size: 0.7rem;
+        }
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -119,7 +135,6 @@
             opacity: 0.9;
         }
         
-        /* Game Options */
         .game-options {
             display: grid;
             gap: 12px;
@@ -159,7 +174,6 @@
             opacity: 0.8;
         }
         
-        /* Cards Grid */
         .cards-container {
             display: none;
             grid-template-columns: repeat(3, 1fr);
@@ -197,7 +211,10 @@
             background: linear-gradient(45deg, #e67e22, #d35400);
         }
         
-        /* Controls */
+        .card.bonus {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+        
         .controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -233,7 +250,6 @@
             color: white;
         }
         
-        /* Result */
         .result {
             display: none;
             background: rgba(255, 255, 255, 0.15);
@@ -268,7 +284,6 @@
             font-weight: bold;
         }
         
-        /* Withdrawal Info */
         .withdrawal-info {
             background: rgba(255, 255, 255, 0.1);
             padding: 12px;
@@ -279,7 +294,6 @@
             opacity: 0.9;
         }
         
-        /* Popup Overlay */
         .popup-overlay {
             display: none;
             position: fixed;
@@ -287,15 +301,15 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            overflow-y: auto;
         }
         
-        /* Custom Alert */
         .custom-alert {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
@@ -303,8 +317,10 @@
             width: 100%;
             max-width: 350px;
             text-align: center;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 10001;
+            position: relative;
         }
         
         .alert-icon {
@@ -351,16 +367,20 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         
-        /* Wallet Popup */
         .wallet-popup {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
             padding: 0;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            max-height: 90vh;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             overflow: hidden;
+            z-index: 10001;
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
         
         .wallet-header {
@@ -368,6 +388,7 @@
             padding: 20px;
             text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
         }
         
         .wallet-title {
@@ -380,6 +401,12 @@
         .wallet-subtitle {
             font-size: 0.9rem;
             opacity: 0.8;
+        }
+        
+        .wallet-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
         }
         
         .wallet-balances {
@@ -438,6 +465,7 @@
             padding: 20px;
             background: rgba(0, 0, 0, 0.2);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
         }
         
         .withdrawal-item {
@@ -491,16 +519,20 @@
             font-weight: bold;
         }
         
-        /* Purchase Popup */
         .purchase-popup {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
             padding: 0;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            max-height: 90vh;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             overflow: hidden;
+            z-index: 10001;
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
         
         .purchase-header {
@@ -508,6 +540,7 @@
             padding: 20px;
             text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
         }
         
         .purchase-title {
@@ -522,56 +555,64 @@
             opacity: 0.8;
         }
         
+        .purchase-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+        
         .purchase-section {
             padding: 20px;
         }
         
         .purchase-options {
             display: grid;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 20px;
         }
         
         .purchase-option {
             background: rgba(255, 255, 255, 0.1);
-            padding: 18px 15px;
+            padding: 15px;
             border-radius: 12px;
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.3s ease;
+            text-align: center;
         }
         
         .purchase-option.selected {
             border-color: #ffd700;
             background: rgba(255, 215, 0, 0.1);
-            transform: translateY(-2px);
         }
         
         .purchase-option .chances {
             font-size: 1.1rem;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             color: #ffd700;
         }
         
         .purchase-option .price {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             opacity: 0.9;
+            line-height: 1.3;
         }
         
         .purchase-buttons {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 8px;
         }
         
         .purchase-btn {
-            padding: 15px;
+            padding: 12px;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
         
         .usdc-btn {
@@ -584,17 +625,84 @@
             color: white;
         }
         
-        /* Animations */
-        @keyframes celebrate {
+        .vans-btn {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #2c3e50;
+        }
+        
+        .token-balance {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .transaction-status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 10002;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .welcome-banner {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #2c3e50;
+            padding: 12px 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.02); }
             100% { transform: scale(1); }
         }
-        
-        .celebrate {
-            animation: celebrate 0.5s ease-in-out 3;
-        }
-        
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -609,19 +717,32 @@
         .slide-in {
             animation: slideIn 0.3s ease-out;
         }
-        
-        /* Force Mobile View Even on Desktop */
-        @media (min-width: 501px) {
-            body {
-                border-left: 1px solid rgba(255,255,255,0.2);
-                border-right: 1px solid rgba(255,255,255,0.2);
-            }
+
+        .claim-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .claim-success {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid #27ae60;
+        }
+
+        .claim-error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Professional Header -->
+        <div class="welcome-banner" id="welcome-banner" style="display: none;">
+            🎁 Welcome! You received 15 VANS + 20 FREE SPINS!
+        </div>
+
         <div class="header">
             <div class="logo-section">
                 <div class="logo-icon">🎴</div>
@@ -632,21 +753,28 @@
             </div>
             <div class="wallet-section">
                 <div class="wallet-info" id="wallet-info">
-                    <div>VANA: <span id="vana-balance">0</span></div>
-                    <div>USDC: <span id="usdc-balance">0</span></div>
+                    <div class="wallet-balance">
+                        <div class="balance-item">
+                            <span class="balance-icon">💎</span>
+                            <span id="vana-balance">0</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="balance-icon">💵</span>
+                            <span id="usdc-balance">0</span>
+                        </div>
+                    </div>
                 </div>
                 <button class="wallet-btn" id="connect-wallet">Connect</button>
             </div>
         </div>
         
-        <!-- Stats Compact -->
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-value" id="token-count">0</div>
                 <div class="stat-label">VANS</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="chances-count">3</div>
+                <div class="stat-value" id="chances-count">20</div>
                 <div class="stat-label">CHANCES</div>
             </div>
             <div class="stat-card">
@@ -655,7 +783,6 @@
             </div>
         </div>
         
-        <!-- Game Options -->
         <div class="game-options" id="game-options">
             <div class="option-card" data-cards="3" data-min="1" data-max="10">
                 <div class="card-count">3 CARDS</div>
@@ -674,12 +801,8 @@
             </div>
         </div>
         
-        <!-- Cards Container -->
-        <div class="cards-container" id="cards-container">
-            <!-- Cards will be generated dynamically -->
-        </div>
+        <div class="cards-container" id="cards-container"></div>
         
-        <!-- Controls -->
         <div class="controls">
             <button id="start-game">🎮 START</button>
             <button id="reveal-cards" disabled>🃏 REVEAL</button>
@@ -687,7 +810,6 @@
             <button id="show-wallet" class="blockchain-btn">👛 WALLET</button>
         </div>
         
-        <!-- Result Display -->
         <div class="result" id="result">
             <h3 id="result-title">CONGRATULATIONS!</h3>
             <div class="result-tokens" id="result-tokens">+10 VANS</div>
@@ -695,26 +817,14 @@
             <p id="result-message">You won VANS Token!</p>
         </div>
         
-        <!-- Withdrawal Info -->
         <div class="withdrawal-info">
             ⓘ Minimum Withdraw: 100 VANS | 1 USDC | 0.5 VANA
         </div>
     </div>
 
-    <!-- Custom Alert -->
-    <div class="popup-overlay" id="alert-popup-overlay">
-        <div class="custom-alert slide-in">
-            <div class="alert-icon" id="alert-icon">⚠️</div>
-            <div class="alert-title" id="alert-title">Warning</div>
-            <div class="alert-message" id="alert-message">Alert message will appear here</div>
-            <div class="alert-buttons">
-                <button class="alert-button alert-cancel" id="alert-cancel-button">Cancel</button>
-                <button class="alert-button alert-confirm" id="alert-confirm-button">Confirm</button>
-            </div>
-        </div>
-    </div>
+    <div id="notification" class="notification" style="display: none;"></div>
 
-    <!-- Wallet Popup -->
+    <!-- Popup Elements -->
     <div class="popup-overlay" id="wallet-popup-overlay">
         <div class="wallet-popup slide-in">
             <div class="wallet-header">
@@ -722,39 +832,43 @@
                 <div class="wallet-subtitle">Manage your assets and tokens</div>
             </div>
             
-            <div class="wallet-balances">
-                <div class="balance-item">
-                    <div class="balance-info">
-                        <div class="balance-icon vans-icon">🪙</div>
-                        <div class="balance-details">
-                            <h4>VANS Token</h4>
-                            <span>Game Token</span>
+            <div class="wallet-content">
+                <div class="wallet-balances">
+                    <div class="balance-item">
+                        <div class="balance-info">
+                            <div class="balance-icon vans-icon">🪙</div>
+                            <div class="balance-details">
+                                <h4>VANS Token</h4>
+                                <span>Game Token</span>
+                            </div>
                         </div>
+                        <div class="balance-amount" id="wallet-popup-vans">0</div>
                     </div>
-                    <div class="balance-amount" id="wallet-popup-vans">0</div>
-                </div>
-                
-                <div class="balance-item">
-                    <div class="balance-info">
-                        <div class="balance-icon vana-icon">💎</div>
-                        <div class="balance-details">
-                            <h4>VANA</h4>
-                            <span>Utility Token</span>
+                    
+                    <div class="balance-item">
+                        <div class="balance-info">
+                            <div class="balance-icon vana-icon">💎</div>
+                            <div class="balance-details">
+                                <h4>VANA</h4>
+                                <span>Utility Token</span>
+                            </div>
                         </div>
+                        <div class="balance-amount" id="wallet-popup-vana">0</div>
                     </div>
-                    <div class="balance-amount" id="wallet-popup-vana">0</div>
-                </div>
-                
-                <div class="balance-item">
-                    <div class="balance-info">
-                        <div class="balance-icon usdc-icon">💵</div>
-                        <div class="balance-details">
-                            <h4>USDC</h4>
-                            <span>Stablecoin</span>
+                    
+                    <div class="balance-item">
+                        <div class="balance-info">
+                            <div class="balance-icon usdc-icon">💵</div>
+                            <div class="balance-details">
+                                <h4>USDC</h4>
+                                <span>Stablecoin</span>
+                            </div>
                         </div>
+                        <div class="balance-amount" id="wallet-popup-usdc">0</div>
                     </div>
-                    <div class="balance-amount" id="wallet-popup-usdc">0</div>
                 </div>
+
+                <div class="claim-status" id="claim-status" style="display: none;"></div>
             </div>
             
             <div class="withdrawal-section">
@@ -796,7 +910,6 @@
         </div>
     </div>
 
-    <!-- Purchase Popup -->
     <div class="popup-overlay" id="purchase-popup-overlay">
         <div class="purchase-popup slide-in">
             <div class="purchase-header">
@@ -804,340 +917,405 @@
                 <div class="purchase-subtitle">Get more playing chances</div>
             </div>
             
-            <div class="purchase-section">
-                <div class="purchase-options">
-                    <div class="purchase-option" data-amount="3" data-usdc="0.03" data-vana="0.01">
-                        <div class="chances">3 Chances</div>
-                        <div class="price">💵 0.03 USDC or 💎 0.01 VANA</div>
+            <div class="purchase-content">
+                <div class="purchase-section">
+                    <div class="purchase-options">
+                        <div class="purchase-option" data-index="0" data-chances="3" data-vana="0.03" data-usdc="0.081">
+                            <div class="chances">3 Chances</div>
+                            <div class="price">💎 0.03 VANA or 💵 0.081 USDC</div>
+                        </div>
+                        <div class="purchase-option" data-index="1" data-chances="10" data-vana="0.08" data-usdc="0.216">
+                            <div class="chances">10 Chances</div>
+                            <div class="price">💎 0.08 VANA or 💵 0.216 USDC</div>
+                        </div>
+                        <div class="purchase-option" data-index="2" data-chances="25" data-vana="0.18" data-usdc="0.486">
+                            <div class="chances">25 Chances</div>
+                            <div class="price">💎 0.18 VANA or 💵 0.486 USDC</div>
+                        </div>
+                        <div class="purchase-option" data-index="3" data-chances="50" data-vana="0.35" data-usdc="0.945">
+                            <div class="chances">50 Chances</div>
+                            <div class="price">💎 0.35 VANA or 💵 0.945 USDC</div>
+                        </div>
+                        <div class="purchase-option" data-vans="5" data-chances="1">
+                            <div class="chances">1 Chance</div>
+                            <div class="price">🪙 5 VANS</div>
+                        </div>
                     </div>
-                    <div class="purchase-option" data-amount="10" data-usdc="0.08" data-vana="0.03">
-                        <div class="chances">10 Chances</div>
-                        <div class="price">💵 0.08 USDC or 💎 0.03 VANA</div>
+                    
+                    <div class="purchase-buttons">
+                        <button class="purchase-btn vans-btn" id="purchase-popup-vans">
+                            🪙 Buy with VANS
+                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="vans-balance-display">0</span></div>
+                        </button>
+                        <button class="purchase-btn vana-btn" id="purchase-popup-vana">
+                            💎 Buy with VANA
+                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="vana-balance-display">0</span></div>
+                        </button>
+                        <button class="purchase-btn usdc-btn" id="purchase-popup-usdc">
+                            💵 Buy with USDC
+                            <div style="font-size: 0.8rem; opacity: 0.9;">Balance: <span id="usdc-balance-display">0</span></div>
+                        </button>
                     </div>
-                    <div class="purchase-option" data-amount="25" data-usdc="0.18" data-vana="0.07">
-                        <div class="chances">25 Chances</div>
-                        <div class="price">💵 0.18 USDC or 💎 0.07 VANA</div>
-                    </div>
-                    <div class="purchase-option" data-amount="50" data-usdc="0.35" data-vana="0.13">
-                        <div class="chances">50 Chances</div>
-                        <div class="price">💵 0.35 USDC or 💎 0.13 VANA</div>
-                    </div>
+                    
+                    <div class="transaction-status" id="purchase-status" style="display: none;"></div>
+                    
+                    <button class="close-popup" id="close-purchase-popup">✕ Close</button>
                 </div>
-                
-                <div class="purchase-buttons">
-                    <button class="purchase-btn usdc-btn" id="purchase-popup-usdc">💵 Buy USDC</button>
-                    <button class="purchase-btn vana-btn" id="purchase-popup-vana">💎 Buy VANA</button>
-                </div>
-                
-                <button class="close-popup" id="close-purchase-popup">✕ Close</button>
             </div>
         </div>
     </div>
 
     <script>
-        // DOM Elements
-        const tokenCountElement = document.getElementById('token-count');
-        const chancesCountElement = document.getElementById('chances-count');
-        const gamesPlayedElement = document.getElementById('games-played');
-        const gameOptions = document.getElementById('game-options');
-        const cardsContainer = document.getElementById('cards-container');
-        const startGameButton = document.getElementById('start-game');
-        const revealCardsButton = document.getElementById('reveal-cards');
-        const buyChancesButton = document.getElementById('buy-chances');
-        const connectWalletButton = document.getElementById('connect-wallet');
-        const showWalletButton = document.getElementById('show-wallet');
-        const resultDiv = document.getElementById('result');
-        const resultTitle = document.getElementById('result-title');
-        const resultTokens = document.getElementById('result-tokens');
-        const resultMessage = document.getElementById('result-message');
-        const cryptoBonusElement = document.getElementById('crypto-bonus');
-        const walletInfo = document.getElementById('wallet-info');
-        const vanaBalance = document.getElementById('vana-balance');
-        const usdcBalance = document.getElementById('usdc-balance');
-        
-        // Popup elements
-        const alertPopupOverlay = document.getElementById('alert-popup-overlay');
-        const walletPopupOverlay = document.getElementById('wallet-popup-overlay');
-        const purchasePopupOverlay = document.getElementById('purchase-popup-overlay');
-        const walletPopupVans = document.getElementById('wallet-popup-vans');
-        const walletPopupVana = document.getElementById('wallet-popup-vana');
-        const walletPopupUsdc = document.getElementById('wallet-popup-usdc');
-        const closeWalletPopup = document.getElementById('close-wallet-popup');
-        const purchasePopupUsdc = document.getElementById('purchase-popup-usdc');
-        const purchasePopupVana = document.getElementById('purchase-popup-vana');
-        const closePurchasePopup = document.getElementById('close-purchase-popup');
-        const withdrawVans = document.getElementById('withdraw-vans');
-        const withdrawVana = document.getElementById('withdraw-vana');
-        const withdrawUsdc = document.getElementById('withdraw-usdc');
-        const alertIcon = document.getElementById('alert-icon');
-        const alertTitle = document.getElementById('alert-title');
-        const alertMessage = document.getElementById('alert-message');
-        const alertCancelButton = document.getElementById('alert-cancel-button');
-        const alertConfirmButton = document.getElementById('alert-confirm-button');
-        
-        // Game variables
+        // Game Configuration
+        const VANA_CHAIN_RPC = "https://rpc.vana.org";
+        const CHAIN_ID = 1480;
+        const GAME_CONTRACT_ADDRESS = "0xF58Ef53Bdc7f1CfeFDBd339d104BB2438174d8e0";
+
+        // Contract ABI
+        const GAME_CONTRACT_ABI = [
+            "function purchaseChancesWithNative(uint256 packageIndex) payable",
+            "function purchaseChancesWithUSDC(uint256 packageIndex)",
+            "function claimVans(uint256 amount)",
+            "function getPackageInfo(uint256 packageIndex) view returns (uint256 chances, uint256 nativePrice, uint256 usdcPrice)",
+            "function canClaim(uint256 amount) view returns (bool)",
+            "function vansBalances(address) view returns (uint256)",
+            "function getContractBalances() view returns (uint256 nativeBalance, uint256 usdcBalance, uint256 vansBalance)",
+            "function getStats() view returns (uint256 totalClaims, uint256 totalChances, uint256 nativeRevenue, uint256 usdcRevenue)",
+            "function MIN_CLAIM_VANS() view returns (uint256)"
+        ];
+
+        // Game State
         let tokens = 0;
-        let chances = 3;
+        let chances = 20;
         let gamesPlayed = 0;
         let selectedOption = null;
         let selectedCard = null;
         let cards = [];
-        let winningCardIndex = -1;
-        let trapCards = [];
+        let cardValues = [];
         let gameActive = false;
         let walletConnected = false;
-        let selectedPurchase = null;
-        let isProcessing = false;
+        let selectedPurchaseOption = null;
+        let gameProcessing = false;
+        let purchaseProcessing = false;
         let newUserBonusGiven = false;
-        
-        // Dynamic win rate - starts high for new users, decreases over time
-        function getWinRate() {
-            if (gamesPlayed < 20) {
-                return 0.7; // 70% win rate for first 20 games
-            } else if (gamesPlayed < 50) {
-                return 0.5; // 50% win rate for next 30 games
-            } else {
-                return 0.3; // 30% win rate after 50 games
+        let userGotCryptoReward = false;
+        let web3;
+        let gameContract;
+        let userAccount;
+        let provider;
+        let signer;
+
+        // Crypto rewards dari game - DIPERKECIL
+        let vanaRewards = 0;
+        let usdcRewards = 0;
+
+        // Minimum withdrawal - DITAMBAHKAN
+        const MIN_WITHDRAW_VANS = 100;
+        const MIN_WITHDRAW_VANA = 0.5;
+        const MIN_WITHDRAW_USDC = 1;
+
+        // Storage Keys
+        const STORAGE_KEYS = {
+            TOKENS: 'vans_game_tokens',
+            CHANCES: 'vans_game_chances',
+            GAMES_PLAYED: 'vans_game_played',
+            WELCOME_BONUS: 'vans_welcome_bonus',
+            WALLET_CONNECTED: 'vans_wallet_connected',
+            USER_ACCOUNT: 'vans_user_account',
+            FIRST_VISIT: 'vans_first_visit',
+            VANA_REWARDS: 'vans_vana_rewards',
+            USDC_REWARDS: 'vans_usdc_rewards'
+        };
+
+        // DOM Elements
+        const elements = {
+            tokenCount: document.getElementById('token-count'),
+            chancesCount: document.getElementById('chances-count'),
+            gamesPlayed: document.getElementById('games-played'),
+            gameOptions: document.getElementById('game-options'),
+            cardsContainer: document.getElementById('cards-container'),
+            startGame: document.getElementById('start-game'),
+            revealCards: document.getElementById('reveal-cards'),
+            buyChances: document.getElementById('buy-chances'),
+            connectWallet: document.getElementById('connect-wallet'),
+            showWallet: document.getElementById('show-wallet'),
+            result: document.getElementById('result'),
+            resultTitle: document.getElementById('result-title'),
+            resultTokens: document.getElementById('result-tokens'),
+            resultMessage: document.getElementById('result-message'),
+            cryptoBonus: document.getElementById('crypto-bonus'),
+            walletInfo: document.getElementById('wallet-info'),
+            vanaBalance: document.getElementById('vana-balance'),
+            usdcBalance: document.getElementById('usdc-balance'),
+            notification: document.getElementById('notification'),
+            welcomeBanner: document.getElementById('welcome-banner'),
+            claimStatus: document.getElementById('claim-status')
+        };
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            elements.notification.textContent = message;
+            elements.notification.style.display = 'block';
+            
+            const colors = {
+                success: 'rgba(39, 174, 96, 0.9)',
+                error: 'rgba(231, 76, 60, 0.9)',
+                warning: 'rgba(241, 196, 15, 0.9)',
+                info: 'rgba(0, 0, 0, 0.8)'
+            };
+            
+            elements.notification.style.background = colors[type] || colors.info;
+            
+            setTimeout(() => {
+                elements.notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Storage Management
+        function saveGameState() {
+            localStorage.setItem(STORAGE_KEYS.TOKENS, tokens.toString());
+            localStorage.setItem(STORAGE_KEYS.CHANCES, chances.toString());
+            localStorage.setItem(STORAGE_KEYS.GAMES_PLAYED, gamesPlayed.toString());
+            localStorage.setItem(STORAGE_KEYS.WELCOME_BONUS, newUserBonusGiven.toString());
+            localStorage.setItem(STORAGE_KEYS.WALLET_CONNECTED, walletConnected.toString());
+            localStorage.setItem(STORAGE_KEYS.VANA_REWARDS, vanaRewards.toString());
+            localStorage.setItem(STORAGE_KEYS.USDC_REWARDS, usdcRewards.toString());
+            if (userAccount) {
+                localStorage.setItem(STORAGE_KEYS.USER_ACCOUNT, userAccount);
             }
         }
-        
-        // Event listeners
-        gameOptions.addEventListener('click', handleOptionSelect);
-        startGameButton.addEventListener('click', startGame);
-        revealCardsButton.addEventListener('click', revealCards);
-        buyChancesButton.addEventListener('click', showPurchasePopup);
-        connectWalletButton.addEventListener('click', connectWallet);
-        showWalletButton.addEventListener('click', showWalletPopup);
-        closeWalletPopup.addEventListener('click', hideWalletPopup);
-        closePurchasePopup.addEventListener('click', hidePurchasePopup);
-        purchasePopupUsdc.addEventListener('click', () => showPurchaseConfirmation('USDC'));
-        purchasePopupVana.addEventListener('click', () => showPurchaseConfirmation('VANA'));
-        withdrawVans.addEventListener('click', () => withdrawToken('VANS', tokens, 100));
-        withdrawVana.addEventListener('click', () => withdrawToken('VANA', parseFloat(vanaBalance.textContent), 0.5));
-        withdrawUsdc.addEventListener('click', () => withdrawToken('USDC', parseFloat(usdcBalance.textContent), 1));
-        alertCancelButton.addEventListener('click', hideAlert);
-        alertConfirmButton.addEventListener('click', handleAlertConfirm);
-        
-        // Event listener untuk close popup ketika klik overlay
-        walletPopupOverlay.addEventListener('click', function(e) {
-            if (e.target === walletPopupOverlay) hideWalletPopup();
-        });
-        
-        purchasePopupOverlay.addEventListener('click', function(e) {
-            if (e.target === purchasePopupOverlay) hidePurchasePopup();
-        });
-        
-        alertPopupOverlay.addEventListener('click', function(e) {
-            if (e.target === alertPopupOverlay) hideAlert();
-        });
-        
-        // Event listeners untuk pilihan pembelian di popup
-        document.querySelectorAll('.purchase-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.purchase-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                option.classList.add('selected');
-                selectedPurchase = {
-                    amount: parseInt(option.dataset.amount),
-                    usdc: parseFloat(option.dataset.usdc),
-                    vana: parseFloat(option.dataset.vana)
-                };
-            });
-        });
-        
-        // Custom alert functions
-        let alertCallback = null;
-        
-        function showAlert(icon, title, message, showConfirm = false) {
-            alertIcon.textContent = icon;
-            alertTitle.textContent = title;
-            alertMessage.textContent = message;
-            
-            if (showConfirm) {
-                alertCancelButton.style.display = 'block';
-                alertConfirmButton.style.display = 'block';
-            } else {
-                alertCancelButton.style.display = 'none';
-                alertConfirmButton.style.display = 'block';
-                alertConfirmButton.textContent = 'OK';
+
+        function loadGameState() {
+            const savedTokens = localStorage.getItem(STORAGE_KEYS.TOKENS);
+            const savedChances = localStorage.getItem(STORAGE_KEYS.CHANCES);
+            const savedGamesPlayed = localStorage.getItem(STORAGE_KEYS.GAMES_PLAYED);
+            const savedWelcomeBonus = localStorage.getItem(STORAGE_KEYS.WELCOME_BONUS);
+            const savedWalletConnected = localStorage.getItem(STORAGE_KEYS.WALLET_CONNECTED);
+            const savedUserAccount = localStorage.getItem(STORAGE_KEYS.USER_ACCOUNT);
+            const savedVanaRewards = localStorage.getItem(STORAGE_KEYS.VANA_REWARDS);
+            const savedUsdcRewards = localStorage.getItem(STORAGE_KEYS.USDC_REWARDS);
+            const firstVisit = localStorage.getItem(STORAGE_KEYS.FIRST_VISIT);
+
+            if (savedTokens) tokens = parseInt(savedTokens);
+            if (savedChances) chances = parseInt(savedChances);
+            if (savedGamesPlayed) gamesPlayed = parseInt(savedGamesPlayed);
+            if (savedWelcomeBonus) newUserBonusGiven = savedWelcomeBonus === 'true';
+            if (savedWalletConnected) walletConnected = savedWalletConnected === 'true';
+            if (savedUserAccount) userAccount = savedUserAccount;
+            if (savedVanaRewards) vanaRewards = parseFloat(savedVanaRewards);
+            if (savedUsdcRewards) usdcRewards = parseFloat(savedUsdcRewards);
+
+            if (!firstVisit) {
+                localStorage.setItem(STORAGE_KEYS.FIRST_VISIT, 'true');
+                giveWelcomeBonus();
             }
-            
-            alertPopupOverlay.style.display = 'flex';
-        }
-        
-        function showConfirmAlert(icon, title, message, confirmCallback) {
-            alertIcon.textContent = icon;
-            alertTitle.textContent = title;
-            alertMessage.textContent = message;
-            alertCancelButton.style.display = 'block';
-            alertConfirmButton.style.display = 'block';
-            alertConfirmButton.textContent = 'Confirm';
-            alertCallback = confirmCallback;
-            alertPopupOverlay.style.display = 'flex';
-        }
-        
-        function hideAlert() {
-            alertPopupOverlay.style.display = 'none';
-            alertCallback = null;
-        }
-        
-        function handleAlertConfirm() {
-            if (alertCallback) {
-                alertCallback();
-            }
-            hideAlert();
-        }
-        
-        // Fungsi show wallet popup
-        function showWalletPopup() {
-            if (!walletConnected) {
-                connectWallet();
-                return;
-            }
-            updateWalletPopup();
-            walletPopupOverlay.style.display = 'flex';
-        }
-        
-        // Fungsi hide wallet popup
-        function hideWalletPopup() {
-            walletPopupOverlay.style.display = 'none';
-        }
-        
-        // Fungsi show purchase popup
-        function showPurchasePopup() {
-            if (!walletConnected) {
-                connectWallet();
-                return;
-            }
-            selectedPurchase = null;
-            document.querySelectorAll('.purchase-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            purchasePopupOverlay.style.display = 'flex';
-        }
-        
-        // Fungsi hide purchase popup
-        function hidePurchasePopup() {
-            purchasePopupOverlay.style.display = 'none';
-            selectedPurchase = null;
-        }
-        
-        // Purchase confirmation
-        function showPurchaseConfirmation(currency) {
-            if (!selectedPurchase) {
-                showAlert('⚠️', 'Warning', 'Please select a chances package first!');
-                return;
-            }
-            
-            const price = currency === 'USDC' ? selectedPurchase.usdc : selectedPurchase.vana;
-            const balance = currency === 'USDC' ? parseFloat(usdcBalance.textContent) : parseFloat(vanaBalance.textContent);
-            
-            if (balance < price) {
-                showAlert('💰', `${currency} Insufficient`, `You need ${price} ${currency}, but only have ${balance} ${currency}.`);
-                return;
-            }
-            
-            showConfirmAlert(
-                '🔄', 
-                `Buy ${selectedPurchase.amount} Chances`, 
-                `Are you sure you want to buy ${selectedPurchase.amount} chances for ${price} ${currency}?`,
-                () => completePurchase(currency)
-            );
-        }
-        
-        function completePurchase(currency) {
-            const price = currency === 'USDC' ? selectedPurchase.usdc : selectedPurchase.vana;
-            
-            // Deduct balance
-            if (currency === 'USDC') {
-                usdcBalance.textContent = (parseFloat(usdcBalance.textContent) - price).toFixed(2);
-            } else {
-                vanaBalance.textContent = (parseFloat(vanaBalance.textContent) - price).toFixed(3);
-            }
-            
-            // Add chances
-            chances += selectedPurchase.amount;
-            
-            // Give bonus for first purchase
-            if (gamesPlayed === 0) {
-                tokens += 5;
-                showAlert('🎉', 'Purchase Successful!', `+${selectedPurchase.amount} chances + 5 VANS bonus!`);
-            } else {
-                showAlert('✅', 'Purchase Successful!', `+${selectedPurchase.amount} chances`);
-            }
-            
+
             updateDisplay();
-            updateWalletPopup();
-            hidePurchasePopup();
-            
-            // Reset selected purchase
-            selectedPurchase = null;
         }
-        
-        // Fungsi update wallet popup
-        function updateWalletPopup() {
-            walletPopupVans.textContent = tokens;
-            walletPopupVana.textContent = vanaBalance.textContent;
-            walletPopupUsdc.textContent = usdcBalance.textContent;
-        }
-        
-        // Fungsi connect wallet
-        function connectWallet() {
-            if (walletConnected) return;
-            
-            walletConnected = true;
-            walletInfo.style.display = 'block';
-            connectWalletButton.textContent = 'Connected';
-            connectWalletButton.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
-            
-            // Set initial balances (very small so user cannot withdraw)
-            vanaBalance.textContent = '0.15';
-            usdcBalance.textContent = '0.25';
-            
-            // Give new user bonus
-            if (!newUserBonusGiven) {
-                tokens += 10;
+
+        function giveWelcomeBonus() {
+            if (!newUserBonusGiven && tokens === 0) {
+                tokens += 15;
+                chances = 20;
                 newUserBonusGiven = true;
-                showAlert('🎁', 'Welcome Bonus!', 'You received 10 VANS for connecting your wallet!');
+                
+                elements.welcomeBanner.style.display = 'block';
+                showNotification('🎁 Welcome! You received 15 VANS + 20 FREE SPINS!', 'success');
+                
+                saveGameState();
+                updateDisplay();
+                
+                setTimeout(() => {
+                    elements.welcomeBanner.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Game Logic
+        function generateCards() {
+            elements.cardsContainer.innerHTML = '';
+            cards = [];
+            cardValues = [];
+            
+            const totalCards = selectedOption.cards;
+            let rewards = [];
+            
+            // Generate rewards - DIPERBAIKI: Kurangi chance crypto reward
+            for (let i = 0; i < totalCards; i++) {
+                const rand = Math.random();
+                
+                if (rand < 0.4) {
+                    rewards.push({ type: 'bomb', value: 0 });
+                } else if (rand < 0.55) { // Hanya 15% chance untuk crypto
+                    const cryptoType = Math.random() < 0.5 ? 'vana' : 'usdc';
+                    let cryptoValue;
+                    
+                    // PERKECIL REWARD CRYPTO
+                    if (cryptoType === 'vana') {
+                        cryptoValue = Math.random() < 0.8 ? 0.01 : (Math.random() < 0.95 ? 0.02 : 0.05);
+                    } else {
+                        cryptoValue = Math.random() < 0.8 ? 0.02 : (Math.random() < 0.95 ? 0.05 : 0.1);
+                    }
+                    
+                    rewards.push({ type: cryptoType, value: cryptoValue });
+                } else {
+                    let minVans, maxVans;
+                    if (totalCards === 3) {
+                        minVans = 1; maxVans = 10;
+                    } else if (totalCards === 5) {
+                        minVans = 11; maxVans = 20;
+                    } else {
+                        minVans = 21; maxVans = 50;
+                    }
+                    rewards.push({ type: 'vans', value: getRandomVans(minVans, maxVans) });
+                }
             }
             
-            updateDisplay();
-            updateWalletPopup();
-        }
-        
-        // Fungsi withdraw token
-        function withdrawToken(tokenType, currentBalance, minAmount) {
-            if (currentBalance < minAmount) {
-                showAlert('⚠️', `Insufficient ${tokenType}`, `Minimum withdraw is ${minAmount} ${tokenType}. You have ${currentBalance} ${tokenType}.`);
-                return;
+            // Ensure at least one good reward
+            const hasGoodReward = rewards.some(reward => reward.type !== 'bomb');
+            if (!hasGoodReward && rewards.length > 0) {
+                const replaceIndex = Math.floor(Math.random() * rewards.length);
+                rewards[replaceIndex] = { 
+                    type: 'vans', 
+                    value: getRandomVans(15, 30) 
+                };
             }
             
-            showConfirmAlert(
-                '💰',
-                `Withdraw ${tokenType}`,
-                `Are you sure you want to withdraw ${currentBalance} ${tokenType} to your wallet?`,
-                () => completeWithdrawal(tokenType, currentBalance)
-            );
-        }
-        
-        function completeWithdrawal(tokenType, amount) {
-            showAlert('✅', `Withdrawal Successful!`, `${amount} ${tokenType} has been sent to your wallet!`);
-            
-            // Reset balance after withdrawal
-            if (tokenType === 'VANS') {
-                tokens = 0;
-            } else if (tokenType === 'VANA') {
-                vanaBalance.textContent = '0';
-            } else if (tokenType === 'USDC') {
-                usdcBalance.textContent = '0';
+            // Shuffle rewards
+            for (let i = rewards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [rewards[i], rewards[j]] = [rewards[j], rewards[i]];
             }
             
-            updateDisplay();
-            updateWalletPopup();
+            // Create card elements
+            for (let i = 0; i < totalCards; i++) {
+                const cardValue = rewards[i];
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = '❓';
+                card.dataset.index = i;
+                
+                card.addEventListener('click', () => selectCard(i));
+                
+                elements.cardsContainer.appendChild(card);
+                cards.push(card);
+                cardValues.push(cardValue);
+            }
+            
+            selectedCard = null;
         }
-        
-        // Game functions
+
+        function getRandomVans(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function selectCard(index) {
+            if (!gameActive || cards[index].classList.contains('revealed') || gameProcessing) return;
+            
+            cards.forEach(card => card.classList.remove('selected'));
+            cards[index].classList.add('selected');
+            selectedCard = index;
+            elements.revealCards.disabled = false;
+        }
+
+        function revealCards() {
+            if (!gameActive || selectedCard === null || gameProcessing) return;
+            
+            gameProcessing = true;
+            gameActive = false;
+            elements.revealCards.disabled = true;
+            
+            const selectedCardValue = cardValues[selectedCard];
+            
+            if (selectedCardValue.type === 'bomb') {
+                cards[selectedCard].classList.add('bomb');
+                cards[selectedCard].innerHTML = '💣';
+                elements.resultTitle.textContent = '💥 BOMB!';
+                elements.resultTokens.textContent = '0 VANS';
+                elements.resultTokens.className = 'result-tokens negative';
+                elements.resultMessage.textContent = 'Better luck next time!';
+                showNotification('💥 Bomb! Better luck next time!', 'warning');
+            } else {
+                cards[selectedCard].classList.add('revealed');
+                
+                if (selectedCardValue.type === 'vans') {
+                    tokens += selectedCardValue.value;
+                    cards[selectedCard].innerHTML = `+${selectedCardValue.value} 🪙`;
+                    elements.resultTitle.textContent = '🎉 CONGRATULATIONS!';
+                    elements.resultTokens.textContent = `+${selectedCardValue.value} VANS`;
+                    elements.resultTokens.className = 'result-tokens';
+                    elements.resultMessage.textContent = 'You won VANS Token!';
+                    showNotification(`🎉 You won ${selectedCardValue.value} VANS!`, 'success');
+                } else if (selectedCardValue.type === 'vana') {
+                    vanaRewards += selectedCardValue.value;
+                    cards[selectedCard].innerHTML = `+${selectedCardValue.value.toFixed(4)} 💎`;
+                    elements.resultTitle.textContent = '💎 CRYPTO BONUS!';
+                    elements.resultTokens.textContent = `+${selectedCardValue.value.toFixed(4)} VANA`;
+                    elements.resultTokens.className = 'result-tokens';
+                    elements.resultMessage.textContent = 'VANA added to your rewards!';
+                    elements.cryptoBonus.textContent = `Total VANA rewards: ${vanaRewards.toFixed(4)}`;
+                    elements.cryptoBonus.style.display = 'block';
+                    showNotification(`💎 You won ${selectedCardValue.value.toFixed(4)} VANA!`, 'success');
+                } else if (selectedCardValue.type === 'usdc') {
+                    usdcRewards += selectedCardValue.value;
+                    cards[selectedCard].innerHTML = `+${selectedCardValue.value.toFixed(4)} 💵`;
+                    elements.resultTitle.textContent = '💵 CRYPTO BONUS!';
+                    elements.resultTokens.textContent = `+${selectedCardValue.value.toFixed(4)} USDC`;
+                    elements.resultTokens.className = 'result-tokens';
+                    elements.resultMessage.textContent = 'USDC added to your rewards!';
+                    elements.cryptoBonus.textContent = `Total USDC rewards: ${usdcRewards.toFixed(4)}`;
+                    elements.cryptoBonus.style.display = 'block';
+                    showNotification(`💵 You won ${selectedCardValue.value.toFixed(4)} USDC!`, 'success');
+                }
+            }
+            
+            // Reveal all cards
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    if (index !== selectedCard) {
+                        const cardValue = cardValues[index];
+                        if (cardValue.type === 'bomb') {
+                            card.classList.add('bomb');
+                            card.innerHTML = '💣';
+                        } else {
+                            card.classList.add('revealed');
+                            if (cardValue.type === 'vans') {
+                                card.innerHTML = `+${cardValue.value} 🪙`;
+                            } else if (cardValue.type === 'vana') {
+                                card.innerHTML = `+${cardValue.value.toFixed(4)} 💎`;
+                            } else if (cardValue.type === 'usdc') {
+                                card.innerHTML = `+${cardValue.value.toFixed(4)} 💵`;
+                            }
+                        }
+                    }
+                }, index * 200);
+            });
+            
+            setTimeout(() => {
+                elements.result.style.display = 'block';
+                elements.startGame.style.display = 'block';
+                elements.startGame.textContent = chances > 0 ? 'PLAY AGAIN' : 'BUY CHANCES';
+                gameProcessing = false;
+                
+                updateDisplay();
+                updateWalletPopup();
+                saveGameState();
+            }, cards.length * 200 + 500);
+        }
+
+        function updateDisplay() {
+            elements.tokenCount.textContent = tokens;
+            elements.chancesCount.textContent = chances;
+            elements.gamesPlayed.textContent = gamesPlayed;
+            
+            elements.startGame.disabled = !selectedOption || chances <= 0 || gameProcessing;
+            
+            if (chances <= 0) {
+                elements.startGame.textContent = 'BUY CHANCES';
+            }
+        }
+
+        // Game Flow
         function handleOptionSelect(e) {
             const optionCard = e.target.closest('.option-card');
             if (!optionCard) return;
@@ -1154,22 +1332,23 @@
                 traps: parseInt(optionCard.dataset.traps) || 0
             };
             
-            startGameButton.disabled = false;
+            elements.startGame.disabled = false;
         }
-        
+
         function startGame() {
-            if (!selectedOption || chances <= 0 || isProcessing) {
+            if (!selectedOption || chances <= 0 || gameProcessing) {
                 if (chances <= 0) {
+                    showNotification('No chances left! Buy more to continue playing.', 'warning');
                     showPurchasePopup();
                 }
                 return;
             }
             
-            isProcessing = true;
-            gameOptions.style.display = 'none';
+            gameProcessing = true;
+            elements.gameOptions.style.display = 'none';
             startRound();
         }
-        
+
         function startRound() {
             if (!gameActive) {
                 chances--;
@@ -1177,219 +1356,439 @@
             
             gamesPlayed++;
             gameActive = true;
-            isProcessing = false;
+            gameProcessing = false;
             
             updateDisplay();
+            saveGameState();
             
-            cardsContainer.style.display = 'grid';
-            resultDiv.style.display = 'none';
-            startGameButton.style.display = 'none';
-            revealCardsButton.style.display = 'block';
-            revealCardsButton.disabled = true;
+            elements.cardsContainer.style.display = 'grid';
+            elements.result.style.display = 'none';
+            elements.startGame.style.display = 'none';
+            elements.revealCards.style.display = 'block';
+            elements.revealCards.disabled = true;
             
             generateCards();
         }
-        
-        function generateCards() {
-            cardsContainer.innerHTML = '';
-            cards = [];
-            trapCards = [];
-            
-            // Use dynamic win rate
-            const winRate = getWinRate();
-            const shouldWin = Math.random() < winRate;
-            
-            if (shouldWin) {
-                winningCardIndex = Math.floor(Math.random() * selectedOption.cards);
-            } else {
-                winningCardIndex = -1; // No winning card this round
+
+        // Wallet Functions
+        async function connectWallet() {
+            try {
+                if (window.ethereum) {
+                    showNotification('🔗 Connecting to VANA Chain...', 'info');
+                    elements.connectWallet.innerHTML = '<span class="loading"></span> Connecting...';
+                    
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    userAccount = await signer.getAddress();
+                    
+                    // Check and switch network
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== CHAIN_ID) {
+                        await switchToVanaChain();
+                    }
+                    
+                    // Initialize contract
+                    gameContract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
+                    
+                    walletConnected = true;
+                    elements.walletInfo.style.display = 'block';
+                    elements.connectWallet.textContent = 'Connected';
+                    elements.connectWallet.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
+                    
+                    // Load real balances
+                    await loadRealBalances();
+                    
+                    updateWalletPopup();
+                    saveGameState();
+                    showNotification('✅ Wallet connected successfully!', 'success');
+                    
+                } else {
+                    throw new Error('MetaMask not found. Please install MetaMask.');
+                }
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showNotification(`❌ ${error.message}`, 'error');
+                elements.connectWallet.textContent = 'Connect';
+                elements.connectWallet.style.background = 'linear-gradient(45deg, #ffd700, #ffed4e)';
             }
-            
-            if (selectedOption.traps > 0) {
-                for (let i = 0; i < selectedOption.traps; i++) {
-                    let trapIndex;
-                    do {
-                        trapIndex = Math.floor(Math.random() * selectedOption.cards);
-                    } while (trapIndex === winningCardIndex || trapCards.includes(trapIndex));
-                    trapCards.push(trapIndex);
+        }
+
+        async function switchToVanaChain() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: `0x${CHAIN_ID.toString(16)}`,
+                            chainName: 'VANA Chain',
+                            rpcUrls: [VANA_CHAIN_RPC],
+                            nativeCurrency: {
+                                name: 'VANA',
+                                symbol: 'VANA',
+                                decimals: 18
+                            },
+                            blockExplorerUrls: ['https://explorer.vana.org/']
+                        }],
+                    });
                 }
             }
-            
-            for (let i = 0; i < selectedOption.cards; i++) {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = '❓';
-                card.dataset.index = i;
-                
-                card.addEventListener('click', () => selectCard(i));
-                
-                cardsContainer.appendChild(card);
-                cards.push(card);
-            }
-            
-            selectedCard = null;
         }
-        
-        function selectCard(index) {
-            if (!gameActive || cards[index].classList.contains('revealed') || isProcessing) return;
+
+        async function loadRealBalances() {
+            if (!walletConnected || !provider) return;
             
-            cards.forEach(card => card.classList.remove('selected'));
-            
-            cards[index].classList.add('selected');
-            selectedCard = index;
-            
-            revealCardsButton.disabled = false;
-        }
-        
-        function revealCards() {
-            if (!gameActive || selectedCard === null || isProcessing) return;
-            
-            isProcessing = true;
-            gameActive = false;
-            revealCardsButton.disabled = true;
-            
-            let tokensWon = 0;
-            let isWin = false;
-            let isTrap = false;
-            let cryptoBonus = null;
-            
-            if (selectedCard === winningCardIndex) {
-                tokensWon = Math.floor(Math.random() * (selectedOption.max - selectedOption.min + 1)) + selectedOption.min;
-                isWin = true;
+            try {
+                // Get real VANA balance
+                const vanaBalance = await provider.getBalance(userAccount);
+                const formattedVana = parseFloat(ethers.utils.formatEther(vanaBalance)).toFixed(4);
+                elements.vanaBalance.textContent = formattedVana;
                 
-                if (Math.random() < 0.15) {
-                    if (Math.random() < 0.7) {
-                        const vanaBonus = (Math.random() * (0.1 - 0.0001) + 0.0001).toFixed(4);
-                        cryptoBonus = { type: 'VANA', amount: parseFloat(vanaBonus) };
-                        vanaBalance.textContent = (parseFloat(vanaBalance.textContent) + parseFloat(vanaBonus)).toFixed(4);
-                    } else {
-                        const usdcBonus = (Math.random() * (0.1 - 0.001) + 0.001).toFixed(3);
-                        cryptoBonus = { type: 'USDC', amount: parseFloat(usdcBonus) };
-                        usdcBalance.textContent = (parseFloat(usdcBalance.textContent) + parseFloat(usdcBonus)).toFixed(3);
-                    }
-                }
-            } else if (trapCards.includes(selectedCard)) {
-                tokensWon = -Math.floor(Math.random() * 10 + 1);
-                isTrap = true;
+                // For demo purposes, set USDC balance to 0
+                elements.usdcBalance.textContent = '0';
+                
+            } catch (error) {
+                console.error('Error loading balances:', error);
+                elements.vanaBalance.textContent = '0';
+                elements.usdcBalance.textContent = '0';
             }
+        }
+
+        // Purchase System - DIPERBAIKI
+        function showPurchasePopup() {
+            // Update balances in purchase popup
+            document.getElementById('vans-balance-display').textContent = tokens;
+            document.getElementById('vana-balance-display').textContent = elements.vanaBalance.textContent;
+            document.getElementById('usdc-balance-display').textContent = elements.usdcBalance.textContent;
             
-            cards.forEach((card, index) => {
-                setTimeout(() => {
-                    if (index === winningCardIndex) {
-                        card.classList.add('revealed');
-                        card.innerHTML = `+${Math.floor(Math.random() * (selectedOption.max - selectedOption.min + 1)) + selectedOption.min} 🪙`;
-                    } else if (trapCards.includes(index)) {
-                        card.classList.add('trap');
-                        card.innerHTML = `-${Math.floor(Math.random() * 10 + 1)} ⚠️`;
-                    } else {
-                        card.classList.add('bomb');
-                        card.innerHTML = '💣';
-                    }
-                }, index * 200);
+            // Reset selection
+            selectedPurchaseOption = null;
+            document.querySelectorAll('.purchase-option').forEach(opt => {
+                opt.classList.remove('selected');
             });
             
-            setTimeout(() => {
-                showResult(isWin, isTrap, tokensWon, cryptoBonus);
-                isProcessing = false;
-            }, selectedOption.cards * 200 + 500);
-        }
-        
-        function showResult(isWin, isTrap, tokensWon, cryptoBonus) {
-            tokens += tokensWon;
-            
-            if (isWin) {
-                resultTitle.textContent = '🎉 CONGRATULATIONS!';
-                resultTokens.textContent = `+${tokensWon} VANS`;
-                resultMessage.textContent = `You found the winning card!`;
-                resultTokens.classList.add('celebrate');
-                
-                if (cryptoBonus) {
-                    cryptoBonusElement.textContent = `+${cryptoBonus.amount} ${cryptoBonus.type} BONUS!`;
-                    cryptoBonusElement.style.display = 'block';
-                } else {
-                    cryptoBonusElement.style.display = 'none';
-                }
-            } else if (isTrap) {
-                resultTitle.textContent = '⚠️ TRAP CARD!';
-                resultTokens.textContent = `${tokensWon} VANS`;
-                resultTokens.className = 'result-tokens negative';
-                resultMessage.textContent = `Be careful with traps!`;
-                cryptoBonusElement.style.display = 'none';
-            } else {
-                resultTitle.textContent = '😞 TRY AGAIN';
-                resultTokens.textContent = '+0 VANS';
-                resultMessage.textContent = `Better luck next time!`;
-                cryptoBonusElement.style.display = 'none';
+            // Auto-select first option
+            const firstOption = document.querySelector('.purchase-option');
+            if (firstOption) {
+                firstOption.classList.add('selected');
+                selectedPurchaseOption = firstOption;
             }
             
-            resultDiv.style.display = 'block';
-            revealCardsButton.style.display = 'none';
-            startGameButton.style.display = 'block';
-            startGameButton.textContent = 'PLAY AGAIN';
-            startGameButton.disabled = chances <= 0;
-            
-            updateDisplay();
-            updateWalletPopup();
-            
-            setTimeout(() => {
-                if (chances > 0) {
-                    nextRound();
-                } else {
-                    changeMode();
-                }
-            }, 3000);
+            document.getElementById('purchase-status').style.display = 'none';
+            document.getElementById('purchase-popup-overlay').style.display = 'flex';
         }
-        
-        function nextRound() {
-            if (isProcessing) return;
-            
-            cardsContainer.style.display = 'none';
-            resultDiv.style.display = 'none';
-            startRound();
+
+        function hidePurchasePopup() {
+            document.getElementById('purchase-popup-overlay').style.display = 'none';
+            selectedPurchaseOption = null;
+            purchaseProcessing = false;
         }
-        
-        function changeMode() {
-            gameActive = false;
-            isProcessing = false;
-            
-            gameOptions.style.display = 'grid';
-            cardsContainer.style.display = 'none';
-            resultDiv.style.display = 'none';
-            startGameButton.style.display = 'block';
-            startGameButton.textContent = '🎮 START';
-            revealCardsButton.style.display = 'none';
-            
-            if (selectedOption) {
-                document.querySelectorAll('.option-card').forEach(card => {
-                    if (parseInt(card.dataset.cards) === selectedOption.cards) {
-                        card.classList.add('selected');
+
+        // Purchase Functions - DIPERBAIKI TOTAL
+        async function purchaseChances(currency) {
+            if (!selectedPurchaseOption) {
+                showNotification('Please select a chances package first!', 'warning');
+                return;
+            }
+
+            if (purchaseProcessing) {
+                showNotification('Please wait for current transaction to complete', 'warning');
+                return;
+            }
+
+            try {
+                purchaseProcessing = true;
+                const purchaseStatus = document.getElementById('purchase-status');
+                purchaseStatus.style.display = 'block';
+                purchaseStatus.textContent = '🔄 Processing transaction...';
+
+                let chancesCount;
+                let cost;
+
+                if (currency === 'VANS') {
+                    // VALIDASI KETAT: Hanya boleh membeli paket VANS khusus
+                    if (!selectedPurchaseOption.dataset.vans) {
+                        throw new Error('Invalid package for VANS purchase. Please select the VANS package (1 chance for 5 VANS).');
                     }
-                });
+                    
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    cost = parseInt(selectedPurchaseOption.dataset.vans);
+                    
+                    // VALIDASI SALDO VANS
+                    if (tokens < cost) {
+                        throw new Error(`Insufficient VANS. Need ${cost}, have ${tokens}`);
+                    }
+
+                    tokens -= cost;
+                    chances += chancesCount;
+                    
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} VANS!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} VANS.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+
+                } else if (currency === 'VANA') {
+                    // VALIDASI KETAT: Hanya boleh membeli paket VANA (bukan paket VANS)
+                    if (selectedPurchaseOption.dataset.vans) {
+                        throw new Error('Invalid package for VANA purchase. Please select a VANA package (3, 10, 25, or 50 chances).');
+                    }
+                    
+            if (!walletConnected || !gameContract) {
+                        throw new Error('Please connect your wallet first for VANA purchases');
+                    }
+
+                    const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
+                    cost = parseFloat(selectedPurchaseOption.dataset.vana);
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    
+                    // VALIDASI: Pastikan paket memiliki data VANA
+                    if (!selectedPurchaseOption.dataset.vana) {
+                        throw new Error('Selected package is not available for VANA purchase');
+                    }
+                    
+                    const costWei = ethers.utils.parseEther(cost.toString());
+                    
+                    const tx = await gameContract.purchaseChancesWithNative(packageIndex, {
+                        value: costWei
+                    });
+                    
+                    purchaseStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
+                    await tx.wait();
+                    
+                    chances += chancesCount;
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} VANA!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} VANA.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+
+                } else if (currency === 'USDC') {
+                    // VALIDASI KETAT: Hanya boleh membeli paket USDC (bukan paket VANS)
+                    if (selectedPurchaseOption.dataset.vans) {
+                        throw new Error('Invalid package for USDC purchase. Please select a USDC package (3, 10, 25, or 50 chances).');
+                    }
+                    
+                    if (!walletConnected || !gameContract) {
+                        throw new Error('Please connect your wallet first for USDC purchases');
+                    }
+
+                    const packageIndex = parseInt(selectedPurchaseOption.dataset.index);
+                    cost = parseFloat(selectedPurchaseOption.dataset.usdc);
+                    chancesCount = parseInt(selectedPurchaseOption.dataset.chances);
+                    
+                    // VALIDASI: Pastikan paket memiliki data USDC
+                    if (!selectedPurchaseOption.dataset.usdc) {
+                        throw new Error('Selected package is not available for USDC purchase');
+                    }
+                    
+                    const tx = await gameContract.purchaseChancesWithUSDC(packageIndex);
+                    
+                    purchaseStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
+                    await tx.wait();
+                    
+                    chances += chancesCount;
+                    showNotification(`✅ Purchased ${chancesCount} chances for ${cost} USDC!`, 'success');
+                    purchaseStatus.innerHTML = `✅ Success! Purchased ${chancesCount} chances for ${cost} USDC.`;
+                    
+                    updateDisplay();
+                    updateWalletPopup();
+                    saveGameState();
+                    
+                    setTimeout(() => {
+                        hidePurchasePopup();
+                    }, 1500);
+                }
+
+            } catch (error) {
+                console.error("Purchase error:", error);
+                showNotification(`❌ Purchase failed: ${error.message}`, 'error');
+                document.getElementById('purchase-status').innerHTML = `❌ Transaction failed: ${error.message}`;
+            } finally {
+                purchaseProcessing = false;
             }
-            
-            startGameButton.disabled = chances <= 0;
-            revealCardsButton.disabled = true;
-            
-            updateDisplay();
         }
-        
-        function updateDisplay() {
-            tokenCountElement.textContent = tokens;
-            chancesCountElement.textContent = chances;
-            gamesPlayedElement.textContent = gamesPlayed;
-            
-            startGameButton.disabled = !selectedOption || chances <= 0 || isProcessing;
+
+        // Wallet Popup Functions
+        function showWalletPopup() {
+            updateWalletPopup();
+            document.getElementById('wallet-popup-overlay').style.display = 'flex';
         }
-        
+
+        function hideWalletPopup() {
+            document.getElementById('wallet-popup-overlay').style.display = 'none';
+            elements.claimStatus.style.display = 'none';
+        }
+
+        function updateWalletPopup() {
+            // Update VANS (game tokens)
+            document.getElementById('wallet-popup-vans').textContent = tokens;
+            
+            // Update VANA (wallet balance + game rewards)
+            const vanaWalletBalance = parseFloat(elements.vanaBalance.textContent || '0');
+            const totalVana = vanaWalletBalance + vanaRewards;
+            document.getElementById('wallet-popup-vana').textContent = totalVana.toFixed(4);
+            
+            // Update USDC (wallet balance + game rewards)
+            const usdcWalletBalance = parseFloat(elements.usdcBalance.textContent || '0');
+            const totalUsdc = usdcWalletBalance + usdcRewards;
+            document.getElementById('wallet-popup-usdc').textContent = totalUsdc.toFixed(4);
+            
+            // Update withdrawal button states berdasarkan minimum
+            document.getElementById('withdraw-vans').disabled = tokens < MIN_WITHDRAW_VANS;
+            document.getElementById('withdraw-vana').disabled = totalVana < MIN_WITHDRAW_VANA;
+            document.getElementById('withdraw-usdc').disabled = totalUsdc < MIN_WITHDRAW_USDC;
+        }
+
+        // Claim VANS function
+        async function claimVans() {
+            if (!walletConnected || !gameContract) {
+                showNotification('Please connect your wallet first', 'error');
+                return;
+            }
+
+            if (tokens < MIN_WITHDRAW_VANS) {
+                showNotification(`Minimum withdrawal is ${MIN_WITHDRAW_VANS} VANS`, 'warning');
+                return;
+            }
+
+            try {
+                elements.claimStatus.style.display = 'block';
+                elements.claimStatus.className = 'claim-status';
+                elements.claimStatus.innerHTML = '🔄 Checking contract status...';
+                
+                const amountWei = ethers.utils.parseEther(tokens.toString());
+                
+                const contractBalances = await gameContract.getContractBalances();
+                const contractVansBalance = contractBalances[2];
+                
+                if (contractVansBalance.lt(amountWei)) {
+                    throw new Error('Contract has insufficient VANS tokens. Please try again later.');
+                }
+
+                const canClaim = await gameContract.canClaim(amountWei);
+                if (!canClaim) {
+                    throw new Error('Cannot claim VANS at this time. Please try again later.');
+                }
+
+                elements.claimStatus.innerHTML = '🔄 Processing claim transaction...';
+                
+                const tx = await gameContract.claimVans(amountWei);
+                
+                elements.claimStatus.innerHTML = `⏳ Transaction sent: ${tx.hash}`;
+                
+                const receipt = await tx.wait();
+                
+                elements.claimStatus.className = 'claim-status claim-success';
+                elements.claimStatus.innerHTML = `✅ Success! Claimed ${tokens} VANS. Transaction: ${tx.hash}`;
+                
+                showNotification(`✅ Successfully claimed ${tokens} VANS!`, 'success');
+                
+                tokens = 0;
+                updateDisplay();
+                updateWalletPopup();
+                saveGameState();
+                
+            } catch (error) {
+                console.error('Claim error:', error);
+                elements.claimStatus.className = 'claim-status claim-error';
+                
+                if (error.message.includes('insufficient VANS in contract')) {
+                    elements.claimStatus.innerHTML = '❌ Contract has insufficient VANS. Please try again later.';
+                } else if (error.message.includes('Below minimum claim')) {
+                    elements.claimStatus.innerHTML = `❌ Below minimum claim amount of ${MIN_WITHDRAW_VANS} VANS`;
+                } else if (error.message.includes('user rejected transaction')) {
+                    elements.claimStatus.innerHTML = '❌ Transaction rejected by user';
+                } else if (error.message.includes('overflow')) {
+                    elements.claimStatus.innerHTML = '❌ Number too large. Please try with smaller amount.';
+                } else {
+                    elements.claimStatus.innerHTML = `❌ Claim failed: ${error.message}`;
+                }
+                
+                showNotification(`❌ Claim failed: ${error.message}`, 'error');
+            }
+        }
+
         // Initialize
-        updateDisplay();
-        
-        // Auto connect wallet after 2 seconds
-        setTimeout(() => {
-            if (!walletConnected) {
+        function initializeGame() {
+            loadGameState();
+            setupEventListeners();
+            updateDisplay();
+            
+            if (walletConnected) {
                 connectWallet();
             }
-        }, 2000);
+        }
+
+        function setupEventListeners() {
+            // Game event listeners
+            elements.gameOptions.addEventListener('click', handleOptionSelect);
+            elements.startGame.addEventListener('click', startGame);
+            elements.revealCards.addEventListener('click', revealCards);
+            
+            // Wallet event listeners
+            elements.connectWallet.addEventListener('click', connectWallet);
+            elements.showWallet.addEventListener('click', showWalletPopup);
+            elements.buyChances.addEventListener('click', showPurchasePopup);
+            
+            // Popup close buttons
+            document.getElementById('close-wallet-popup').addEventListener('click', hideWalletPopup);
+            document.getElementById('close-purchase-popup').addEventListener('click', hidePurchasePopup);
+            
+            // Purchase options selection
+            document.querySelectorAll('.purchase-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.purchase-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    selectedPurchaseOption = this;
+                });
+            });
+            
+            // Purchase buttons
+            document.getElementById('purchase-popup-vans').addEventListener('click', () => purchaseChances('VANS'));
+            document.getElementById('purchase-popup-vana').addEventListener('click', () => purchaseChances('VANA'));
+            document.getElementById('purchase-popup-usdc').addEventListener('click', () => purchaseChances('USDC'));
+
+            // Withdrawal buttons
+            document.getElementById('withdraw-vans').addEventListener('click', claimVans);
+            document.getElementById('withdraw-vana').addEventListener('click', () => {
+                const totalVana = parseFloat(document.getElementById('wallet-popup-vana').textContent);
+                if (totalVana < MIN_WITHDRAW_VANA) {
+                    showNotification(`Minimum VANA withdrawal is ${MIN_WITHDRAW_VANA}`, 'warning');
+                } else {
+                    showNotification('VANA rewards will be distributed automatically', 'info');
+                }
+            });
+            document.getElementById('withdraw-usdc').addEventListener('click', () => {
+                const totalUsdc = parseFloat(document.getElementById('wallet-popup-usdc').textContent);
+                if (totalUsdc < MIN_WITHDRAW_USDC) {
+                    showNotification(`Minimum USDC withdrawal is ${MIN_WITHDRAW_USDC}`, 'warning');
+                } else {
+                    showNotification('USDC rewards will be distributed automatically', 'info');
+                }
+            });
+        }
+
+        // Start the game
+        document.addEventListener('DOMContentLoaded', initializeGame);
     </script>
 </body>
 </html>
