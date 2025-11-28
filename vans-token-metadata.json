@@ -1,0 +1,22 @@
+{
+    "name": "Vanaswap Token",
+    "symbol": "VANS",
+    "decimals": 18,
+    "description": "The governance and utility token for Vanswap DEX, powering decentralized trading across Vana Chain and Beyond.",
+    "website": "https://vanswap.xyz",
+    "logo": {
+        "src": "https://vanswap.xyz/asset/vans.png",
+        "width": 256,
+        "height": 256,
+        "ipfs_hash": ""
+    },
+    "social": {
+        "twitter": "https://twitter.com/vanswap_xyz",
+        "telegram": "https://t.me/vanswap_xyz",
+        "discord": "https://discord.gg/vanswap",
+        "github": "https://github.com/vanswap_xyz"
+    },
+    "contract_address": "0x82741ff5937933244eb562A4b396f8079F1de914",
+    "chain_id": 1480,
+    "network": "Vana Chain"
+}
