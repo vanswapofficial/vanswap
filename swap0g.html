@@ -395,7 +395,7 @@
       vana: {
         chainId: 1480,
         chainIdHex: '0x5c8',
-        name: "Vana Network",
+        name: "Vana Chain",
         rpcUrl: "https://rpc.vana.org",
         explorer: "https://vanascan.io",
         logo: "https://vanswap.xyz/assets/vana.png",
@@ -437,71 +437,74 @@
     };
 
     // NETWORK MANAGER
-    class NetworkManager {
-      constructor() {
-        this.currentNetwork = this.getStoredNetwork() || 'vana';
-        this.listeners = [];
-      }
-      
-      setNetwork(network) {
-        if (!NETWORK_CONFIG[network]) return;
-        
-        this.currentNetwork = network;
-        localStorage.setItem('vanswap-network', network);
-        this.notifyAllListeners();
-        
-        // Update UI immediately
-        this.updateNetworkUI();
-        this.reloadPageForNetwork();
-      }
-      
-      getCurrentNetwork() {
-        return this.currentNetwork;
-      }
-      
-      getCurrentConfig() {
-        return NETWORK_CONFIG[this.currentNetwork];
-      }
-      
-      getStoredNetwork() {
-        return localStorage.getItem('vanswap-network');
-      }
-      
-      addListener(callback) {
-        this.listeners.push(callback);
-      }
-      
-      notifyAllListeners() {
-        this.listeners.forEach(callback => callback(this.currentNetwork));
-      }
-      
-      updateNetworkUI() {
-        const config = this.getCurrentConfig();
-        const networkDisplay = document.getElementById('networkDisplay');
-        if (networkDisplay) {
-          networkDisplay.textContent = config.name;
-        }
-      }
-      
-      reloadPageForNetwork() {
-        // Reset form and reload data for new network
-        const fromAmount = document.getElementById('fromAmount');
-        const toAmount = document.getElementById('toAmount');
-        if (fromAmount) fromAmount.value = '';
-        if (toAmount) toAmount.value = '';
-        
-        // Reset display values
-        const status = document.getElementById('status');
-        const txLink = document.getElementById('txLink');
-        if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
-        if (txLink) txLink.innerHTML = '';
-        
-        // Re-initialize contracts and data for new network
-        setTimeout(() => {
-          location.reload();
-        }, 500);
-      }
+class NetworkManager {
+  constructor() {
+    this.currentNetwork = this.getStoredNetwork() || 'vana';
+    this.listeners = [];
+  }
+  
+  setNetwork(network) {
+    if (!NETWORK_CONFIG[network]) return;
+    
+    this.currentNetwork = network;
+    localStorage.setItem('vanswap-network', network);
+    this.notifyAllListeners();
+    
+    // Update UI immediately
+    this.updateNetworkUI();
+    this.reloadPageForNetwork();
+  }
+  
+  getCurrentNetwork() {
+    return this.currentNetwork;
+  }
+  
+  getCurrentConfig() {
+    return NETWORK_CONFIG[this.currentNetwork];
+  }
+  
+  getStoredNetwork() {
+    return localStorage.getItem('vanswap-network');
+  }
+  
+  addListener(callback) {
+    this.listeners.push(callback);
+  }
+  
+  notifyAllListeners() {
+    this.listeners.forEach(callback => callback(this.currentNetwork));
+  }
+  
+  updateNetworkUI() {
+    const config = this.getCurrentConfig();
+    const networkDisplay = document.getElementById('networkDisplay');
+    if (networkDisplay) {
+      networkDisplay.textContent = config.name;
     }
+  }
+  
+  reloadPageForNetwork() {
+    // ✅ TAMBAH 1 BARIS INI - Skip reload jika sedang connect wallet
+    if (window.skipReloadForWalletConnect) return;
+    
+    // Reset form and reload data for new network
+    const fromAmount = document.getElementById('fromAmount');
+    const toAmount = document.getElementById('toAmount');
+    if (fromAmount) fromAmount.value = '';
+    if (toAmount) toAmount.value = '';
+    
+    // Reset display values
+    const status = document.getElementById('status');
+    const txLink = document.getElementById('txLink');
+    if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
+    if (txLink) txLink.innerHTML = '';
+    
+    // Re-initialize contracts and data for new network
+    setTimeout(() => {
+      location.reload();
+    }, 500);
+  }
+}
 
     // Global instance
     const networkManager = new NetworkManager();
@@ -648,96 +651,98 @@
     }
 
     // NETWORK SELECTOR INITIALIZATION - COMPACT VERSION
-    function initNetworkSelector() {
-      const connectBtn = document.getElementById('connectBtn');
-      const dropdown = document.getElementById('walletNetworkDropdown');
-      const walletText = document.getElementById('walletText');
-      const disconnectBtn = document.getElementById('disconnectBtn');
+function initNetworkSelector() {
+  const connectBtn = document.getElementById('connectBtn');
+  const dropdown = document.getElementById('walletNetworkDropdown');
+  const walletText = document.getElementById('walletText');
+  const disconnectBtn = document.getElementById('disconnectBtn');
 
-      // Toggle dropdown
-      connectBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        
-        if (!account) {
-          // Jika belum connect, langsung connect wallet
-          connectWallet();
-        } else {
-          // Jika sudah connect, show network dropdown
-          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        }
-      });
-
-      // Handle network selection
-      dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const network = option.getAttribute('data-network');
-          networkManager.setNetwork(network);
-          dropdown.style.display = 'none';
-        });
-      });
-
-      // Handle disconnect
-      if (disconnectBtn) {
-        disconnectBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          disconnectWallet();
-          dropdown.style.display = 'none';
-        });
-      }
-
-      // Close dropdown when clicking outside
-      document.addEventListener('click', () => {
-        dropdown.style.display = 'none';
-      });
-
-      // Update UI when network changes
-      networkManager.addListener((network) => {
-        updateNetworkUI();
-      });
-
-      // Update when account changes
-      function updateWalletDisplay() {
-        if (account) {
-          walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
-        } else {
-          walletText.textContent = 'Connect Wallet';
-        }
-      }
-
-      // Set initial state
-      updateWalletDisplay();
-      updateNetworkUI();
+  // Toggle dropdown
+  connectBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    
+    if (!account) {
+      // Jika belum connect, langsung connect wallet
+      // ✅ TAMBAH 1 BARIS INI SAJA
+      window.skipReloadForWalletConnect = true;
+      connectWallet();
+    } else {
+      // Jika sudah connect, show network dropdown
+      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     }
+  });
 
-    // Tambahkan fungsi disconnect
-    function disconnectWallet() {
-      account = null;
-      signer = null;
-      const connectBtn = document.getElementById('connectBtn');
-      const walletText = document.getElementById('walletText');
-      
-      if (connectBtn) connectBtn.textContent = 'Connect Wallet';
-      if (walletText) walletText.textContent = 'Connect Wallet';
-      
-      // Reset balances and form
-      document.getElementById('fromBalance').textContent = '—';
-      document.getElementById('toBalance').textContent = '—';
-      document.getElementById('fromAmount').value = '';
-      document.getElementById('toAmount').value = '';
-      document.getElementById('status').textContent = 'Disconnected';
-      
-      updateSwapBtn();
-      showToast('Wallet disconnected');
-    }
+  // Handle network selection
+  dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const network = option.getAttribute('data-network');
+      networkManager.setNetwork(network);
+      dropdown.style.display = 'none';
+    });
+  });
 
-    function updateNetworkUI() {
-      const config = networkManager.getCurrentConfig();
-      const networkDisplay = document.getElementById('networkDisplay');
-      if (networkDisplay) {
-        networkDisplay.textContent = config.name;
-      }
+  // Handle disconnect
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      disconnectWallet();
+      dropdown.style.display = 'none';
+    });
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    dropdown.style.display = 'none';
+  });
+
+  // Update UI when network changes
+  networkManager.addListener((network) => {
+    updateNetworkUI();
+  });
+
+  // Update when account changes
+  function updateWalletDisplay() {
+    if (account) {
+      walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
+    } else {
+      walletText.textContent = 'Connect Wallet';
     }
+  }
+
+  // Set initial state
+  updateWalletDisplay();
+  updateNetworkUI();
+}
+
+// Tambahkan fungsi disconnect
+function disconnectWallet() {
+  account = null;
+  signer = null;
+  const connectBtn = document.getElementById('connectBtn');
+  const walletText = document.getElementById('walletText');
+  
+  if (connectBtn) connectBtn.textContent = 'Connect Wallet';
+  if (walletText) walletText.textContent = 'Connect Wallet';
+  
+  // Reset balances and form
+  document.getElementById('fromBalance').textContent = '—';
+  document.getElementById('toBalance').textContent = '—';
+  document.getElementById('fromAmount').value = '';
+  document.getElementById('toAmount').value = '';
+  document.getElementById('status').textContent = 'Disconnected';
+  
+  updateSwapBtn();
+  showToast('Wallet disconnected');
+}
+
+function updateNetworkUI() {
+  const config = networkManager.getCurrentConfig();
+  const networkDisplay = document.getElementById('networkDisplay');
+  if (networkDisplay) {
+    networkDisplay.textContent = config.name;
+  }
+}
 
     // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
     function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut, fromDecimals, toDecimals) {
