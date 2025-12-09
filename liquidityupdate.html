@@ -19,8 +19,164 @@
 
   <title>Provide Liquidity | VanSwap DEX - Earn Fees on Vana Chain</title>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    /* Style Anda disini, saya menganggap ini tetap sama seperti sebelumnya, jadi tidak saya tulis ulang di sini */
+    <style>
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.12);
+      --card-bg: rgba(14,42,33,0.85);
+      --card-border: rgba(26,127,94,0.12);
+      --glass: rgba(255,255,255,0.03);
+      --warning: #ff9800;
+      --danger: #f44336;
+      --success: #4caf50;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    .logo span{font-weight:700;font-size:18px}
+    .connect-wallet{display:flex;align-items:center;justify-content:center;background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative;min-width:140px;transition:all 0.2s ease}
+    .connect-wallet:hover{background:#3ad8b1}
+    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
+    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.5);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
+    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
+    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
+    .menu-item:hover{background:rgba(255,255,255,0.02)}
+    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
+    .main{max-width:1200px;margin:32px auto;padding:0 20px}
+    .swap-row{display:flex;gap:24px;align-items:flex-start}
+    @media (max-width:980px){.swap-row{flex-direction:column;padding-bottom:40px}}
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px;flex:1;max-width:540px;box-shadow:0 10px 30px rgba(0,0,0,0.55)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title{font-size:20px;font-weight:700}
+    .token-block{background:rgba(255,255,255,0.02);border-radius:12px;padding:10px;margin-bottom:12px;border:1px solid transparent}
+    .token-block:focus-within{border-color:var(--primary)}
+    .input-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .label{color:#cfece0;font-size:13px}
+    .balance{color:var(--muted);font-size:13px;cursor:pointer}
+    .row{display:flex;gap:12px;align-items:center}
+    .select-wrap{position:relative;min-width:140px}
+    .select{display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;background:rgba(0,0,0,0.12);cursor:pointer;border:1px solid rgba(255,255,255,0.02);min-width:120px;z-index:1500}
+    .select img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+    .symbol{font-weight:700}
+    .amount-wrap{flex:1;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+    .amount{width:100%;background:transparent;border:none;color:var(--text);font-size:22px;font-weight:700;text-align:right;padding:6px 0;outline:none}
+    .amount::placeholder{color:var(--muted)}
+    .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;margin-top:8px}
+    .usd{color:var(--muted);font-size:13px;white-space:nowrap}
+    .max{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:10px;font-weight:700;color:var(--primary);cursor:pointer;font-size:13px}
+    .max:disabled{opacity:0.5;cursor:not-allowed}
+    .token-list{position:absolute;top:calc(100% + 8px);left:0;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);min-width:320px;max-height:320px;overflow:auto;z-index:2200;box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:auto}
+    .token-search input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);margin-bottom:8px}
+    .token-option{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
+    .token-option:hover{background:rgba(255,255,255,0.02)}
+    .token-addr{font-size:12px;color:var(--muted)}
+    .controls{text-align:center;margin:8px 0}
+    .flip{background:var(--primary-dark);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px}
+    .price{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;margin-top:12px}
+    .info{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;padding:6px 0}
+    .primary{width:100%;background:var(--primary);border:none;padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px}
+    .primary:disabled{opacity:0.5;cursor:not-allowed}
+    .secondary{width:100%;background:transparent;border:1px solid var(--primary);padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px;color:var(--primary)}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .panel{flex:1;min-width:260px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px}
+    .panel h4{font-weight:700;margin-bottom:10px}
+    .panel-row{display:flex;justify-content:space-between;color:var(--muted);padding:8px 0}
+    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
+
+    .liquidity-info{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:16px}
+    .liquidity-info h4{font-weight:600;margin-bottom:8px;font-size:15px}
+    .liquidity-info p{color:var(--muted);font-size:13px;line-height:1.4;margin-bottom:8px}
+    .pool-share{display:flex;justify-content:space-between;margin-top:12px}
+    .pool-share .label{color:var(--muted)}
+    .pool-share .value{font-weight:600}
+    .add-icon{display:flex;align-items:center;justify-content:center;margin:12px 0}
+    .add-icon div{width:24px;height:24px;border-radius:50%;background:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:16px}
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab{flex:1;padding:10px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
+    .tab.active{background:var(--primary)}
+    .tab:hover:not(.active){background:rgba(255,255,255,0.04)}
+
+    .pool-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px;margin-bottom:12px}
+    .pool-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .pool-tokens{display:flex;align-items:center;gap:8px}
+    .pool-token{display:flex;align-items:center;gap:6px}
+    .pool-token img{width:24px;height:24px;border-radius:6px}
+    .pool-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .metric{text-align:center}
+    .metric-value{font-weight:700;font-size:16px;margin-bottom:4px}
+    .metric-label{color:var(--muted);font-size:12px}
+    .pool-actions{display:flex;gap:8px;margin-top:12px}
+    .pool-action{flex:1;padding:8px;border-radius:8px;text-align:center;font-weight:600;cursor:pointer;font-size:13px}
+    .pool-add{background:var(--primary)}
+    .pool-remove{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
+
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;max-width:400px;width:100%}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .modal-title{font-size:18px;font-weight:700}
+    .close-modal{background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer}
+    .percentage-buttons{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin:16px 0}
+    .percentage-btn{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-weight:600;text-align:center}
+    .percentage-btn.active{background:var(--primary);border-color:var(--primary)}
+    .remove-amounts{margin:16px 0}
+    .remove-amount{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .remove-amount:last-child{border-bottom:none}
+    .slippage-info{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px}
+    .slippage-info .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
+
+    .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
+    .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
+    .add-token-btn span{font-weight:600;font-size:14px}
+    .add-token-form{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;margin-top:12px;border:1px solid rgba(255,255,255,0.05)}
+    .form-group{margin-bottom:12px}
+    .form-label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+    .form-input{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:14px}
+    .form-input:focus{outline:none;border-color:var(--primary)}
+    .form-actions{display:flex;gap:8px;margin-top:16px}
+    .btn{flex:1;padding:10px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:14px}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text)}
+    .warning-box{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin-top:12px}
+    .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
+    .warning-text{color:var(--warning);font-size:13px;line-height:1.4}
+    .token-verified{color:var(--accent);font-size:11px;margin-left:6px}
+    .token-imported{color:var(--primary);font-size:11px;margin-left:6px}
+    .token-warning{color:var(--warning);font-size:11px;margin-left:6px}
+
+    .tvl-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .tvl-stat{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
+    .tvl-value{font-weight:700;font-size:18px;color:var(--accent);margin-bottom:4px}
+    .tvl-label{color:var(--muted);font-size:12px}
+
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
+
+    /* Network Selector Styles */
+    .wallet-network-container{position:relative;display:inline-block}
+    .network-dropdown{position:absolute;top:100%;background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;padding:8px;display:none;z-index:2000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:160px}
+    .network-option{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:14px}
+    .network-option:hover{background:rgba(255,255,255,0.05)}
+
+    @media (max-width:520px){
+      .select img{width:28px;height:28px}.amount{font-size:20px}.menu-dropdown{right:12px;left:auto}.token-list{min-width:260px;left:0;right:0}
+      .pool-metrics{grid-template-columns:1fr}.tvl-stats{grid-template-columns:1fr}
+      .connect-wallet{min-width:120px;padding:6px 10px;font-size:14px}
+      .wallet-network-container{position:static}
+      .network-dropdown{right:20px !important;left:20px !important;width:auto}
+    }
   </style>
 </head>
 <body>
