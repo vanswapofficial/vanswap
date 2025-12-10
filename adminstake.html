@@ -110,9 +110,16 @@
 
     /* Error Message */
     .error-message{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:8px;padding:8px;margin-top:8px;font-size:12px;color:var(--danger);display:none}
+
+    /* Network Indicator */
+    .network-indicator{position:fixed;top:70px;right:20px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;z-index:1000}
+    .network-bsc{background:#f0b90b;color:#000}
+    .network-wrong{background:var(--danger);color:white}
   </style>
 </head>
 <body>
+
+  <div id="networkIndicator" class="network-indicator" style="display:none"></div>
 
   <header class="header">
     <div class="nav-container">
@@ -362,8 +369,10 @@
     // CONFIGURATION
     const STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
     const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+    const VANA_CHAIN_ID = "0x5c8"; // VANA Mainnet
+    
 
-    // ABI - Real functions dari kontrak
+    // ABI
     const STAKING_ABI = [
       'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)',
       'function totalStaked() view returns (uint256)',
@@ -395,39 +404,119 @@
     let account = null;
     let stakingContract = null;
     let vansToken = null;
-    let vansDecimals = 18; // Default to 18
+    let vansDecimals = 18;
     let currentWithdrawType = null;
     let autoRefreshInterval = null;
+    let isConnecting = false;
 
     const $ = id => document.getElementById(id);
 
     // INITIALIZATION
     async function init() {
       setupEventListeners();
-      await connectWallet();
+      
+      // Check for cached connection
+      if (typeof window.ethereum !== 'undefined' && window.ethereum.isConnected()) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            await connectWallet();
+          }
+        } catch (error) {
+          console.log('No cached connection');
+        }
+      }
+      
+      checkNetwork();
     }
 
-    // WALLET CONNECTION
+    // CHECK NETWORK
+    async function checkNetwork() {
+      if (typeof window.ethereum === 'undefined') return;
+      
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        updateNetworkIndicator(chainId);
+      } catch (error) {
+        console.log('Cannot get chainId');
+      }
+    }
+
+    function updateNetworkIndicator(chainId) {
+      const indicator = $('networkIndicator');
+      if (!indicator) return;
+      
+      if (chainId === BSC_CHAIN_ID) {
+        indicator.textContent = 'BSC Mainnet';
+        indicator.className = 'network-indicator network-bsc';
+        indicator.style.display = 'block';
+      } else if (chainId === BSC_TESTNET_ID) {
+        indicator.textContent = 'BSC Testnet';
+        indicator.className = 'network-indicator network-bsc';
+        indicator.style.display = 'block';
+      } else {
+        indicator.textContent = 'Wrong Network! Switch to BSC';
+        indicator.className = 'network-indicator network-wrong';
+        indicator.style.display = 'block';
+      }
+    }
+
+    // WALLET CONNECTION - FIXED
     async function connectWallet() {
+      if (isConnecting) return;
+      isConnecting = true;
+      
       if (typeof window.ethereum === 'undefined') {
         alert('Please install MetaMask or another Web3 wallet!');
         $('healthStatus').textContent = 'Web3 wallet not found';
+        isConnecting = false;
         return;
       }
 
       try {
+        $('connectBtn').innerHTML = '<span class="spinner"></span>Connecting...';
+        $('connectBtn').disabled = true;
+
         provider = new ethers.providers.Web3Provider(window.ethereum);
         
-        // Check for existing connection
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-          signer = provider.getSigner();
-          account = accounts[0];
-        } else {
-          await provider.send("eth_requestAccounts", []);
-          signer = provider.getSigner();
-          account = await signer.getAddress();
+        // Check current network
+        const network = await provider.getNetwork();
+        console.log('Current network:', network.chainId);
+        
+        if (network.chainId !== 56 && network.chainId !== 97) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x38' }], // BSC Mainnet
+            });
+          } catch (switchError) {
+            // If network doesn't exist in wallet, add it
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0x38',
+                  chainName: 'Binance Smart Chain Mainnet',
+                  nativeCurrency: {
+                    name: 'BNB',
+                    symbol: 'BNB',
+                    decimals: 18
+                  },
+                  rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                  blockExplorerUrls: ['https://bscscan.com/']
+                }]
+              });
+            }
+          }
+          // Wait a bit for network switch
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          provider = new ethers.providers.Web3Provider(window.ethereum);
         }
+
+        // Request accounts
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        account = await signer.getAddress();
 
         stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
         vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
@@ -442,6 +531,7 @@
         }
 
         $('connectBtn').textContent = shortenAddress(account);
+        $('connectBtn').style.background = 'var(--accent)';
         $('healthStatus').textContent = 'Connected - Verifying ownership...';
 
         // Check if connected wallet is owner
@@ -454,6 +544,8 @@
             $('connectBtn').style.background = 'var(--danger)';
             $('healthStatus').textContent = 'Connected wallet is not contract owner!';
             disableAdminFunctions();
+            isConnecting = false;
+            $('connectBtn').disabled = false;
             return;
           }
 
@@ -472,10 +564,15 @@
         console.error('Connection failed:', error);
         if (error.code === 4001) {
           $('healthStatus').textContent = 'Connection rejected by user';
+          $('connectBtn').textContent = 'Connect Wallet';
         } else {
           $('healthStatus').textContent = 'Connection failed: ' + error.message;
+          $('connectBtn').textContent = 'Try Again';
         }
         showError('balanceError', 'Connection failed: ' + error.message);
+      } finally {
+        isConnecting = false;
+        $('connectBtn').disabled = false;
       }
     }
 
@@ -512,7 +609,6 @@
     // LOAD CONTRACT HEALTH DATA
     async function loadContractHealth() {
       try {
-        // Clear previous errors
         hideError('balanceError');
         
         // Get VANS balance directly from token contract
@@ -579,7 +675,6 @@
         const tbody = $('remindersTable');
         tbody.innerHTML = '';
 
-        // Try to get active withdrawals
         try {
           const withdrawals = await stakingContract.getActiveWithdrawals();
 
@@ -783,13 +878,11 @@
         // Check allowance first
         const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
         if (allowance.lt(amountWei)) {
-          // Approve first
           const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
           $('returnStatus').textContent = 'Approving VANS...';
           await approveTx.wait();
         }
 
-        // Then return
         const tx = await stakingContract.returnVansToContract(amountWei);
 
         $('returnStatus').textContent = 'Returning VANS...';
@@ -833,7 +926,6 @@
 
         const poolInfo = await stakingContract.pools(poolId);
 
-        // Parse inputs, use existing values if not provided
         const newApyWei = newApy ? ethers.utils.parseUnits(newApy, 16) : poolInfo.apy;
         const newMinVansWei = minVans ? ethers.utils.parseUnits(minVans, vansDecimals) : poolInfo.minVansStake;
         const newMinVanaWei = minVana ? ethers.utils.parseEther(minVana) : poolInfo.minVanaStake;
@@ -964,7 +1056,14 @@
       if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
       }
-      autoRefreshInterval = setInterval(loadAllData, 30000); // Refresh every 30 seconds
+      autoRefreshInterval = setInterval(loadAllData, 30000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
     }
 
     // EVENT LISTENERS SETUP
@@ -980,14 +1079,46 @@
       $('updatePoolBtn').addEventListener('click', updatePool);
       $('addRewardsBtn').addEventListener('click', addRewards);
 
-      // Handle wallet changes
+      // Handle wallet changes WITHOUT RELOAD
       if (window.ethereum) {
-        window.ethereum.on('accountsChanged', (accounts) => {
-          location.reload();
+        window.ethereum.on('accountsChanged', async (accounts) => {
+          console.log('Accounts changed:', accounts);
+          if (accounts.length === 0) {
+            // User disconnected wallet
+            $('connectBtn').textContent = 'Connect Wallet';
+            $('connectBtn').style.background = 'var(--accent)';
+            $('healthStatus').textContent = 'Wallet disconnected';
+            account = null;
+            signer = null;
+            stakingContract = null;
+            vansToken = null;
+            stopAutoRefresh();
+            disableAdminFunctions();
+          } else {
+            // User switched accounts
+            account = accounts[0];
+            $('connectBtn').textContent = shortenAddress(account);
+            $('healthStatus').textContent = 'Account changed, reconnecting...';
+            await connectWallet();
+          }
         });
 
-        window.ethereum.on('chainChanged', () => {
-          location.reload();
+        window.ethereum.on('chainChanged', async (chainId) => {
+          console.log('Chain changed to:', chainId);
+          updateNetworkIndicator(chainId);
+          
+          // Re-initialize provider with new chain
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          
+          if (account) {
+            // Re-create contracts with new provider
+            stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
+            vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+            
+            $('healthStatus').textContent = 'Network changed, reloading data...';
+            await loadAllData();
+          }
         });
       }
     }
