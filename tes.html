@@ -587,6 +587,20 @@
     }
 
     // ==============================
+    // WALLET DISPLAY FUNCTION - DIBUAT GLOBAL
+    // ==============================
+    function updateWalletDisplay() {
+      const walletText = document.getElementById('walletText');
+      if (!walletText) return;
+      
+      if (account) {
+        walletText.textContent = account.substring(0, 6) + '...' + account.substring(38);
+      } else {
+        walletText.textContent = 'Connect Wallet';
+      }
+    }
+
+    // ==============================
     // KONFIGURASI JARINGAN AWAL
     // ==============================
     function initNetworkConfig() {
@@ -661,7 +675,6 @@
     function initNetworkSelector() {
       const connectBtn = $('connectBtn');
       const dropdown = $('walletNetworkDropdown');
-      const walletText = $('walletText');
       const disconnectBtn = $('disconnectBtn');
 
       if (!connectBtn || !dropdown) {
@@ -718,19 +731,8 @@
       networkManager.addListener((network) => {
         console.log('Network changed to:', network);
         updateNetworkUI();
-        updateWalletDisplay();
+        updateWalletDisplay(); // Sekarang fungsi ini global
       });
-
-      // Update wallet display
-      function updateWalletDisplay() {
-        if (!walletText) return;
-        
-        if (account) {
-          walletText.textContent = account.substring(0, 6) + '...' + account.substring(38);
-        } else {
-          walletText.textContent = 'Connect Wallet';
-        }
-      }
 
       // Set initial state
       updateWalletDisplay();
@@ -1700,14 +1702,14 @@
           
           if (accounts && accounts.length > 0) {
             account = accounts[0];
-            updateWalletDisplay();
+            updateWalletDisplay(); // Panggil fungsi global
             await getPoolReserves(selectedFrom, selectedTo);
             updateBalances();
             updateDropdownBalances();
             updatePriceInfo();
           } else {
             account = null;
-            updateWalletDisplay();
+            updateWalletDisplay(); // Panggil fungsi global
           }
         });
       }
@@ -1787,7 +1789,7 @@
         // Check if wallet is already connected
         if (window.ethereum && window.ethereum.selectedAddress) {
           account = window.ethereum.selectedAddress;
-          updateWalletDisplay();
+          updateWalletDisplay(); // Panggil fungsi global
           provider = new ethers.providers.Web3Provider(window.ethereum);
           signer = provider.getSigner();
           router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
