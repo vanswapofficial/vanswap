@@ -446,16 +446,16 @@
       const indicator = $('networkIndicator');
       if (!indicator) return;
       
-      if (chainId === BSC_CHAIN_ID) {
-        indicator.textContent = 'BSC Mainnet';
+      if (chainId === VANA_CHAIN_ID) {
+        indicator.textContent = 'VANA Mainnet';
         indicator.className = 'network-indicator network-bsc';
         indicator.style.display = 'block';
-      } else if (chainId === BSC_TESTNET_ID) {
+      } else if (chainId === VANA_TESTNET_ID) {
         indicator.textContent = 'BSC Testnet';
         indicator.className = 'network-indicator network-bsc';
         indicator.style.display = 'block';
       } else {
-        indicator.textContent = 'Wrong Network! Switch to BSC';
+        indicator.textContent = 'Wrong Network! Switch to VANA';
         indicator.className = 'network-indicator network-wrong';
         indicator.style.display = 'block';
       }
@@ -483,11 +483,11 @@
         const network = await provider.getNetwork();
         console.log('Current network:', network.chainId);
         
-        if (network.chainId !== 56 && network.chainId !== 97) {
+        if (network.chainId !== 1480 && network.chainId !== 97) {
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x38' }], // BSC Mainnet
+              params: [{ chainId: '0x5c8' }], // BSC Mainnet
             });
           } catch (switchError) {
             // If network doesn't exist in wallet, add it
@@ -495,15 +495,15 @@
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: '0x38',
-                  chainName: 'Binance Smart Chain Mainnet',
+                  chainId: '0x5b8',
+                  chainName: 'Vana Network Mainnet',
                   nativeCurrency: {
-                    name: 'BNB',
-                    symbol: 'BNB',
+                    name: 'VANA',
+                    symbol: 'VANA',
                     decimals: 18
                   },
-                  rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                  blockExplorerUrls: ['https://bscscan.com/']
+                  rpcUrls: ['https://rpc vana.org/'],
+                  blockExplorerUrls: ['https://vanascan.org/']
                 }]
               });
             }
