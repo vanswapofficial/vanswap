@@ -1,77 +1,45 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-   <title>VanSwap - Decentralized Exchange on Vana Chain | Trade, Earn, Grow</title>
+ <meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self' https://vanswap.xyz; 
+               script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com https://walletconnect.com https://cdn.walletconnect.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+               font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+               img-src 'self' data: https: blob:;
+               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
+               frame-src 'self' https:;
+               frame-ancestors 'none'; 
+               base-uri 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
+  <title>Swap Tokens | VanSwap DEX - Swap on Vana Chain and Beyond</title>
   <meta name="google-site-verification" content="jtn_hlAfPbAOul0xNc9EbHGeko6e5CwWGHV2GYQ0_dY" />
-  <meta name="title" content="VanSwap - Vana Swap Decentralized Exchange on Vana Chain | Trade, Earn, Grow">
-  <meta name="description" content="Experience lightning-fast swaps, yield farming, and seamless liquidity provision on Vana Chain's premier decentralized exchange. Low fees, high security, and competitive APY.">
-  <meta name="keywords" content="vanswap, vana chain,vana swap,vana dex, decentralized exchange, defi, swap, liquidity, yield farming, crypto, blockchain, DEX, vanaswap.xyz">
-  <meta name="author" content="VanSwap">
+  <meta name="description" content="Instantly swap tokens on VanSwap DEX — built on Vana Chain and 0G Network. Enjoy ultra-low fees, fast transactions, and full decentralization.">
   <meta name="robots" content="index, follow">
- 
-  <!-- Open Graph / Facebook -->
+
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://vanswap.xyz/">
-  <meta property="og:title" content="VanSwap - Decentralized Exchange on Vana Chain">
-  <meta property="og:description" content="Trade, Earn, and Grow on Vana Chain. Experience lightning-fast swaps, yield farming, and seamless liquidity provision.">
-  <meta property="og:image" content="https://vanswap.xyz/assets/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:site_name" content="VanSwap">
+  <meta property="og:url" content="https://vanswap.xyz/swap">
+  <meta property="og:title" content="Swap Tokens | VanSwap DEX">
+  <meta property="og:description" content="Swap tokens instantly with VanSwap — decentralized and multi-chain on Vana & 0G.">
+  <meta property="og:image" content="https://vanswap.xyz/assets/og-swap.png">
 
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://vanswap.xyz/">
-  <meta property="twitter:title" content="VanSwap - Decentralized Exchange on Vana Chain">
-  <meta property="twitter:description" content="Trade, Earn, and Grow on Vana Chain. Experience lightning-fast swaps, yield farming, and seamless liquidity provision.">
-  <meta property="twitter:image" content="https://vanswap.xyz/assets/twitter-image.png">
-  <meta name="twitter:site" content="@vanswap_xyz">
-  <meta name="twitter:creator" content="@vanswap_xyz">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Swap Tokens | VanSwap DEX">
+  <meta name="twitter:description" content="Fast, secure, and low-fee swaps on Vana Chain and 0G Network.">
+  <meta name="twitter:image" content="https://vanswap.xyz/assets/og-swap.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="https://vanswap.xyz/assets/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="https://vanswap.xyz/assets/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="https://vanswap.xyz/assets/favicon-96x96.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://vanswap.xyz/assets/apple-touch-icon.png">
-
-  <!-- Canonical URL -->
-  <link rel="canonical" href="https://vanswap.xyz/">
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "VanSwap",
-    "url": "https://vanswap.xyz/",
-    "logo": "https://vanswap.xyz/assets/vans.png",
-    "description": "VanSwap is a decentralized exchange (DEX) built on Vana Chain | Trade, Earn, Grow.",
-    "foundingDate": "2025",
-    "sameAs": [
-      "https://twitter.com/VanSwap_xyz",
-      "https://t.me/VanSwap_xyz",
-      "https://github.com/vanswap_xyz"
-    ]
-  }
-  </script>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "Vanswap Vana DEX",
-  "url": "https://vanswap.xyz/",
-  "description": "DEX Decentralized Exchange on Vana Network",
-  "applicationCategory": "FinanceApplication",
-  "operatingSystem": "All",
-  "offers": {
-    "@type": "Offer",
-    "category": "FinancialService",
-    "description": "Decentralized token swapping, liquidity provision, and yield farming"
-  }
-}
-</script>
+  <link rel="canonical" href="https://vanswap.xyz/swap">
+  <noscript>
+    <div style="background:linear-gradient(135deg,#ff6b35,#ff8e53);color:white;padding:20px;text-align:center;position:fixed;top:0;width:100%;z-index:9999;">
+      <h3>🚫 JavaScript Required</h3>
+      <p>JavaScript is required for wallet connection and token swapping. Please enable it to continue.</p>
+    </div>
+  </noscript>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -214,11 +182,12 @@
       <div style="display:flex;align-items:center;gap:8px;position:relative;">
         <button id="menuBtn" class="menu-dot-btn" title="Menu">⋮</button>
         <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
-          <div class="menu-item" data-href="swap0g.html">Swap</div>
-          <div class="menu-item" data-href="liquidity0g.html">Liquidity</div>
+          <div class="menu-item" data-href="swap.html">Swap</div>
+          <div class="menu-item" data-href="liquidity.html">Liquidity</div>
           <div class="menu-item" data-href="factorytokendeployer0g.html">Create Token</div>
-          <div class="menu-item" data-href="staking.html">Stake</div>
-          <div class="menu-sep"></div>
+          <div class="menu-item" data-href="stakelive.html">Stake</div>
+          <div class="menu-item" data-href="bridge.html">Bridge Vans</div>
+          <div class="menu-sep"></div>         
           <div class="menu-item" data-href="docs.html">Docs</div>
         </div>
 
@@ -386,8 +355,7 @@
     </div>
   </div>
 
-  <footer>© 2025 VanSwap. Built on Vana Chain</footer>
-
+  <footer>© 2025 VanSwap DEX- Built on Vana Chain and Beyond</footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
     // NETWORK CONFIGURATION
@@ -395,7 +363,7 @@
       vana: {
         chainId: 1480,
         chainIdHex: '0x5c8',
-        name: "Vana Chain",
+        name: "Vana Network",
         rpcUrl: "https://rpc.vana.org",
         explorer: "https://vanascan.io",
         logo: "https://vanswap.xyz/assets/vana.png",
@@ -423,9 +391,10 @@
           router: '0x7cba03e40fce39c55ac3280e4eedb9c5d733d35d',
           factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
           w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
-          wvans: '0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
           panda:
 '0x1e8f1ddae579222d2b86fe398934815892a06d75',
+          wvans:
+'0x3c1bc8c66bA827AaFC1D36f22B6b77401d22AbF5',
           usdc: '0x1f3aa82227281ca364bfb3d253b0f1af1da6473e'
         },
         nativeCurrency: {
@@ -437,74 +406,71 @@
     };
 
     // NETWORK MANAGER
-class NetworkManager {
-  constructor() {
-    this.currentNetwork = this.getStoredNetwork() || 'vana';
-    this.listeners = [];
-  }
-  
-  setNetwork(network) {
-    if (!NETWORK_CONFIG[network]) return;
-    
-    this.currentNetwork = network;
-    localStorage.setItem('vanswap-network', network);
-    this.notifyAllListeners();
-    
-    // Update UI immediately
-    this.updateNetworkUI();
-    this.reloadPageForNetwork();
-  }
-  
-  getCurrentNetwork() {
-    return this.currentNetwork;
-  }
-  
-  getCurrentConfig() {
-    return NETWORK_CONFIG[this.currentNetwork];
-  }
-  
-  getStoredNetwork() {
-    return localStorage.getItem('vanswap-network');
-  }
-  
-  addListener(callback) {
-    this.listeners.push(callback);
-  }
-  
-  notifyAllListeners() {
-    this.listeners.forEach(callback => callback(this.currentNetwork));
-  }
-  
-  updateNetworkUI() {
-    const config = this.getCurrentConfig();
-    const networkDisplay = document.getElementById('networkDisplay');
-    if (networkDisplay) {
-      networkDisplay.textContent = config.name;
+    class NetworkManager {
+      constructor() {
+        this.currentNetwork = this.getStoredNetwork() || 'vana';
+        this.listeners = [];
+      }
+      
+      setNetwork(network) {
+        if (!NETWORK_CONFIG[network]) return;
+        
+        this.currentNetwork = network;
+        localStorage.setItem('vanswap-network', network);
+        this.notifyAllListeners();
+        
+        // Update UI immediately
+        this.updateNetworkUI();
+        this.reloadPageForNetwork();
+      }
+      
+      getCurrentNetwork() {
+        return this.currentNetwork;
+      }
+      
+      getCurrentConfig() {
+        return NETWORK_CONFIG[this.currentNetwork];
+      }
+      
+      getStoredNetwork() {
+        return localStorage.getItem('vanswap-network');
+      }
+      
+      addListener(callback) {
+        this.listeners.push(callback);
+      }
+      
+      notifyAllListeners() {
+        this.listeners.forEach(callback => callback(this.currentNetwork));
+      }
+      
+      updateNetworkUI() {
+        const config = this.getCurrentConfig();
+        const networkDisplay = document.getElementById('networkDisplay');
+        if (networkDisplay) {
+          networkDisplay.textContent = config.name;
+        }
+      }
+      
+      reloadPageForNetwork() {
+        // Reset form and reload data for new network
+        const fromAmount = document.getElementById('fromAmount');
+        const toAmount = document.getElementById('toAmount');
+        if (fromAmount) fromAmount.value = '';
+        if (toAmount) toAmount.value = '';
+        
+        // Reset display values
+        const status = document.getElementById('status');
+        const txLink = document.getElementById('txLink');
+        if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
+        if (txLink) txLink.innerHTML = '';
+        
+        // Re-initialize contracts and data for new network
+        setTimeout(() => {
+          location.reload();
+        }, 500);
+      }
     }
-  }
-  
-  reloadPageForNetwork() {
-    // ✅ TAMBAH 1 BARIS INI - Skip reload jika sedang connect wallet
-    if (window.skipReloadForWalletConnect) return;
-    
-    // Reset form and reload data for new network
-    const fromAmount = document.getElementById('fromAmount');
-    const toAmount = document.getElementById('toAmount');
-    if (fromAmount) fromAmount.value = '';
-    if (toAmount) toAmount.value = '';
-    
-    // Reset display values
-    const status = document.getElementById('status');
-    const txLink = document.getElementById('txLink');
-    if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
-    if (txLink) txLink.innerHTML = '';
-    
-    // Re-initialize contracts and data for new network
-    setTimeout(() => {
-      location.reload();
-    }, 500);
-  }
-}
 
     // Global instance
     const networkManager = new NetworkManager();
@@ -575,7 +541,7 @@ class NetworkManager {
           { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true },
           { symbol: 'WVANA', address: config.contracts.wvana, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
+          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
           { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true }
         ];
       } else { // zerog
@@ -583,8 +549,8 @@ class NetworkManager {
           { symbol: '0G', address: '0G_NATIVE', logo: 'https://vanswap.xyz/assets/0g.png', decimals: 18, verified: true },
           { symbol: 'W0G', address: config.contracts.w0g, logo: 'https://vanswap.xyz/assets/w0g.png', decimals: 18, verified: true },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true },
-          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
+          { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true },       
+        { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
         ];
       }
     }
@@ -651,98 +617,96 @@ class NetworkManager {
     }
 
     // NETWORK SELECTOR INITIALIZATION - COMPACT VERSION
-function initNetworkSelector() {
-  const connectBtn = document.getElementById('connectBtn');
-  const dropdown = document.getElementById('walletNetworkDropdown');
-  const walletText = document.getElementById('walletText');
-  const disconnectBtn = document.getElementById('disconnectBtn');
+    function initNetworkSelector() {
+      const connectBtn = document.getElementById('connectBtn');
+      const dropdown = document.getElementById('walletNetworkDropdown');
+      const walletText = document.getElementById('walletText');
+      const disconnectBtn = document.getElementById('disconnectBtn');
 
-  // Toggle dropdown
-  connectBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    
-    if (!account) {
-      // Jika belum connect, langsung connect wallet
-      // ✅ TAMBAH 1 BARIS INI SAJA
-      window.skipReloadForWalletConnect = true;
-      connectWallet();
-    } else {
-      // Jika sudah connect, show network dropdown
-      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+      // Toggle dropdown
+      connectBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        if (!account) {
+          // Jika belum connect, langsung connect wallet
+          connectWallet();
+        } else {
+          // Jika sudah connect, show network dropdown
+          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+      });
+
+      // Handle network selection
+      dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const network = option.getAttribute('data-network');
+          networkManager.setNetwork(network);
+          dropdown.style.display = 'none';
+        });
+      });
+
+      // Handle disconnect
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          disconnectWallet();
+          dropdown.style.display = 'none';
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', () => {
+        dropdown.style.display = 'none';
+      });
+
+      // Update UI when network changes
+      networkManager.addListener((network) => {
+        updateNetworkUI();
+      });
+
+      // Update when account changes
+      function updateWalletDisplay() {
+        if (account) {
+          walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
+        } else {
+          walletText.textContent = 'Connect Wallet';
+        }
+      }
+
+      // Set initial state
+      updateWalletDisplay();
+      updateNetworkUI();
     }
-  });
 
-  // Handle network selection
-  dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
-    option.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const network = option.getAttribute('data-network');
-      networkManager.setNetwork(network);
-      dropdown.style.display = 'none';
-    });
-  });
-
-  // Handle disconnect
-  if (disconnectBtn) {
-    disconnectBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      disconnectWallet();
-      dropdown.style.display = 'none';
-    });
-  }
-
-  // Close dropdown when clicking outside
-  document.addEventListener('click', () => {
-    dropdown.style.display = 'none';
-  });
-
-  // Update UI when network changes
-  networkManager.addListener((network) => {
-    updateNetworkUI();
-  });
-
-  // Update when account changes
-  function updateWalletDisplay() {
-    if (account) {
-      walletText.textContent = account.substring(0,6) + '...' + account.substring(38);
-    } else {
-      walletText.textContent = 'Connect Wallet';
+    // Tambahkan fungsi disconnect
+    function disconnectWallet() {
+      account = null;
+      signer = null;
+      const connectBtn = document.getElementById('connectBtn');
+      const walletText = document.getElementById('walletText');
+      
+      if (connectBtn) connectBtn.textContent = 'Connect Wallet';
+      if (walletText) walletText.textContent = 'Connect Wallet';
+      
+      // Reset balances and form
+      document.getElementById('fromBalance').textContent = '—';
+      document.getElementById('toBalance').textContent = '—';
+      document.getElementById('fromAmount').value = '';
+      document.getElementById('toAmount').value = '';
+      document.getElementById('status').textContent = 'Disconnected';
+      
+      updateSwapBtn();
+      showToast('Wallet disconnected');
     }
-  }
 
-  // Set initial state
-  updateWalletDisplay();
-  updateNetworkUI();
-}
-
-// Tambahkan fungsi disconnect
-function disconnectWallet() {
-  account = null;
-  signer = null;
-  const connectBtn = document.getElementById('connectBtn');
-  const walletText = document.getElementById('walletText');
-  
-  if (connectBtn) connectBtn.textContent = 'Connect Wallet';
-  if (walletText) walletText.textContent = 'Connect Wallet';
-  
-  // Reset balances and form
-  document.getElementById('fromBalance').textContent = '—';
-  document.getElementById('toBalance').textContent = '—';
-  document.getElementById('fromAmount').value = '';
-  document.getElementById('toAmount').value = '';
-  document.getElementById('status').textContent = 'Disconnected';
-  
-  updateSwapBtn();
-  showToast('Wallet disconnected');
-}
-
-function updateNetworkUI() {
-  const config = networkManager.getCurrentConfig();
-  const networkDisplay = document.getElementById('networkDisplay');
-  if (networkDisplay) {
-    networkDisplay.textContent = config.name;
-  }
-}
+    function updateNetworkUI() {
+      const config = networkManager.getCurrentConfig();
+      const networkDisplay = document.getElementById('networkDisplay');
+      if (networkDisplay) {
+        networkDisplay.textContent = config.name;
+      }
+    }
 
     // FUNGSI BARU: Hitung price impact yang akurat berdasarkan Constant Product Formula
     function calculateAccuratePriceImpact(amountIn, reserveIn, reserveOut, fromDecimals, toDecimals) {
