@@ -117,6 +117,16 @@
     /* Estimated Rewards */
     .estimated-rewards{margin-top:12px;padding:8px;background:rgba(255,255,255,0.02);border-radius:6px;text-align:center}
 
+    /* Network Alert */
+    .network-alert{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
+    .network-alert-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:700;margin-bottom:6px}
+    .network-alert-content{color:var(--warning);font-size:13px}
+    .network-alert .btn{display:inline-block;margin-top:8px;padding:6px 12px;font-size:12px}
+
+    /* Allowance Status */
+    .allowance-status{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:var(--warning);display:none}
+    .allowance-status.approved{background:rgba(76,175,80,0.1);border-color:var(--success);color:var(--success)}
+
     footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
 
     @media (max-width:520px){
@@ -154,6 +164,18 @@
 
   <!-- MAIN CONTENT -->
   <main class="main">
+    <!-- Network Alert -->
+    <div id="networkAlert" class="network-alert">
+      <div class="network-alert-header">
+        <span>⚠️</span>
+        <span>WRONG NETWORK</span>
+      </div>
+      <div class="network-alert-content">
+        Please switch to Vana Chain to use staking features.
+        <button id="switchNetworkBtn" class="btn-primary">Switch to Vana Chain</button>
+      </div>
+    </div>
+
     <div class="stake-container">
 
       <!-- STAKE CARD -->
@@ -215,6 +237,12 @@
               <button class="btn-percent" data-percent="75">75%</button>
               <button class="btn-percent active" data-percent="100">MAX</button>
             </div>
+          </div>
+
+          <!-- Allowance Status (only for VANS) -->
+          <div id="allowance0" class="allowance-status" style="display:none">
+            <span id="allowanceText0">Checking allowance...</span>
+            <button id="approveBtn0" class="btn-secondary" style="margin-left:8px;padding:2px 8px;font-size:11px">Approve VANS</button>
           </div>
 
           <button class="btn-primary stake-btn" data-pool="0" disabled>
@@ -283,6 +311,12 @@
             </div>
           </div>
 
+          <!-- Allowance Status (only for VANS) -->
+          <div id="allowance1" class="allowance-status" style="display:none">
+            <span id="allowanceText1">Checking allowance...</span>
+            <button id="approveBtn1" class="btn-secondary" style="margin-left:8px;padding:2px 8px;font-size:11px">Approve VANS</button>
+          </div>
+
           <button class="btn-primary stake-btn" data-pool="1" disabled>
             Stake for 90 Days (35% APY)
           </button>
@@ -349,6 +383,12 @@
             </div>
           </div>
 
+          <!-- Allowance Status (only for VANS) -->
+          <div id="allowance2" class="allowance-status" style="display:none">
+            <span id="allowanceText2">Checking allowance...</span>
+            <button id="approveBtn2" class="btn-secondary" style="margin-left:8px;padding:2px 8px;font-size:11px">Approve VANS</button>
+          </div>
+
           <button class="btn-primary stake-btn" data-pool="2" disabled>
             Stake for 180 Days (55% APY)
           </button>
@@ -413,6 +453,12 @@
               <button class="btn-percent" data-percent="75">75%</button>
               <button class="btn-percent active" data-percent="100">MAX</button>
             </div>
+          </div>
+
+          <!-- Allowance Status (only for VANS) -->
+          <div id="allowance3" class="allowance-status" style="display:none">
+            <span id="allowanceText3">Checking allowance...</span>
+            <button id="approveBtn3" class="btn-secondary" style="margin-left:8px;padding:2px 8px;font-size:11px">Approve VANS</button>
           </div>
 
           <button class="btn-primary stake-btn" data-pool="3" disabled>
@@ -504,13 +550,15 @@
       'function getUserStakes(address user) view returns (tuple(uint256 amount, uint256 stakeTime, uint256 unlockTime, uint256 rewardDebt, bool isVana, uint8 poolId, bool unstaked, bool rewardsClaimed)[])',
       'function getClaimableRewards(address user) view returns (uint256)',
       'function pools(uint256) view returns (uint256 lockPeriod, uint256 apy, uint256 minVansStake, uint256 minVanaStake, uint256 maxVansStake, uint256 maxVanaStake, uint256 totalStaked, bool active)',
-      'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)'
+      'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)',
+      'function totalStaked() view returns (uint256)'
     ];
 
     const ERC20_ABI = [
       'function balanceOf(address) view returns (uint256)',
       'function transfer(address,uint256) returns (bool)',
       'function approve(address,uint256) returns (bool)',
+      'function allowance(address,address) view returns (uint256)',
       'function transferFrom(address,address,uint256) returns (bool)',
       'function decimals() view returns (uint8)'
     ];
@@ -530,7 +578,7 @@
       { id: 3, name: '12 Month', apy: 85, lockDays: 365, minVans: 10000, minVana: 1 }
     ];
 
-    // Konstanta konversi VANA ke VANS
+    // Konstanta konversi VANA ke VANS - PENTING!
     const VANA_TO_VANS_RATE = 10000; // 1 VANA = 10,000 VANS
 
     const $ = id => document.getElementById(id);
@@ -538,18 +586,74 @@
     // INITIALIZATION
     async function init() {
       setupEventListeners();
-      await connectWallet();
+      await checkNetwork();
     }
 
-    // WALLET CONNECTION
-    async function connectWallet() {
-      if (!window.ethereum) {
-        alert('Please install MetaMask!');
+    // CHECK NETWORK
+    async function checkNetwork() {
+      if (typeof window.ethereum === 'undefined') {
         return;
       }
 
       try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        
+        if (chainId !== VANA_CHAIN.chainId) {
+          $('networkAlert').style.display = 'block';
+          await switchToVanaChain();
+        } else {
+          $('networkAlert').style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Network check failed:', error);
+      }
+    }
+
+    // SWITCH TO VANA CHAIN
+    async function switchToVanaChain() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: VANA_CHAIN.chainId }],
+        });
+        $('networkAlert').style.display = 'none';
+        return true;
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [VANA_CHAIN],
+            });
+            $('networkAlert').style.display = 'none';
+            return true;
+          } catch (addError) {
+            console.error('Failed to add Vana Chain:', addError);
+            $('stakeStatus').textContent = 'Please add Vana Chain manually';
+            return false;
+          }
+        } else {
+          console.error('Failed to switch to Vana Chain:', switchError);
+          $('stakeStatus').textContent = 'Please switch to Vana Chain manually';
+          return false;
+        }
+      }
+    }
+
+    // WALLET CONNECTION
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask or another Web3 wallet!');
+        $('stakeStatus').textContent = 'Web3 wallet not found';
+        return;
+      }
+
+      try {
+        await checkNetwork();
+
         provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        // Request account connection
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         account = await signer.getAddress();
@@ -557,46 +661,53 @@
         stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
         vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
 
-        $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
+        $('connectBtn').textContent = shortenAddress(account);
         $('stakeStatus').textContent = 'Connected - Loading data...';
 
         await loadUserData();
 
       } catch (error) {
         console.error('Connection failed:', error);
-        $('stakeStatus').textContent = 'Connection failed';
+        if (error.code === 4001) {
+          $('stakeStatus').textContent = 'Connection rejected by user';
+        } else {
+          $('stakeStatus').textContent = 'Connection failed: ' + error.message;
+        }
       }
     }
 
     // LOAD USER DATA
     async function loadUserData() {
       try {
-        // Load balances
         await loadBalances();
-
-        // Load user stakes
+        await checkAllowances();
         await loadUserStakes();
-
-        // Load pool totals
         await loadPoolTotals();
 
         $('stakeStatus').textContent = 'Ready to stake';
 
       } catch (error) {
         console.error('Load data failed:', error);
-        $('stakeStatus').textContent = 'Failed to load data';
+        $('stakeStatus').textContent = 'Failed to load data: ' + error.message;
       }
     }
 
     // LOAD BALANCES
     async function loadBalances() {
       try {
+        if (!account || !provider) return;
+
         const vanaBalance = await provider.getBalance(account);
         const vansBalance = await vansToken.balanceOf(account);
 
         // Update balance displays for all pools
         for (let i = 0; i < 4; i++) {
-          $(`pool${i}Balance`).textContent = `VANA: ${formatEther(vanaBalance)} | VANS: ${formatEther(vansBalance)}`;
+          const vansFormatted = formatEther(vansBalance);
+          const vanaFormatted = formatEther(vanaBalance);
+          $(`pool${i}Balance`).innerHTML = `
+            <div style="font-size:11px">VANA: ${vanaFormatted}</div>
+            <div style="font-size:11px">VANS: ${vansFormatted}</div>
+          `;
         }
 
       } catch (error) {
@@ -604,9 +715,90 @@
       }
     }
 
+    // CHECK VANS ALLOWANCE - DIPERBAIKI
+    async function checkAllowances() {
+      try {
+        if (!account || !vansToken) return;
+
+        // Check allowance for staking contract
+        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+        const allowanceAmount = parseFloat(ethers.utils.formatEther(allowance));
+
+        // Update allowance display for all pools
+        for (let i = 0; i < 4; i++) {
+          const allowanceElement = $(`allowance${i}`);
+          const allowanceText = $(`allowanceText${i}`);
+          const approveBtn = $(`approveBtn${i}`);
+
+          // Cek token yang aktif di pool ini
+          const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${i}"]`);
+          const currentToken = tokenBtn ? tokenBtn.dataset.token : 'vans';
+
+          // Hanya tampilkan allowance untuk VANS
+          if (currentToken === 'vans') {
+            if (allowanceAmount > 0) {
+              allowanceElement.style.display = 'block';
+              allowanceElement.className = 'allowance-status approved';
+              allowanceText.textContent = `VANS Approved: ${allowanceAmount.toFixed(4)}`;
+              approveBtn.style.display = 'none';
+            } else {
+              allowanceElement.style.display = 'block';
+              allowanceElement.className = 'allowance-status';
+              allowanceText.textContent = 'VANS approval needed';
+              approveBtn.style.display = 'inline-block';
+              approveBtn.onclick = () => approveVANS(i);
+            }
+          } else {
+            // Untuk VANA, sembunyikan allowance status
+            allowanceElement.style.display = 'none';
+          }
+        }
+
+      } catch (error) {
+        console.error('Check allowance failed:', error);
+      }
+    }
+
+    // APPROVE VANS TOKENS - DIPERBAIKI
+    async function approveVANS(poolId) {
+      try {
+        if (!account) return;
+
+        const approveBtn = $(`approveBtn${poolId}`);
+        const allowanceText = $(`allowanceText${poolId}`);
+        
+        approveBtn.disabled = true;
+        approveBtn.innerHTML = '<span class="spinner"></span>Approving...';
+        allowanceText.textContent = 'Approving VANS...';
+
+        // Approve maximum amount (2^256 - 1)
+        const maxUint = ethers.constants.MaxUint256;
+        const tx = await vansToken.approve(STAKING_CONTRACT, maxUint);
+
+        allowanceText.textContent = 'Waiting for confirmation...';
+        await tx.wait();
+
+        // Update allowance display
+        allowanceText.textContent = 'VANS Approved!';
+        $(`allowance${poolId}`).className = 'allowance-status approved';
+        approveBtn.style.display = 'none';
+
+        // Update stake button state
+        updateStakeButtonState(poolId);
+
+      } catch (error) {
+        console.error('Approve failed:', error);
+        $(`allowanceText${poolId}`).textContent = 'Approval failed: ' + error.message;
+        $(`approveBtn${poolId}`).disabled = false;
+        $(`approveBtn${poolId}`).textContent = 'Try Again';
+      }
+    }
+
     // LOAD USER STAKES
     async function loadUserStakes() {
       try {
+        if (!account || !stakingContract) return;
+
         const userStakes = await stakingContract.getUserStakes(account);
 
         if (userStakes.length === 0) {
@@ -657,17 +849,14 @@
           }
         });
 
-        // Update rewards summary
         $('claimableRewards').textContent = totalClaimable.toFixed(4) + ' VANS';
         $('claimAllBtn').disabled = totalClaimable === 0;
 
-        // Check if any stakes are unlocked for unstake all
         const hasUnlocked = userStakes.some(stake => 
           !stake.unstaked && (new Date()) >= (new Date(stake.unlockTime * 1000))
         );
         $('unstakeAllBtn').disabled = !hasUnlocked;
 
-        // Update "Your Stake" in pool cards
         updateYourStakesDisplay(userStakes);
 
       } catch (error) {
@@ -678,6 +867,8 @@
     // LOAD POOL TOTALS
     async function loadPoolTotals() {
       try {
+        if (!stakingContract) return;
+
         for (let i = 0; i < 4; i++) {
           const poolInfo = await stakingContract.pools(i);
           $(`pool${i}Total`).textContent = formatEther(poolInfo.totalStaked);
@@ -702,12 +893,14 @@
       }
     }
 
-    // STAKE TOKENS
+    // STAKE TOKENS - DIPERBAIKI (VANA & VANS)
     async function stakeTokens(poolId) {
       if (!account) {
         await connectWallet();
         return;
       }
+
+      await checkNetwork();
 
       const amountInput = $(`pool${poolId}Amount`);
       const amount = amountInput.value;
@@ -737,16 +930,22 @@
         let tx;
 
         if (tokenType === 'vana') {
+          // STAKE VANA - PERBAIKAN UTAMA
+          // stakeVana(uint8 poolId) payable
+          console.log(`Staking ${amount} VANA to pool ${poolId} with value:`, amountWei.toString());
           tx = await stakingContract.stakeVana(poolId, { value: amountWei });
         } else {
-          // Approve VANS first if needed
+          // STAKE VANS
           const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+          
           if (allowance.lt(amountWei)) {
-            $('stakeStatus').textContent = 'Approving VANS...';
-            const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
-            await approveTx.wait();
+            $('stakeStatus').textContent = 'Insufficient allowance. Please approve VANS first.';
+            stakeBtn.disabled = false;
+            stakeBtn.textContent = `Stake for ${POOLS[poolId].lockDays} Days (${POOLS[poolId].apy}% APY)`;
+            return;
           }
 
+          console.log(`Staking ${amount} VANS to pool ${poolId}`);
           tx = await stakingContract.stakeVans(amountWei, poolId);
         }
 
@@ -758,16 +957,23 @@
         $('stakeStatus').textContent = 'Stake successful!';
         amountInput.value = '';
 
-        // Reload data
         await loadUserData();
 
       } catch (error) {
         console.error('Stake failed:', error);
-        $('stakeStatus').textContent = 'Stake failed: ' + error.message;
+        const errorMsg = error.reason || error.data?.message || error.message || error.message;
+        $('stakeStatus').textContent = 'Stake failed: ' + errorMsg;
+        
+        // Jika error karena insufficient funds untuk VANA
+        if (tokenType === 'vana' && errorMsg.includes('insufficient funds')) {
+          $('stakeStatus').textContent = 'Insufficient VANA balance. Make sure you have enough VANA for gas fees too.';
+        }
       } finally {
         const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
-        stakeBtn.disabled = false;
-        stakeBtn.textContent = `Stake for ${POOLS[poolId].lockDays} Days (${POOLS[poolId].apy}% APY)`;
+        if (stakeBtn) {
+          stakeBtn.disabled = false;
+          stakeBtn.textContent = `Stake for ${POOLS[poolId].lockDays} Days (${POOLS[poolId].apy}% APY)`;
+        }
       }
     }
 
@@ -840,11 +1046,9 @@
         $('unstakeAllBtn').innerHTML = '<span class="spinner"></span>Unstaking All...';
         $('stakeStatus').textContent = 'Unstaking all available...';
 
-        // Get user stakes to find unlocked ones
         const userStakes = await stakingContract.getUserStakes(account);
         const now = Math.floor(Date.now() / 1000);
 
-        // Unstake all unlocked positions
         for (let i = 0; i < userStakes.length; i++) {
           if (!userStakes[i].unstaked && userStakes[i].unlockTime <= now) {
             const tx = await stakingContract.unstake(i);
@@ -864,25 +1068,27 @@
       }
     }
 
-    // CALCULATE ESTIMATED REWARDS - PERBAIKAN DI SINI
+    // CALCULATE ESTIMATED REWARDS - DIPERBAIKI DENGAN KONVERSI YANG BENAR
     function calculateEstimatedRewards(amount, poolId, tokenType) {
       if (!amount || amount <= 0) return 0;
 
       const pool = POOLS[poolId];
       
-      // Konversi VANA ke VANS untuk perhitungan reward
+      // Konversi ke VANS untuk perhitungan reward
       let amountInVans = amount;
       if (tokenType === 'vana') {
         amountInVans = amount * VANA_TO_VANS_RATE; // 1 VANA = 10,000 VANS
       }
       
-      const annualReward = amountInVans * (pool.apy / 100);
-      const lockReward = annualReward * (pool.lockDays / 365);
+      // Hitung reward dalam VANS
+      // APY adalah Annual Percentage Yield (tahunan)
+      const annualRewardVans = amountInVans * (pool.apy / 100);
+      const lockRewardVans = annualRewardVans * (pool.lockDays / 365);
 
-      return lockReward.toFixed(6);
+      return lockRewardVans.toFixed(6);
     }
 
-    // UPDATE ESTIMATED REWARDS DISPLAY - PERBAIKAN DI SINI
+    // UPDATE ESTIMATED REWARDS DISPLAY
     function updateEstimatedRewards() {
       for (let i = 0; i < 4; i++) {
         const amount = $(`pool${i}Amount`).value;
@@ -898,9 +1104,9 @@
       }
     }
 
-    // SET MAX AMOUNT
+    // SET MAX AMOUNT - DIPERBAIKI
     async function setMaxAmount(poolId, percent = 1) {
-      if (!account) return;
+      if (!account || !provider || !vansToken) return;
 
       try {
         const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${poolId}"]`);
@@ -915,6 +1121,8 @@
 
         const balanceFormatted = parseFloat(ethers.utils.formatEther(balance));
         const maxAmount = balanceFormatted * percent;
+        
+        // Set value dengan presisi yang sesuai
         $(`pool${poolId}Amount`).value = maxAmount.toFixed(6);
 
         updateEstimatedRewards();
@@ -925,17 +1133,46 @@
       }
     }
 
-    // UPDATE STAKE BUTTON STATE
-    function updateStakeButtonState(poolId) {
+    // UPDATE STAKE BUTTON STATE - DIPERBAIKI
+    async function updateStakeButtonState(poolId) {
       const amount = $(`pool${poolId}Amount`).value;
-
-      if (amount && parseFloat(amount) > 0) {
-        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
-        stakeBtn.disabled = false;
-      } else {
-        const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+      const stakeBtn = document.querySelector(`.stake-btn[data-pool="${poolId}"]`);
+      
+      if (!amount || parseFloat(amount) <= 0) {
         stakeBtn.disabled = true;
+        return;
       }
+
+      const tokenBtn = document.querySelector(`.token-btn.active[data-pool="${poolId}"]`);
+      const tokenType = tokenBtn.dataset.token;
+
+      const pool = POOLS[poolId];
+      const minStake = tokenType === 'vans' ? pool.minVans : pool.minVana;
+      
+      if (parseFloat(amount) < minStake) {
+        stakeBtn.disabled = true;
+        return;
+      }
+
+      // Untuk VANS, check allowance
+      if (tokenType === 'vans') {
+        try {
+          const amountWei = ethers.utils.parseEther(amount);
+          const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+          
+          if (allowance.lt(amountWei)) {
+            stakeBtn.disabled = true;
+            return;
+          }
+        } catch (error) {
+          console.error('Check allowance failed:', error);
+          stakeBtn.disabled = true;
+          return;
+        }
+      }
+
+      // Untuk VANA, tidak perlu check allowance
+      stakeBtn.disabled = false;
     }
 
     // UTILITY FUNCTIONS
@@ -943,7 +1180,12 @@
       return parseFloat(ethers.utils.formatEther(wei)).toFixed(4);
     }
 
-    // EVENT LISTENERS SETUP
+    function shortenAddress(address) {
+      if (!address) return '';
+      return address.substring(0, 6) + '...' + address.substring(38);
+    }
+
+    // EVENT LISTENERS SETUP - DIPERBAIKI
     function setupEventListeners() {
       // Menu
       const menuBtn = $('menuBtn');
@@ -963,15 +1205,32 @@
       // Connect button
       $('connectBtn').addEventListener('click', connectWallet);
 
-      // Token selection buttons
+      // Switch network button
+      $('switchNetworkBtn').addEventListener('click', switchToVanaChain);
+
+      // Token selection buttons - DIPERBAIKI
       document.querySelectorAll('.token-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const poolId = this.dataset.pool;
-          // Remove active class from all buttons in this pool
+          
+          // Update active token
           document.querySelectorAll(`.token-btn[data-pool="${poolId}"]`).forEach(b => b.classList.remove('active'));
-          // Add active class to clicked button
           this.classList.add('active');
+          
+          // Update allowance display based on selected token
+          const allowanceElement = $(`allowance${poolId}`);
+          if (this.dataset.token === 'vans') {
+            // Tampilkan allowance status untuk VANS
+            checkAllowances();
+          } else {
+            // Sembunyikan allowance status untuk VANA
+            allowanceElement.style.display = 'none';
+          }
+          
+          // Update UI
+          loadBalances();
           updateEstimatedRewards();
+          updateStakeButtonState(poolId);
         });
       });
 
@@ -982,9 +1241,7 @@
           const poolId = poolCard.dataset.pool;
           const percent = parseFloat(this.dataset.percent) / 100;
 
-          // Remove active class from all percentage buttons in this pool
           this.closest('.input-actions').querySelectorAll('.btn-percent').forEach(b => b.classList.remove('active'));
-          // Add active class to clicked button
           this.classList.add('active');
 
           setMaxAmount(parseInt(poolId), percent);
@@ -1001,7 +1258,10 @@
 
       // Balance click to set max
       for (let i = 0; i < 4; i++) {
-        $(`pool${i}Balance`).addEventListener('click', () => setMaxAmount(i));
+        const balanceElement = $(`pool${i}Balance`);
+        if (balanceElement) {
+          balanceElement.addEventListener('click', () => setMaxAmount(i));
+        }
       }
 
       // Stake buttons
@@ -1017,6 +1277,21 @@
 
       // Unstake all button
       $('unstakeAllBtn').addEventListener('click', unstakeAllAvailable);
+
+      // Handle wallet changes
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            location.reload();
+          } else {
+            location.reload();
+          }
+        });
+
+        window.ethereum.on('chainChanged', () => {
+          location.reload();
+        });
+      }
     }
 
     // Initialize on load
