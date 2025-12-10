@@ -107,6 +107,9 @@
     /* Countdown */
     .countdown{font-size:12px;color:var(--warning);font-weight:600}
     .countdown.danger{color:var(--danger)}
+
+    /* Error Message */
+    .error-message{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:8px;padding:8px;margin-top:8px;font-size:12px;color:var(--danger);display:none}
   </style>
 </head>
 <body>
@@ -144,7 +147,7 @@
             <span>⚠️</span>
             <span>PERINGATAN - DEADLINE MENDEKAT</span>
           </div>
-          <div class="warning-content" id="warningMessage"></div>
+          <div class="alert-content" id="warningMessage"></div>
         </div>
 
         <div class="stats-grid">
@@ -174,6 +177,7 @@
           </div>
         </div>
 
+        <div class="error-message" id="balanceError"></div>
         <div class="status" id="healthStatus">Connect wallet to view status</div>
       </section>
 
@@ -232,7 +236,7 @@
 
         <div class="form-group">
           <label class="form-label">Amount to Withdraw</label>
-          <input type="number" id="withdrawAmount" class="form-input" placeholder="Enter amount">
+          <input type="number" id="withdrawAmount" class="form-input" placeholder="Enter amount" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
@@ -240,6 +244,7 @@
           <button id="withdrawVansBtn" class="btn-warning">Withdraw VANS</button>
         </div>
 
+        <div class="error-message" id="withdrawError"></div>
         <div class="status" id="withdrawStatus">Ready for withdrawal</div>
       </section>
 
@@ -251,7 +256,7 @@
 
         <div class="form-group">
           <label class="form-label">Return VANA to Contract</label>
-          <input type="number" id="returnVanaAmount" class="form-input" placeholder="VANA amount to return">
+          <input type="number" id="returnVanaAmount" class="form-input" placeholder="VANA amount to return" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
@@ -260,13 +265,14 @@
 
         <div class="form-group" style="margin-top:16px">
           <label class="form-label">Return VANS to Contract</label>
-          <input type="number" id="returnVansAmount" class="form-input" placeholder="VANS amount to return">
+          <input type="number" id="returnVansAmount" class="form-input" placeholder="VANS amount to return" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
           <button id="returnVansBtn" class="btn-secondary">Return VANS</button>
         </div>
 
+        <div class="error-message" id="returnError"></div>
         <div class="status" id="returnStatus">Ready to return funds</div>
       </section>
 
@@ -293,18 +299,19 @@
 
         <div class="form-group">
           <label class="form-label">Min VANS Stake</label>
-          <input type="number" id="minVans" class="form-input" placeholder="e.g., 10000">
+          <input type="number" id="minVans" class="form-input" placeholder="e.g., 10000" step="0.000000000000000001">
         </div>
 
         <div class="form-group">
           <label class="form-label">Min VANA Stake</label>
-          <input type="number" id="minVana" class="form-input" placeholder="e.g., 1">
+          <input type="number" id="minVana" class="form-input" placeholder="e.g., 1" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
           <button id="updatePoolBtn" class="btn-primary">Update Pool</button>
         </div>
 
+        <div class="error-message" id="poolError"></div>
         <div class="status" id="poolStatus">Ready to update pool</div>
       </section>
 
@@ -316,13 +323,14 @@
 
         <div class="form-group">
           <label class="form-label">Add Rewards (VANS)</label>
-          <input type="number" id="addRewardsAmount" class="form-input" placeholder="Amount to add">
+          <input type="number" id="addRewardsAmount" class="form-input" placeholder="Amount to add" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
           <button id="addRewardsBtn" class="btn-primary">Add Rewards</button>
         </div>
 
+        <div class="error-message" id="rewardsError"></div>
         <div class="status" id="rewardsStatus">Ready to add rewards</div>
       </section>
     </div>
@@ -338,7 +346,7 @@
 
       <div class="form-group">
         <label class="form-label">Amount to Withdraw</label>
-        <input type="number" id="modalWithdrawAmount" class="form-input" placeholder="Enter amount">
+        <input type="number" id="modalWithdrawAmount" class="form-input" placeholder="Enter amount" step="0.000000000000000001">
         <div style="font-size:12px;color:var(--muted);margin-top:4px" id="modalWithdrawInfo"></div>
       </div>
 
@@ -369,7 +377,6 @@
       'function addRewards(uint256 amount)',
       'function owner() view returns (address)',
       'function withdrawalRecords(uint256) view returns (uint256 amount, bool isVana, uint256 withdrawTime, uint256 returnDeadline, bool returned, address returnedBy, uint256 returnTime)',
-      'function activeWithdrawals(uint256) view returns (bool)',
       'function getActiveWithdrawals() view returns (tuple(uint256 amount, bool isVana, uint256 withdrawTime, uint256 returnDeadline, bool returned, address returnedBy, uint256 returnTime)[])'
     ];
 
@@ -378,7 +385,8 @@
       'function transfer(address,uint256) returns (bool)',
       'function approve(address,uint256) returns (bool)',
       'function transferFrom(address,address,uint256) returns (bool)',
-      'function decimals() view returns (uint8)'
+      'function decimals() view returns (uint8)',
+      'function symbol() view returns (string)'
     ];
 
     // STATE
@@ -387,6 +395,7 @@
     let account = null;
     let stakingContract = null;
     let vansToken = null;
+    let vansDecimals = 18; // Default to 18
     let currentWithdrawType = null;
     let autoRefreshInterval = null;
 
@@ -398,7 +407,7 @@
       await connectWallet();
     }
 
-    // WALLET CONNECTION - PERBAIKAN UTAMA
+    // WALLET CONNECTION
     async function connectWallet() {
       if (typeof window.ethereum === 'undefined') {
         alert('Please install MetaMask or another Web3 wallet!');
@@ -409,14 +418,12 @@
       try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
         
-        // Cek apakah sudah ada koneksi
+        // Check for existing connection
         const accounts = await provider.listAccounts();
         if (accounts.length > 0) {
-          // Sudah terkoneksi, gunakan akun yang sudah ada
           signer = provider.getSigner();
           account = accounts[0];
         } else {
-          // Minta koneksi wallet
           await provider.send("eth_requestAccounts", []);
           signer = provider.getSigner();
           account = await signer.getAddress();
@@ -425,7 +432,16 @@
         stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
         vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
 
-        $('connectBtn').textContent = account.substring(0, 6) + '...' + account.substring(38);
+        // Get VANS token decimals
+        try {
+          vansDecimals = await vansToken.decimals();
+          console.log('VANS decimals:', vansDecimals);
+        } catch (error) {
+          console.warn('Could not get VANS decimals, using default 18');
+          vansDecimals = 18;
+        }
+
+        $('connectBtn').textContent = shortenAddress(account);
         $('healthStatus').textContent = 'Connected - Verifying ownership...';
 
         // Check if connected wallet is owner
@@ -449,6 +465,7 @@
         } catch (error) {
           console.error('Owner check failed:', error);
           $('healthStatus').textContent = 'Error verifying ownership';
+          showError('balanceError', 'Failed to verify ownership: ' + error.message);
         }
 
       } catch (error) {
@@ -458,6 +475,7 @@
         } else {
           $('healthStatus').textContent = 'Connection failed: ' + error.message;
         }
+        showError('balanceError', 'Connection failed: ' + error.message);
       }
     }
 
@@ -483,39 +501,62 @@
         await loadContractHealth();
         await loadWithdrawalReminders();
         $('healthStatus').textContent = 'All data loaded successfully';
+        hideError('balanceError');
       } catch (error) {
         console.error('Load data failed:', error);
         $('healthStatus').textContent = 'Failed to load data: ' + error.message;
+        showError('balanceError', 'Load failed: ' + error.message);
       }
     }
 
     // LOAD CONTRACT HEALTH DATA
     async function loadContractHealth() {
       try {
-        const balance = await stakingContract.getContractBalance();
-        const totalStaked = await stakingContract.totalStaked();
+        // Clear previous errors
+        hideError('balanceError');
+        
+        // Get VANS balance directly from token contract
+        const vansBalance = await vansToken.balanceOf(STAKING_CONTRACT);
+        console.log('Raw VANS balance:', vansBalance.toString());
+        
+        // Get other contract balances
+        let vanaBalance, rewardPool, totalStaked;
+        
+        try {
+          const balance = await stakingContract.getContractBalance();
+          vanaBalance = balance[1]; // VANA balance
+          rewardPool = balance[2]; // Reward pool
+        } catch (error) {
+          console.warn('getContractBalance failed:', error);
+          vanaBalance = ethers.constants.Zero;
+          rewardPool = ethers.constants.Zero;
+        }
+        
+        try {
+          totalStaked = await stakingContract.totalStaked();
+        } catch (error) {
+          console.warn('totalStaked failed:', error);
+          totalStaked = ethers.constants.Zero;
+        }
 
-        const vansBalance = balance[0];
-        const vanaBalance = balance[1];
-        const rewardPool = balance[2];
+        // Format and display balances
+        $('vanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
+        $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
+        $('rewardPool').textContent = formatUnits(rewardPool, vansDecimals) + ' VANS';
+        $('totalStaked').textContent = formatUnits(totalStaked, 18);
 
-        $('vanaBalance').textContent = formatEther(vanaBalance) + ' VANA';
-        $('vansBalance').textContent = formatEther(vansBalance) + ' VANS';
-        $('rewardPool').textContent = formatEther(rewardPool) + ' VANS';
-        $('totalStaked').textContent = formatEther(totalStaked);
+        // Calculate needed funds
+        const vanaNeeded = totalStaked.gt(vanaBalance) ? totalStaked.sub(vanaBalance) : ethers.constants.Zero;
+        const vansNeeded = rewardPool.gt(vansBalance) ? rewardPool.sub(vansBalance) : ethers.constants.Zero;
 
-        // Calculate needed funds (simplified)
-        const vanaNeeded = totalStaked > vanaBalance ? totalStaked - vanaBalance : 0;
-        const vansNeeded = rewardPool > vansBalance ? rewardPool - vansBalance : 0;
-
-        $('vanaNeeded').textContent = formatEther(vanaNeeded) + ' VANA';
-        $('vansNeeded').textContent = formatEther(vansNeeded) + ' VANS';
+        $('vanaNeeded').textContent = formatUnits(vanaNeeded, 18) + ' VANA';
+        $('vansNeeded').textContent = formatUnits(vansNeeded, vansDecimals) + ' VANS';
 
         // Show alerts if needed
-        if (vanaNeeded > 0 || vansNeeded > 0) {
+        if (!vanaNeeded.isZero() || !vansNeeded.isZero()) {
           $('emergencyAlert').style.display = 'block';
           $('emergencyMessage').textContent = 
-            `Perlu ${formatEther(vanaNeeded)} VANA dan ${formatEther(vansNeeded)} VANS untuk memenuhi kewajiban unstake user!`;
+            `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS untuk memenuhi kewajiban unstake user!`;
         } else {
           $('emergencyAlert').style.display = 'none';
         }
@@ -523,6 +564,7 @@
       } catch (error) {
         console.error('Load health failed:', error);
         $('healthStatus').textContent = 'Error loading health data';
+        showError('balanceError', 'Failed to load contract health: ' + error.message);
       }
     }
 
@@ -537,7 +579,7 @@
         const tbody = $('remindersTable');
         tbody.innerHTML = '';
 
-        // Try to get active withdrawals (if function exists)
+        // Try to get active withdrawals
         try {
           const withdrawals = await stakingContract.getActiveWithdrawals();
 
@@ -555,7 +597,14 @@
           withdrawals.forEach((withdrawal, index) => {
             if (!withdrawal.returned) {
               activeCount++;
-              totalWithdrawn += parseFloat(ethers.utils.formatEther(withdrawal.amount));
+              
+              // Parse amount based on token type
+              const amount = parseFloat(
+                withdrawal.isVana 
+                  ? ethers.utils.formatEther(withdrawal.amount)
+                  : formatUnits(withdrawal.amount, vansDecimals)
+              );
+              totalWithdrawn += amount;
 
               const deadline = new Date(withdrawal.returnDeadline * 1000);
               const now = new Date();
@@ -573,7 +622,7 @@
               const row = document.createElement('tr');
               row.innerHTML = `
                 <td>${index}</td>
-                <td>${formatEther(withdrawal.amount)} ${withdrawal.isVana ? 'VANA' : 'VANS'}</td>
+                <td>${amount.toFixed(4)} ${withdrawal.isVana ? 'VANA' : 'VANS'}</td>
                 <td>${deadline.toLocaleString()}</td>
                 <td class="countdown ${hoursLeft < 24 ? 'danger' : ''}">${formatCountdown(timeLeft)}</td>
               `;
@@ -582,8 +631,7 @@
           });
 
         } catch (error) {
-          // Fallback if getActiveWithdrawals doesn't exist
-          console.log('getActiveWithdrawals not available, using fallback');
+          console.log('getActiveWithdrawals failed:', error);
           tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Withdrawal tracking not available</td></tr>';
         }
 
@@ -643,10 +691,12 @@
       }
 
       try {
+        hideError('withdrawError');
         $('withdrawStatus').innerHTML = '<span class="spinner"></span>Processing withdrawal...';
         $('confirmWithdrawBtn').disabled = true;
 
-        const amountWei = ethers.utils.parseEther(amount);
+        const decimals = currentWithdrawType === 'vana' ? 18 : vansDecimals;
+        const amountWei = ethers.utils.parseUnits(amount.toString(), decimals);
         let tx;
 
         if (currentWithdrawType === 'vana') {
@@ -665,7 +715,9 @@
 
       } catch (error) {
         console.error('Withdrawal failed:', error);
-        $('withdrawStatus').textContent = 'Withdrawal failed: ' + (error.reason || error.message);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('withdrawStatus').textContent = 'Withdrawal failed!';
+        showError('withdrawError', 'Withdrawal failed: ' + errorMsg);
       } finally {
         $('confirmWithdrawBtn').disabled = false;
       }
@@ -685,6 +737,7 @@
       }
 
       try {
+        hideError('returnError');
         $('returnStatus').innerHTML = '<span class="spinner"></span>Returning VANA...';
         $('returnVanaBtn').disabled = true;
 
@@ -700,7 +753,9 @@
 
       } catch (error) {
         console.error('Return VANA failed:', error);
-        $('returnStatus').textContent = 'Return failed: ' + (error.reason || error.message);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('returnStatus').textContent = 'Return failed!';
+        showError('returnError', 'Return VANA failed: ' + errorMsg);
       } finally {
         $('returnVanaBtn').disabled = false;
       }
@@ -719,14 +774,20 @@
       }
 
       try {
+        hideError('returnError');
         $('returnStatus').innerHTML = '<span class="spinner"></span>Returning VANS...';
         $('returnVansBtn').disabled = true;
 
-        const amountWei = ethers.utils.parseEther(amount);
+        const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
 
-        // Approve first
-        const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
-        await approveTx.wait();
+        // Check allowance first
+        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+        if (allowance.lt(amountWei)) {
+          // Approve first
+          const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+          $('returnStatus').textContent = 'Approving VANS...';
+          await approveTx.wait();
+        }
 
         // Then return
         const tx = await stakingContract.returnVansToContract(amountWei);
@@ -740,7 +801,9 @@
 
       } catch (error) {
         console.error('Return VANS failed:', error);
-        $('returnStatus').textContent = 'Return failed: ' + (error.reason || error.message);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('returnStatus').textContent = 'Return failed!';
+        showError('returnError', 'Return VANS failed: ' + errorMsg);
       } finally {
         $('returnVansBtn').disabled = false;
       }
@@ -764,13 +827,15 @@
       }
 
       try {
+        hideError('poolError');
         $('poolStatus').innerHTML = '<span class="spinner"></span>Updating pool...';
         $('updatePoolBtn').disabled = true;
 
         const poolInfo = await stakingContract.pools(poolId);
 
+        // Parse inputs, use existing values if not provided
         const newApyWei = newApy ? ethers.utils.parseUnits(newApy, 16) : poolInfo.apy;
-        const newMinVansWei = minVans ? ethers.utils.parseEther(minVans) : poolInfo.minVansStake;
+        const newMinVansWei = minVans ? ethers.utils.parseUnits(minVans, vansDecimals) : poolInfo.minVansStake;
         const newMinVanaWei = minVana ? ethers.utils.parseEther(minVana) : poolInfo.minVanaStake;
 
         const tx = await stakingContract.updatePoolConfig(
@@ -794,7 +859,9 @@
 
       } catch (error) {
         console.error('Update pool failed:', error);
-        $('poolStatus').textContent = 'Update failed: ' + (error.reason || error.message);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('poolStatus').textContent = 'Update failed!';
+        showError('poolError', 'Update pool failed: ' + errorMsg);
       } finally {
         $('updatePoolBtn').disabled = false;
       }
@@ -814,13 +881,19 @@
       }
 
       try {
+        hideError('rewardsError');
         $('rewardsStatus').innerHTML = '<span class="spinner"></span>Adding rewards...';
         $('addRewardsBtn').disabled = true;
 
-        const amountWei = ethers.utils.parseEther(amount);
+        const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
 
-        const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
-        await approveTx.wait();
+        // Check allowance first
+        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+        if (allowance.lt(amountWei)) {
+          const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+          $('rewardsStatus').textContent = 'Approving VANS...';
+          await approveTx.wait();
+        }
 
         const tx = await stakingContract.addRewards(amountWei);
 
@@ -833,15 +906,21 @@
 
       } catch (error) {
         console.error('Add rewards failed:', error);
-        $('rewardsStatus').textContent = 'Add rewards failed: ' + (error.reason || error.message);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('rewardsStatus').textContent = 'Add rewards failed!';
+        showError('rewardsError', 'Add rewards failed: ' + errorMsg);
       } finally {
         $('addRewardsBtn').disabled = false;
       }
     }
 
     // UTILITY FUNCTIONS
-    function formatEther(wei) {
-      return parseFloat(ethers.utils.formatEther(wei)).toFixed(4);
+    function formatUnits(wei, decimals) {
+      try {
+        return parseFloat(ethers.utils.formatUnits(wei, decimals)).toFixed(4);
+      } catch (error) {
+        return '0.0000';
+      }
     }
 
     function formatCountdown(milliseconds) {
@@ -855,6 +934,26 @@
 
       const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
       return `${minutes}m`;
+    }
+
+    function shortenAddress(address) {
+      if (!address) return '';
+      return address.substring(0, 6) + '...' + address.substring(38);
+    }
+
+    function showError(elementId, message) {
+      const element = $(elementId);
+      if (element) {
+        element.textContent = message;
+        element.style.display = 'block';
+      }
+    }
+
+    function hideError(elementId) {
+      const element = $(elementId);
+      if (element) {
+        element.style.display = 'none';
+      }
     }
 
     function closeModal(modalId) {
@@ -884,13 +983,7 @@
       // Handle wallet changes
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', (accounts) => {
-          if (accounts.length === 0) {
-            // User disconnected wallet
-            location.reload();
-          } else {
-            // User switched accounts
-            location.reload();
-          }
+          location.reload();
         });
 
         window.ethereum.on('chainChanged', () => {
