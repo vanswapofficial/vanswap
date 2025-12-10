@@ -161,6 +161,9 @@
     .network-option{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:14px}
     .network-option:hover{background:rgba(255,255,255,0.05)}
 
+    /* Loading indicator */
+    .loading{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;margin-left:8px}
+
     @media (max-width:520px){
       .select img{width:28px;height:28px}.amount{font-size:20px}.menu-dropdown{right:12px;left:auto}.token-list{min-width:260px;left:0;right:0}
       .connect-wallet{min-width:120px;padding:6px 10px;font-size:14px}
@@ -195,7 +198,7 @@
         <div class="wallet-network-container">
           <button id="connectBtn" class="connect-wallet" type="button">
             <span id="walletText">Connect Wallet</span>
-            <span style="margin-left:6px;font-size:12px">▼</span>
+            <span id="walletArrow" style="margin-left:6px;font-size:12px">▼</span>
           </button>
           
           <div id="walletNetworkDropdown" class="network-dropdown" style="right:0; left:auto; min-width:180px;">
@@ -406,25 +409,56 @@
     };
 
     // ==============================
-    // NETWORK MANAGER
+    // NETWORK MANAGER - DIPERBAIKI
     // ==============================
     class NetworkManager {
       constructor() {
         this.currentNetwork = this.getStoredNetwork() || 'vana';
         this.listeners = [];
+        this.isSwitchingNetwork = false;
       }
       
-      setNetwork(network) {
-        if (!NETWORK_CONFIG[network]) return;
+      async setNetwork(network) {
+        if (!NETWORK_CONFIG[network] || this.isSwitchingNetwork) return;
         
+        this.isSwitchingNetwork = true;
         console.log(`Switching network to: ${network}`);
-        this.currentNetwork = network;
-        localStorage.setItem('vanswap-network', network);
-        this.notifyAllListeners();
         
-        // Update UI immediately
-        this.updateNetworkUI();
-        this.reloadDataForNetwork();
+        // Tampilkan loading
+        const walletText = document.getElementById('walletText');
+        const originalText = walletText ? walletText.textContent : '';
+        if (walletText) {
+          walletText.innerHTML = `Switching... <span class="loading"></span>`;
+        }
+        
+        try {
+          // Simpan network baru
+          this.currentNetwork = network;
+          localStorage.setItem('vanswap-network', network);
+          
+          // Update UI terlebih dahulu
+          this.updateNetworkUI();
+          this.notifyAllListeners();
+          
+          // Reset data untuk network baru
+          this.reloadDataForNetwork();
+          
+          // Jika wallet sudah terhubung, reconnect otomatis
+          if (account) {
+            console.log('Reconnecting wallet to new network...');
+            await reconnectWalletForNewNetwork();
+          }
+          
+          showToast(`Switched to ${NETWORK_CONFIG[network].name}`);
+          
+        } catch (error) {
+          console.error('Network switch error:', error);
+          showToast(`Failed to switch network: ${error.message}`);
+        } finally {
+          this.isSwitchingNetwork = false;
+          // Restore wallet text
+          updateWalletDisplay();
+        }
       }
       
       getCurrentNetwork() {
@@ -476,13 +510,15 @@
         updatePriceInfo();
         updateSwapBtn();
         
-        // If wallet is connected, update balances
+        // Reset balances display
+        const fromBalance = document.getElementById('fromBalance');
+        const toBalance = document.getElementById('toBalance');
+        if (fromBalance) fromBalance.textContent = '—';
+        if (toBalance) toBalance.textContent = '—';
+        
+        // If wallet is connected, update balances (akan diupdate oleh reconnect)
         if (account) {
-          setTimeout(() => {
-            updateBalances();
-            updateDropdownBalances();
-            getPoolReserves(selectedFrom, selectedTo);
-          }, 500);
+          // Data akan diupdate setelah reconnect
         }
       }
     }
@@ -587,16 +623,20 @@
     }
 
     // ==============================
-    // WALLET DISPLAY FUNCTION - DIBUAT GLOBAL
+    // WALLET DISPLAY FUNCTION
     // ==============================
     function updateWalletDisplay() {
       const walletText = document.getElementById('walletText');
+      const walletArrow = document.getElementById('walletArrow');
+      
       if (!walletText) return;
       
       if (account) {
         walletText.textContent = account.substring(0, 6) + '...' + account.substring(38);
+        if (walletArrow) walletArrow.textContent = '▼';
       } else {
         walletText.textContent = 'Connect Wallet';
+        if (walletArrow) walletArrow.textContent = '▼';
       }
     }
 
@@ -670,7 +710,7 @@
     }
 
     // ==============================
-    // NETWORK SELECTOR
+    // NETWORK SELECTOR - DIPERBAIKI
     // ==============================
     function initNetworkSelector() {
       const connectBtn = $('connectBtn');
@@ -682,7 +722,7 @@
         return;
       }
 
-      // Toggle dropdown - FIXED: hanya preventDefault, tidak stopPropagation
+      // Toggle dropdown
       connectBtn.addEventListener('click', (e) => {
         if (e) e.preventDefault();
         
@@ -696,15 +736,19 @@
         }
       });
 
-      // Handle network selection
+      // Handle network selection - OTOMATIS RECONNECT
       dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
-        option.addEventListener('click', (e) => {
+        option.addEventListener('click', async (e) => {
           if (e) e.preventDefault();
           
           const network = option.getAttribute('data-network');
           console.log('Selected network:', network);
-          networkManager.setNetwork(network);
+          
+          // Tutup dropdown
           dropdown.style.display = 'none';
+          
+          // Switch network dengan auto-reconnect
+          await networkManager.setNetwork(network);
         });
       });
 
@@ -713,7 +757,7 @@
         disconnectBtn.addEventListener('click', (e) => {
           if (e) {
             e.preventDefault();
-            e.stopPropagation(); // Hanya di sini kita butuh stopPropagation
+            e.stopPropagation();
           }
           disconnectWallet();
           dropdown.style.display = 'none';
@@ -731,7 +775,7 @@
       networkManager.addListener((network) => {
         console.log('Network changed to:', network);
         updateNetworkUI();
-        updateWalletDisplay(); // Sekarang fungsi ini global
+        updateWalletDisplay();
       });
 
       // Set initial state
@@ -744,6 +788,64 @@
       const networkDisplay = $('networkDisplay');
       if (networkDisplay) {
         networkDisplay.textContent = config.name;
+      }
+    }
+
+    // ==============================
+    // RECONNECT WALLET FOR NEW NETWORK - FUNGSI BARU
+    // ==============================
+    async function reconnectWalletForNewNetwork() {
+      if (!account || !window.ethereum) return;
+      
+      try {
+        console.log('Reconnecting wallet for new network...');
+        setStatus('Reconnecting wallet...');
+        
+        // Switch chain di wallet
+        await ensureCorrectChain();
+        
+        // Re-initialize provider and contracts untuk network baru
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        wvanaContract = new ethers.Contract(WVANA, WVANA_ABI, signer);
+        
+        // Update UI
+        updateWalletDisplay();
+        
+        // Get data untuk network baru
+        await getPoolReserves(selectedFrom, selectedTo);
+        await updateBalances();
+        await updateDropdownBalances();
+        updateSwapBtn();
+        updatePriceInfo();
+        
+        setStatus('Connected to new network');
+        showToast('Wallet reconnected to new network');
+        
+      } catch (error) {
+        console.error('Reconnect error:', error);
+        
+        // Jika gagal reconnect, tetap pertahankan account tapi reset state
+        if (error.code === 4001) {
+          // User rejected chain switch
+          showToast('Please approve network switch in your wallet');
+          setStatus('Network switch rejected');
+        } else {
+          showToast('Failed to reconnect: ' + error.message);
+          setStatus('Reconnection failed');
+        }
+        
+        // Reset balances display karena kita di network baru
+        const fromBalance = document.getElementById('fromBalance');
+        const toBalance = document.getElementById('toBalance');
+        if (fromBalance) fromBalance.textContent = '—';
+        if (toBalance) toBalance.textContent = '—';
+        
+        // Account tetap terhubung, tapi data tidak tersedia
+        updateWalletDisplay();
+        updateSwapBtn();
       }
     }
 
@@ -910,6 +1012,9 @@
         }
       } catch (error) {
         console.error('Update balances error:', error);
+        // Jika error, reset balances display
+        $('fromBalance').textContent = '—';
+        $('toBalance').textContent = '—';
       }
     }
 
@@ -1691,7 +1796,16 @@
           );
           
           if (targetNetwork) {
-            networkManager.setNetwork(targetNetwork);
+            // Update network tanpa reconnect (wallet sudah di network yang benar)
+            networkManager.currentNetwork = targetNetwork;
+            localStorage.setItem('vanswap-network', targetNetwork);
+            networkManager.updateNetworkUI();
+            networkManager.reloadDataForNetwork();
+            
+            // Reconnect wallet ke network baru
+            if (account) {
+              await reconnectWalletForNewNetwork();
+            }
           } else {
             setStatus('Unsupported chain - please switch to Vana or 0G');
           }
@@ -1702,14 +1816,18 @@
           
           if (accounts && accounts.length > 0) {
             account = accounts[0];
-            updateWalletDisplay(); // Panggil fungsi global
+            updateWalletDisplay();
             await getPoolReserves(selectedFrom, selectedTo);
             updateBalances();
             updateDropdownBalances();
             updatePriceInfo();
           } else {
             account = null;
-            updateWalletDisplay(); // Panggil fungsi global
+            updateWalletDisplay();
+            // Reset balances
+            $('fromBalance').textContent = '—';
+            $('toBalance').textContent = '—';
+            updateSwapBtn();
           }
         });
       }
@@ -1789,7 +1907,7 @@
         // Check if wallet is already connected
         if (window.ethereum && window.ethereum.selectedAddress) {
           account = window.ethereum.selectedAddress;
-          updateWalletDisplay(); // Panggil fungsi global
+          updateWalletDisplay();
           provider = new ethers.providers.Web3Provider(window.ethereum);
           signer = provider.getSigner();
           router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
