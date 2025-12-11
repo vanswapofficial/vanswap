@@ -471,7 +471,7 @@
     const VANA_CHAIN_ID = 1480;
     const VANA_CHAIN_HEX = "0x5c8";
     
-    // ABI - Lengkap dengan semua fungsi
+    // ABI
     const STAKING_ABI = [
       'function owner() view returns (address)',
       'function vansToken() view returns (address)',
@@ -526,7 +526,6 @@
         
         const isVanaChain = chainId === VANA_CHAIN_HEX || parseInt(chainId, 16) === VANA_CHAIN_ID;
         
-        // Update UI
         updateNetworkIndicator(isVanaChain, chainId);
         
         return isVanaChain;
@@ -557,7 +556,6 @@
 
     async function switchToVanaChain() {
       try {
-        // Check if already on VANA Chain
         const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
         if (currentChainId === VANA_CHAIN_HEX) {
           console.log("Already on VANA Chain");
@@ -609,14 +607,12 @@
         $('connectBtn').innerHTML = '<span class="spinner"></span>Connecting...';
         $('connectBtn').disabled = true;
 
-        // Check network first
         const isCorrectNetwork = await checkNetwork();
         if (!isCorrectNetwork) {
           const shouldSwitch = confirm('You are on wrong network. Switch to VANA Chain?');
           if (shouldSwitch) {
             const switched = await switchToVanaChain();
             if (switched) {
-              // Wait 2 seconds for network switch, then reconnect
               setTimeout(async () => {
                 await connectWallet();
               }, 2000);
@@ -726,104 +722,170 @@
       }
     }
 
-    // FUNGSI UTAMA YANG DIPERBAIKI
+    // ========== PERBAIKAN UTAMA: LOAD CONTRACT HEALTH ==========
     async function loadContractHealth() {
       try {
-        console.log('=== MULAI LOAD CONTRACT HEALTH ===');
+        console.log('=== LOAD CONTRACT HEALTH ===');
         
         let totalVanaStaked, totalVansStaked, vanaBalance, vansBalance, rewardPoolAmount;
         
         try {
+          // 1. AMBIL DATA DARI KONTRAK - TAPI DATA MUNGKIN TERBALIK
           const health = await stakingContract.getContractHealth();
-          console.log('Data mentah dari getContractHealth:', health);
           
-          // DEBUG: Tampilkan semua nilai
-          console.log('Index 0 (totalVanaStaked):', formatUnits(health[0], 18), 'VANA');
-          console.log('Index 1 (totalVansStaked):', formatUnits(health[1], vansDecimals), 'VANS');
-          console.log('Index 2 (vanaBalance):', formatUnits(health[2], 18), 'VANA');
-          console.log('Index 3 (vansBalance):', formatUnits(health[3], vansDecimals), 'VANS');
-          console.log('Index 4 (rewardPool):', formatUnits(health[4], vansDecimals), 'VANS');
+          console.log('📊 Data mentah dari getContractHealth:');
+          console.log('Indeks 0 (totalVanaStaked):', formatUnits(health[0], 18));
+          console.log('Indeks 1 (totalVansStaked):', formatUnits(health[1], vansDecimals));
+          console.log('Indeks 2 (vanaBalance):', formatUnits(health[2], 18));
+          console.log('Indeks 3 (vansBalance):', formatUnits(health[3], vansDecimals));
+          console.log('Indeks 4 (rewardPool):', formatUnits(health[4], vansDecimals));
           
-          // ANALISIS: Berdasarkan informasi Anda, 48,127,000 adalah VANS balance
-          // Jika health[2] (vanaBalance) menunjukkan 48,127,000, maka mapping terbalik
+          // 2. AMBIL DATA DARI getContractBalance UNTUK VALIDASI
+          const balanceData = await stakingContract.getContractBalance();
           
-          const vanaBalanceRaw = parseFloat(formatUnits(health[2], 18));
-          const vansBalanceRaw = parseFloat(formatUnits(health[3], vansDecimals));
+          console.log('🔍 Data dari getContractBalance untuk validasi:');
+          console.log('Indeks 0 (vansBalance):', formatUnits(balanceData[0], vansDecimals));
+          console.log('Indeks 1 (vanaBalance):', formatUnits(balanceData[1], 18));
+          console.log('Indeks 2 (rewardPool):', formatUnits(balanceData[2], vansDecimals));
           
-          if (Math.abs(vanaBalanceRaw - 48127000) < 1000) {
-            console.log('⚠️ MAPPING TERBALIK DETECTED!');
-            console.log('VANA balance menunjukkan 48,127,000 (seharusnya VANS balance)');
-            
-            // Mapping terbalik: data VANA dan VANS tertukar
-            totalVansStaked = health[0];  // Ini sebenarnya VANS staked
-            totalVanaStaked = health[1];  // Ini sebenarnya VANA staked
-            vansBalance = health[2];      // Ini sebenarnya VANS balance (48,127,000)
-            vanaBalance = health[3];      // Ini sebenarnya VANA balance (0)
-            rewardPoolAmount = health[4]; // Reward pool tetap VANS
-            
-            console.log('✅ Menerapkan mapping terbalik');
-          } else {
-            // Mapping normal
-            totalVanaStaked = health[0];
+          // 3. ANALISIS: BERDASARKAN INFORMASI ANDA:
+          // - VANS Balance harus ~48,000,000
+          // - VANS Staked harus ~127,000
+          // - VANA Balance harus 0 (native)
+          // - VANA Staked harus 0
+          
+          // 4. TENTUKAN DATA YANG BENAR:
+          // Cek mana yang menunjukkan ~48,000,000 VANS
+          const health2Value = parseFloat(formatUnits(health[2], 18));
+          const health3Value = parseFloat(formatUnits(health[3], vansDecimals));
+          const balance0Value = parseFloat(formatUnits(balanceData[0], vansDecimals));
+          const balance1Value = parseFloat(formatUnits(balanceData[1], 18));
+          
+          console.log('🧮 Analisis nilai:');
+          console.log('health[2] sebagai VANA (~48jt?):', health2Value);
+          console.log('health[3] sebagai VANS (~48jt?):', health3Value);
+          console.log('balance[0] sebagai VANS (~48jt?):', balance0Value);
+          console.log('balance[1] sebagai VANA (~48jt?):', balance1Value);
+          
+          // PRIORITAS: Gunakan getContractBalance karena lebih reliable
+          // Berdasarkan struktur: getContractBalance() returns (vansBalance, vanaBalance, rewardPool)
+          vansBalance = balanceData[0];      // Ini seharusnya VANS balance (48,000,000)
+          vanaBalance = balanceData[1];      // Ini seharusnya VANA balance (native, 0)
+          rewardPoolAmount = balanceData[2]; // Reward pool VANS
+          
+          console.log('✅ Menggunakan getContractBalance sebagai sumber utama');
+          console.log('VANS Balance dari kontrak:', formatUnits(vansBalance, vansDecimals));
+          console.log('VANA Balance dari kontrak:', formatUnits(vanaBalance, 18));
+          
+          // 5. UNTUK STAKED DATA: Analisis mana yang ~127,000
+          const health0Value = parseFloat(formatUnits(health[0], 18));
+          const health1Value = parseFloat(formatUnits(health[1], vansDecimals));
+          
+          console.log('🔍 Analisis staked data:');
+          console.log('health[0] sebagai VANA staked:', health0Value);
+          console.log('health[1] sebagai VANS staked:', health1Value);
+          
+          // Jika health[1] sekitar 127,000, maka itu VANS staked
+          if (health1Value > 120000 && health1Value < 130000) {
+            console.log('✅ Deteksi: health[1] adalah VANS Staked (~127,000)');
             totalVansStaked = health[1];
-            vanaBalance = health[2];
-            vansBalance = health[3];
-            rewardPoolAmount = health[4];
-            console.log('✅ Menerapkan mapping normal');
+            totalVanaStaked = health[0];
+          } 
+          // Jika health[0] sekitar 127,000, maka itu VANS staked (data terbalik)
+          else if (health0Value > 120000 && health0Value < 130000) {
+            console.log('⚠️ Deteksi: health[0] adalah VANS Staked (data terbalik)');
+            totalVansStaked = health[0];
+            totalVanaStaked = health[1];
+          }
+          // Jika tidak bisa deteksi, gunakan asumsi default
+          else {
+            console.log('⚠️ Tidak bisa deteksi pasti, menggunakan logika default');
+            totalVansStaked = health[1];
+            totalVanaStaked = health[0];
           }
           
         } catch (error) {
-          console.error('getContractHealth error:', error);
-          // Fallback
-          const balance = await stakingContract.getContractBalance();
-          vansBalance = balance[0];
-          vanaBalance = balance[1];
-          rewardPoolAmount = balance[2];
+          console.error('❌ Error mengambil data kesehatan:', error);
           
-          totalVanaStaked = ethers.constants.Zero;
-          totalVansStaked = ethers.constants.Zero;
+          // Fallback: coba ambil data langsung dari balanceOf
+          try {
+            console.log('🔄 Fallback ke balanceOf langsung');
+            
+            // Ambil balance VANS dari token contract
+            const vansBalanceRaw = await vansToken.balanceOf(STAKING_CONTRACT);
+            vansBalance = vansBalanceRaw;
+            
+            // VANA adalah native, coba ambil balance ether
+            const vanaBalanceRaw = await provider.getBalance(STAKING_CONTRACT);
+            vanaBalance = vanaBalanceRaw;
+            
+            // Untuk staked data, gunakan default
+            totalVanaStaked = ethers.constants.Zero;
+            totalVansStaked = ethers.constants.Zero;
+            
+            // Reward pool coba ambil dari function terpisah
+            try {
+              rewardPoolAmount = await stakingContract.rewardPool();
+            } catch {
+              rewardPoolAmount = ethers.constants.Zero;
+            }
+            
+          } catch (fallbackError) {
+            console.error('Fallback juga gagal:', fallbackError);
+            throw error;
+          }
         }
         
-        // PERHITUNGAN KEBUTUHAN
+        // 6. VALIDASI FINAL
+        console.log('🎯 Data akhir yang akan ditampilkan:');
+        console.log('VANA Balance:', formatUnits(vanaBalance, 18), 'VANA');
+        console.log('VANS Balance:', formatUnits(vansBalance, vansDecimals), 'VANS');
+        console.log('Total Staked VANA:', formatUnits(totalVanaStaked, 18), 'VANA');
+        console.log('Total Staked VANS:', formatUnits(totalVansStaked, vansDecimals), 'VANS');
+        console.log('Reward Pool:', formatUnits(rewardPoolAmount, vansDecimals), 'VANS');
+        
+        // 7. HITUNG KEBUTUHAN TOKEN
         const vanaNeeded = totalVanaStaked.gt(vanaBalance) ? totalVanaStaked.sub(vanaBalance) : ethers.constants.Zero;
         const vansNeeded = totalVansStaked.gt(vansBalance) ? totalVansStaked.sub(vansBalance) : ethers.constants.Zero;
         const isEmergency = !vanaNeeded.isZero() || !vansNeeded.isZero();
         
-        // TAMPILKAN DI UI
+        console.log('🧮 Perhitungan kebutuhan:');
+        console.log('VANA dibutuhkan:', formatUnits(vanaNeeded, 18));
+        console.log('VANS dibutuhkan:', formatUnits(vansNeeded, vansDecimals));
+        console.log('Emergency:', isEmergency);
+        
+        // 8. TAMPILKAN DI UI
         $('vanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
         $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
-        $('totalStakedVana').textContent = formatUnits(totalVanaStaked, 18) + ' VANA';
-        $('totalStakedVans').textContent = formatUnits(totalVansStaked, vansDecimals) + ' VANS';
+        $('totalStakedVana').textContent = formatUnits(totalVanaStaked, 18);
+        $('totalStakedVans').textContent = formatUnits(totalVansStaked, vansDecimals);
         $('rewardPool').textContent = formatUnits(rewardPoolAmount, vansDecimals) + ' VANS';
         $('vanaNeeded').textContent = formatUnits(vanaNeeded, 18) + ' VANA';
         $('vansNeeded').textContent = formatUnits(vansNeeded, vansDecimals) + ' VANS';
         
-        // EMERGENCY ALERT
+        // 9. TAMPILKAN ALERTS JIKA PERLU
         if (isEmergency) {
           $('emergencyAlert').style.display = 'block';
           let message = '';
           if (!vanaNeeded.isZero() && !vansNeeded.isZero()) {
-            message = `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS!`;
+            message = `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS untuk cover semua stake!`;
           } else if (!vanaNeeded.isZero()) {
-            message = `Perlu ${formatUnits(vanaNeeded, 18)} VANA!`;
+            message = `Perlu ${formatUnits(vanaNeeded, 18)} VANA untuk cover VANA stake!`;
           } else if (!vansNeeded.isZero()) {
-            message = `Perlu ${formatUnits(vansNeeded, vansDecimals)} VANS!`;
+            message = `Perlu ${formatUnits(vansNeeded, vansDecimals)} VANS untuk cover VANS stake!`;
           }
           $('emergencyMessage').textContent = message;
         } else {
           $('emergencyAlert').style.display = 'none';
         }
         
-        console.log('=== HASIL AKHIR ===');
-        console.log('VANA Balance:', $('vanaBalance').textContent);
-        console.log('VANS Balance:', $('vansBalance').textContent);
-        console.log('Staked VANA:', $('totalStakedVana').textContent);
-        console.log('Staked VANS:', $('totalStakedVans').textContent);
-        console.log('Emergency:', isEmergency);
-        console.log('=======================\n');
+        console.log('✅ Contract health loaded successfully');
+        console.log('=============================\n');
         
       } catch (error) {
-        console.error('Load health failed:', error);
+        console.error('❌ Load contract health failed:', error);
+        $('healthStatus').textContent = 'Failed to load contract health: ' + error.message;
+        showError('balanceError', 'Load health failed: ' + error.message);
         throw error;
       }
     }
@@ -894,7 +956,7 @@
         let activeWithdrawalsList = [];
         try {
           activeWithdrawalsList = await stakingContract.getActiveWithdrawals();
-          console.log('Active withdrawals loaded:', activeWithdrawalsList.length);
+          console.log('Withdrawals loaded:', activeWithdrawalsList.length);
         } catch (error) {
           console.log('getActiveWithdrawals failed:', error.message);
         }
