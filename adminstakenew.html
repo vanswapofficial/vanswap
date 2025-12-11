@@ -19,6 +19,8 @@
       --warning: #ff9800;
       --danger: #f44336;
       --success: #4caf50;
+      --vans-color: #31d0aa;
+      --vana-color: #ff9800;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -39,7 +41,7 @@
 
     /* Main Content */
     .main{max-width:1200px;margin:32px auto;padding:0 20px}
-    .admin-container{display:grid;grid-template-columns:repeat(auto-fit, minmax(500px, 1fr));gap:24px}
+    .admin-container{display:grid;grid-template-columns:1fr 1fr;gap:24px}
     @media (max-width:980px){.admin-container{grid-template-columns:1fr}}
 
     /* Cards */
@@ -48,22 +50,42 @@
     .title{font-size:20px;font-weight:700}
 
     /* Stats Grid */
-    .stats-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;margin-bottom:16px}
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
     .stat-item{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
     .stat-label{color:var(--muted);font-size:12px;margin-bottom:4px}
     .stat-value{font-weight:700;font-size:16px}
     .stat-value.warning{color:var(--warning)}
     .stat-value.danger{color:var(--danger)}
     .stat-value.success{color:var(--success)}
+    .stat-value.vans{color:var(--vans-color)}
+    .stat-value.vana{color:var(--vana-color)}
 
-    /* Alert Box */
-    .alert-box{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:10px;padding:12px;margin-bottom:16px}
+    /* Alert Styles */
+    .emergency-alert{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
     .alert-header{display:flex;align-items:center;gap:8px;color:var(--danger);font-weight:700;margin-bottom:6px}
     .alert-content{color:var(--danger);font-size:13px}
 
-    .info-box{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:10px;padding:12px;margin-bottom:16px}
-    .info-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:700;margin-bottom:6px}
-    .info-content{color:var(--warning);font-size:13px}
+    .warning-alert{background:rgba(255,152,0,0.1);border:1px solid var(--warning);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
+    .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:700;margin-bottom:6px}
+    .warning-content{color:var(--warning);font-size:13px}
+
+    .vans-warning{background:rgba(49,208,170,0.1);border:1px solid var(--vans-color);border-radius:10px;padding:12px;margin-bottom:16px;display:none}
+    .vans-warning-header{display:flex;align-items:center;gap:8px;color:var(--vans-color);font-weight:700;margin-bottom:6px}
+    .vans-warning-content{color:var(--vans-color);font-size:13px}
+
+    /* Token Badge */
+    .token-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+    .token-badge.vana{background:rgba(255,152,0,0.15);color:var(--vana-color)}
+    .token-badge.vans{background:rgba(49,208,170,0.15);color:var(--vans-color)}
+
+    /* Tables */
+    .table{width:100%;border-collapse:collapse;margin-top:12px}
+    .table th{text-align:left;padding:8px 12px;background:rgba(255,255,255,0.02);color:var(--muted);font-weight:600;font-size:12px}
+    .table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px}
+    .table .action-btn{padding:4px 8px;border-radius:6px;border:none;font-size:11px;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-warning{background:var(--warning);color:white}
+    .btn-danger{background:var(--danger);color:white}
 
     /* Forms */
     .form-group{margin-bottom:12px}
@@ -73,7 +95,7 @@
     .form-actions{display:flex;gap:8px;margin-top:16px}
 
     /* Buttons */
-    .btn{padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:14px}
+    .btn{flex:1;padding:10px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:14px}
     .btn-primary{background:var(--primary);color:white}
     .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text)}
     .btn-warning{background:var(--warning);color:white}
@@ -94,15 +116,22 @@
     .modal-title{font-size:18px;font-weight:700}
     .close-modal{background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer}
 
+    /* Countdown */
+    .countdown{font-size:12px;color:var(--warning);font-weight:600}
+    .countdown.danger{color:var(--danger)}
+
+    /* Error Message */
+    .error-message{background:rgba(244,67,54,0.1);border:1px solid var(--danger);border-radius:8px;padding:8px;margin-top:8px;font-size:12px;color:var(--danger);display:none}
+
     /* Network Indicator */
     .network-indicator{position:fixed;top:70px;right:20px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;z-index:1000}
-    .network-vana{background:#1a7f5e;color:white}
+    .network-bsc{background:#f0b90b;color:#000}
     .network-wrong{background:var(--danger);color:white}
-
-    /* Tabs */
-    .tabs{display:flex;gap:4px;margin-bottom:16px;background:rgba(0,0,0,0.2);padding:4px;border-radius:8px}
-    .tab{flex:1;padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
-    .tab.active{background:var(--primary)}
+    
+    /* Owner Info */
+    .owner-info{padding:8px 12px;background:rgba(76,175,80,0.1);border-radius:8px;border:1px solid rgba(76,175,80,0.2);margin-top:8px;font-size:12px}
+    .owner-info .label{color:var(--muted)}
+    .owner-info .address{color:var(--success);font-weight:600;word-break:break-all}
   </style>
 </head>
 <body>
@@ -126,237 +155,326 @@
       <section class="card">
         <div class="card-head">
           <div class="title">Contract Health</div>
-          <button id="refreshHealth" class="btn btn-secondary">Refresh</button>
+          <button id="refreshHealth" class="btn-secondary">Refresh</button>
         </div>
 
-        <div id="emergencyAlert" class="alert-box" style="display:none">
+        <!-- Emergency Alert -->
+        <div id="emergencyAlert" class="emergency-alert">
           <div class="alert-header">
             <span>🚨</span>
-            <span>PERINGATAN - DATA TIDAK SESUAI</span>
+            <span>EMERGENCY - DANA HARUS DIKEMBALIKAN!</span>
           </div>
           <div class="alert-content" id="emergencyMessage"></div>
         </div>
 
-        <div id="infoAlert" class="info-box">
-          <div class="info-header">
-            <span>ℹ️</span>
-            <span>STATUS KONTRAK</span>
+        <!-- VANA Warning Alert -->
+        <div id="vanaWarningAlert" class="warning-alert">
+          <div class="warning-header">
+            <span>⚠️</span>
+            <span>PERINGATAN - VANA DI WITHDRAW!</span>
           </div>
-          <div class="info-content" id="infoMessage">Memuat data kontrak...</div>
+          <div class="warning-content" id="vanaWarningMessage"></div>
+        </div>
+
+        <!-- VANS Warning Alert -->
+        <div id="vansWarningAlert" class="vans-warning">
+          <div class="vans-warning-header">
+            <span>⚠️</span>
+            <span>PERINGATAN - VANS DI WITHDRAW!</span>
+          </div>
+          <div class="vans-warning-content" id="vansWarningMessage"></div>
+        </div>
+
+        <!-- Owner Information -->
+        <div id="ownerInfo" class="owner-info" style="display:none">
+          <div class="label">Contract Owner:</div>
+          <div class="address" id="contractOwnerAddress"></div>
         </div>
 
         <div class="stats-grid">
+          <!-- VANA SECTION -->
           <div class="stat-item">
-            <div class="stat-label">VANA in Contract</div>
-            <div class="stat-value" id="vanaBalance">0.0000</div>
+            <div class="stat-label">
+              <span class="token-badge vana">VANA</span> Balance
+            </div>
+            <div class="stat-value vana" id="vanaBalance">0.0000 VANA</div>
           </div>
+          
+          <!-- VANS SECTION -->
           <div class="stat-item">
-            <div class="stat-label">VANS in Contract</div>
-            <div class="stat-value" id="vansBalance">0.0000</div>
+            <div class="stat-label">
+              <span class="token-badge vans">VANS</span> Balance
+            </div>
+            <div class="stat-value vans" id="vansBalance">0.0000 VANS</div>
           </div>
+
+          <!-- STAKE VANA -->
           <div class="stat-item">
-            <div class="stat-label">Reward Pool</div>
-            <div class="stat-value" id="rewardPool">0.0000</div>
+            <div class="stat-label">
+              Total Staked <span class="token-badge vana">VANA</span>
+            </div>
+            <div class="stat-value vana" id="totalStakedVana">0.0000</div>
           </div>
+
+          <!-- STAKE VANS -->
           <div class="stat-item">
-            <div class="stat-label">Total Staked</div>
-            <div class="stat-value" id="totalStaked">0.0000</div>
+            <div class="stat-label">
+              Total Staked <span class="token-badge vans">VANS</span>
+            </div>
+            <div class="stat-value vans" id="totalStakedVans">0.0000</div>
           </div>
+
+          <!-- VANA DIBUTUHKAN -->
           <div class="stat-item">
-            <div class="stat-label">Stakers Count</div>
-            <div class="stat-value" id="stakersCount">0</div>
+            <div class="stat-label">
+              <span class="token-badge vana">VANA</span> Dibutuhkan
+            </div>
+            <div class="stat-value vana" id="vanaNeeded">0.0000 VANA</div>
           </div>
+
+          <!-- VANS DIBUTUHKAN -->
           <div class="stat-item">
-            <div class="stat-label">Contract Status</div>
-            <div class="stat-value success" id="contractStatus">-</div>
+            <div class="stat-label">
+              <span class="token-badge vans">VANS</span> Dibutuhkan
+            </div>
+            <div class="stat-value vans" id="vansNeeded">0.0000 VANS</div>
           </div>
         </div>
 
-        <div class="form-actions">
-          <button id="fixDataBtn" class="btn btn-warning" style="display:none">Fix Contract Data</button>
+        <!-- TOTAL STAKED SUMMARY -->
+        <div style="margin-top:16px;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;text-align:center">
+          <div style="color:var(--muted);font-size:12px;margin-bottom:4px">Total Staked (Kedua Token)</div>
+          <div style="font-weight:700;font-size:18px">
+            <span style="color:var(--vana-color)" id="totalStakedVanaDisplay">0</span> VANA + 
+            <span style="color:var(--vans-color)" id="totalStakedVansDisplay">0</span> VANS
+          </div>
         </div>
 
+        <div class="error-message" id="balanceError"></div>
         <div class="status" id="healthStatus">Connect wallet to view status</div>
       </section>
 
-      <!-- TOKEN MANAGEMENT -->
+      <!-- CONTRACT INFO & CONFIGURATION -->
       <section class="card">
         <div class="card-head">
-          <div class="title">Token Management</div>
+          <div class="title">Contract Configuration</div>
+          <div style="font-size:12px;color:var(--accent)">Manual Configuration</div>
         </div>
 
-        <div class="info-box">
-          <div class="info-header">
-            <span>💡</span>
-            <span>INFORMASI</span>
+        <div class="form-group">
+          <label class="form-label">Staking Contract Address</label>
+          <input type="text" id="stakingContractInput" class="form-input" value="0x69c0261f0f590072b3AB5D100ae655eB9eF55344" placeholder="Enter contract address">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">VANS Token Address</label>
+          <input type="text" id="vansTokenInput" class="form-input" value="0x82741ff5937933244eb562A4b396f8079F1de914" placeholder="Enter VANS token address">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Owner Address (Optional)</label>
+          <input type="text" id="ownerAddressInput" class="form-input" placeholder="Enter known owner address (optional)">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">
+            Jika kontrak tidak punya fungsi owner(), masukkan manual
           </div>
-          <div class="info-content">Saldo VANS: <span id="vansInfo">0.0000</span><br>Saldo VANA: <span id="vanaInfo">0.0000</span></div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Token to Manage</label>
-          <select id="manageToken" class="form-input">
-            <option value="VANA">VANA</option>
-            <option value="VANS">VANS</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Action</label>
-          <select id="manageAction" class="form-input">
-            <option value="withdraw">Withdraw from Contract</option>
-            <option value="deposit">Deposit to Contract</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Amount</label>
-          <input type="number" id="manageAmount" class="form-input" placeholder="Enter amount" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
-          <button id="executeBtn" class="btn btn-primary">Execute</button>
-          <button id="checkAllowanceBtn" class="btn btn-secondary">Check Allowance</button>
+          <button id="updateConfigBtn" class="btn-primary">Update Configuration</button>
+          <button id="resetConfigBtn" class="btn-secondary">Reset</button>
         </div>
 
-        <div class="status" id="tokenStatus">Ready for token operations</div>
+        <div class="error-message" id="configError"></div>
+        <div class="status" id="configStatus">Ready to configure</div>
       </section>
 
-      <!-- CONTRACT DEBUG -->
+      <!-- EMERGENCY WITHDRAWAL -->
       <section class="card">
         <div class="card-head">
-          <div class="title">Contract Debug</div>
+          <div class="title">Emergency Withdrawal</div>
+          <div style="font-size:12px;color:var(--warning)">⚠️ Warning akan muncul setelah withdrawal</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Debug Action</label>
-          <select id="debugAction" class="form-input">
-            <option value="checkTotalStaked">Check Total Staked</option>
-            <option value="checkStakers">Check Stakers List</option>
-            <option value="checkPools">Check All Pools</option>
-            <option value="checkOwner">Check Contract Owner</option>
-            <option value="checkPaused">Check If Paused</option>
-          </select>
+          <label class="form-label">Amount to Withdraw</label>
+          <input type="number" id="withdrawAmount" class="form-input" placeholder="Enter amount" step="0.000000000000000001">
         </div>
 
         <div class="form-actions">
-          <button id="debugBtn" class="btn btn-secondary">Run Debug</button>
-          <button id="resetStakedBtn" class="btn btn-danger">Reset Staked Data</button>
+          <button id="withdrawVanaBtn" class="btn-warning" style="background:var(--vana-color)">Withdraw VANA</button>
+          <button id="withdrawVansBtn" class="btn-warning" style="background:var(--vans-color)">Withdraw VANS</button>
         </div>
 
-        <div class="status" id="debugResult">Debug results will appear here</div>
+        <div style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Current Connected Wallet:</div>
+          <div style="font-size:11px;color:var(--text);word-break:break-all" id="currentWallet">Not connected</div>
+        </div>
 
-        <div style="background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;margin-top:12px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Raw Contract Data:</div>
-          <div style="font-size:11px;font-family:monospace;color:#aaa" id="rawData">-</div>
+        <div class="error-message" id="withdrawError"></div>
+        <div class="status" id="withdrawStatus">Ready for withdrawal</div>
+      </section>
+
+      <!-- RETURN FUNDS -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Return Funds to Contract</div>
+          <div style="font-size:12px;color:var(--accent)">Untuk clear warning setelah withdrawal</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color:var(--vana-color)">
+            <span class="token-badge vana">VANA</span> Amount to Return
+          </label>
+          <input type="number" id="returnVanaAmount" class="form-input" placeholder="VANA amount to return" step="0.000000000000000001">
+        </div>
+
+        <div class="form-actions">
+          <button id="returnVanaBtn" class="btn-secondary" style="border-left:4px solid var(--vana-color)">Return VANA</button>
+        </div>
+
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label" style="color:var(--vans-color)">
+            <span class="token-badge vans">VANS</span> Amount to Return
+          </label>
+          <input type="number" id="returnVansAmount" class="form-input" placeholder="VANS amount to return" step="0.000000000000000001">
+        </div>
+
+        <div class="form-actions">
+          <button id="returnVansBtn" class="btn-secondary" style="border-left:4px solid var(--vans-color)">Return VANS</button>
+        </div>
+
+        <div class="error-message" id="returnError"></div>
+        <div class="status" id="returnStatus">Ready to return funds</div>
+      </section>
+
+      <!-- CONTRACT BALANCE DETAIL -->
+      <section class="card">
+        <div class="card-head">
+          <div class="title">Contract Balance Detail</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- VANA BALANCE DETAIL -->
+          <div style="padding:12px;background:rgba(255,152,0,0.05);border-radius:10px;border:1px solid rgba(255,152,0,0.1)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span class="token-badge vana">VANA</span>
+              <div style="font-weight:600">Balance Details</div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Contract Balance:</div>
+            <div style="font-weight:700;color:var(--vana-color)" id="detailVanaBalance">0.0000 VANA</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:4px">Total User Staked:</div>
+            <div style="font-weight:700;color:var(--vana-color)" id="detailUserStakedVana">0.0000 VANA</div>
+            <div style="font-size:11px;color:var(--warning);margin-top:8px;padding:4px;background:rgba(255,152,0,0.1);border-radius:4px" id="vanaStatus">Status: OK</div>
+          </div>
+
+          <!-- VANS BALANCE DETAIL -->
+          <div style="padding:12px;background:rgba(49,208,170,0.05);border-radius:10px;border:1px solid rgba(49,208,170,0.1)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span class="token-badge vans">VANS</span>
+              <div style="font-weight:600">Balance Details</div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Contract Balance:</div>
+            <div style="font-weight:700;color:var(--vans-color)" id="detailVansBalance">0.0000 VANS</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:4px">Reward Pool:</div>
+            <div style="font-weight:700;color:var(--vans-color)" id="detailRewardPool">0.0000 VANS</div>
+            <div style="font-size:11px;color:var(--vans-color);margin-top:8px;padding:4px;background:rgba(49,208,170,0.1);border-radius:4px" id="vansStatus">Status: OK</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Contract Health Summary:</div>
+          <div style="font-size:13px" id="healthSummary">All balances are sufficient</div>
         </div>
       </section>
 
-      <!-- REWARDS MANAGEMENT -->
+      <!-- ADMIN FUNCTIONS -->
       <section class="card">
         <div class="card-head">
-          <div class="title">Rewards Management</div>
+          <div class="title">Admin Functions</div>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-label">Available VANS</div>
-            <div class="stat-value" id="availableVans">0.0000</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <button id="testConnectionBtn" class="btn-secondary">Test Connection</button>
+          <button id="checkBalancesBtn" class="btn-secondary">Check Balances</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Connection Status:</div>
+          <div style="padding:10px;background:rgba(255,255,255,0.02);border-radius:8px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:var(--muted)">Contract:</span>
+              <span style="font-size:11px;color:var(--text)" id="contractStatus">Not connected</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:var(--muted)">VANS Token:</span>
+              <span style="font-size:11px;color:var(--text)" id="vansTokenStatus">Not connected</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:11px;color:var(--muted)">Wallet:</span>
+              <span style="font-size:11px;color:var(--text)" id="walletStatus">Not connected</span>
+            </div>
           </div>
-          <div class="stat-item">
-            <div class="stat-label">Rewards Needed</div>
-            <div class="stat-value" id="rewardsNeeded">0.0000</div>
-          </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Add VANS to Reward Pool</label>
-          <input type="number" id="addRewardsAmount" class="form-input" placeholder="VANS amount" step="0.000000000000000001">
-        </div>
-
-        <div class="form-actions">
-          <button id="addRewardsBtn" class="btn btn-primary">Add Rewards</button>
-          <button id="withdrawExcessBtn" class="btn btn-secondary">Withdraw Excess</button>
-        </div>
-
-        <div class="status" id="rewardsStatus">Ready to manage rewards</div>
+        <div class="error-message" id="adminError"></div>
+        <div class="status" id="adminStatus">Ready</div>
       </section>
     </div>
   </main>
 
-  <!-- CONFIRM MODAL -->
-  <div id="confirmModal" class="modal-overlay">
+  <!-- WITHDRAWAL MODAL -->
+  <div id="withdrawModal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-title" id="modalTitle">Confirm Action</div>
-        <button class="close-modal" onclick="closeModal('confirmModal')">×</button>
+        <div class="modal-title">Confirm Withdrawal</div>
+        <button class="close-modal" onclick="closeModal('withdrawModal')">×</button>
       </div>
 
       <div class="form-group">
-        <p id="modalMessage">Are you sure you want to proceed?</p>
-        <div class="alert-box" style="margin-top:12px" id="modalWarning">
-          <div class="alert-header">
-            <span>⚠️</span>
-            <span>WARNING</span>
-          </div>
-          <div class="alert-content" id="modalWarningText"></div>
+        <label class="form-label">Amount to Withdraw</label>
+        <input type="number" id="modalWithdrawAmount" class="form-input" placeholder="Enter amount" step="0.000000000000000001">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="modalWithdrawInfo"></div>
+      </div>
+
+      <div style="padding:10px;background:rgba(255,152,0,0.1);border-radius:8px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--warning)">
+          ⚠️ <strong>Warning akan muncul</strong> setelah withdrawal!
+          <br>Pastikan untuk mengembalikan dana sebelum deadline.
         </div>
       </div>
 
       <div class="form-actions">
-        <button id="confirmActionBtn" class="btn btn-warning">Confirm</button>
-        <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+        <button id="confirmWithdrawBtn" class="btn-warning">Confirm Withdraw</button>
+        <button class="btn-secondary" onclick="closeModal('withdrawModal')">Cancel</button>
       </div>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-    // CONFIGURATION
-    const STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
-    const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
-    const VANA_CHAIN_ID = "0x5c8"; // 1480 in decimal
+    // CONFIGURATION - Default values
+    let STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
+    let VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+    let CONTRACT_OWNER = ""; // Will be detected or set manually
+    const VANA_CHAIN_ID = "0x5c8"; // VANA Mainnet
     
-    // ABI yang lebih lengkap untuk debugging
+    // ABI - Minimal version without owner() function
     const STAKING_ABI = [
-      // Basic info
-      'function owner() view returns (address)',
-      'function paused() view returns (bool)',
-      
-      // Balance functions
       'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)',
       'function totalStaked() view returns (uint256)',
       'function rewardPool() view returns (uint256)',
-      
-      // Staking info
-      'function stakersCount() view returns (uint256)',
-      'function getStakerInfo(address) view returns (uint256 totalStaked, uint256 pendingRewards)',
-      
-      // Pool functions
-      'function pools(uint256) view returns (uint256 lockPeriod, uint256 apy, uint256 minVansStake, uint256 minVanaStake, uint256 maxVansStake, uint256 maxVanaStake, uint256 totalStaked, bool active)',
-      'function poolCount() view returns (uint256)',
-      
-      // Management functions
       'function emergencyWithdrawVANA(uint256 amount)',
       'function emergencyWithdrawVANS(uint256 amount)',
       'function returnVanaToContract() payable',
       'function returnVansToContract(uint256 amount)',
-      'function addRewards(uint256 amount)',
-      
-      // Emergency functions
-      'function pause()',
-      'function unpause()',
-      'function emergencyWithdrawAll()',
-      
-      // Debug functions (jika ada)
-      'function resetTotalStaked()'
+      'function addRewards(uint256 amount)'
     ];
 
     const ERC20_ABI = [
       'function balanceOf(address) view returns (uint256)',
       'function transfer(address,uint256) returns (bool)',
       'function approve(address,uint256) returns (bool)',
-      'function allowance(address,address) view returns (uint256)',
+      'function transferFrom(address,address,uint256) returns (bool)',
       'function decimals() view returns (uint8)',
       'function symbol() view returns (string)'
     ];
@@ -368,17 +486,23 @@
     let stakingContract = null;
     let vansToken = null;
     let vansDecimals = 18;
+    let currentWithdrawType = null;
+    let autoRefreshInterval = null;
+    let isConnecting = false;
     let isOwner = false;
-    let currentAction = null;
+    
+    // Track withdrawal history
+    let withdrawalHistory = [];
 
     const $ = id => document.getElementById(id);
 
     // INITIALIZATION
     async function init() {
       setupEventListeners();
+      loadSavedConfig();
       
       // Check for cached connection
-      if (typeof window.ethereum !== 'undefined') {
+      if (typeof window.ethereum !== 'undefined' && window.ethereum.isConnected()) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           if (accounts.length > 0) {
@@ -390,6 +514,35 @@
       }
       
       checkNetwork();
+    }
+
+    // LOAD SAVED CONFIG
+    function loadSavedConfig() {
+      try {
+        const savedConfig = localStorage.getItem('vanswap_admin_config');
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          STAKING_CONTRACT = config.stakingContract || STAKING_CONTRACT;
+          VANS_TOKEN = config.vansToken || VANS_TOKEN;
+          CONTRACT_OWNER = config.contractOwner || "";
+          
+          $('stakingContractInput').value = STAKING_CONTRACT;
+          $('vansTokenInput').value = VANS_TOKEN;
+          $('ownerAddressInput').value = CONTRACT_OWNER;
+        }
+      } catch (error) {
+        console.log('No saved config found');
+      }
+    }
+
+    // SAVE CONFIG
+    function saveConfig() {
+      const config = {
+        stakingContract: STAKING_CONTRACT,
+        vansToken: VANS_TOKEN,
+        contractOwner: CONTRACT_OWNER
+      };
+      localStorage.setItem('vanswap_admin_config', JSON.stringify(config));
     }
 
     // CHECK NETWORK
@@ -410,7 +563,7 @@
       
       if (chainId === VANA_CHAIN_ID) {
         indicator.textContent = 'VANA Mainnet';
-        indicator.className = 'network-indicator network-vana';
+        indicator.className = 'network-indicator network-bsc';
         indicator.style.display = 'block';
       } else {
         indicator.textContent = 'Wrong Network! Switch to VANA';
@@ -419,11 +572,183 @@
       }
     }
 
+    // UPDATE CONFIGURATION
+    function updateConfiguration() {
+      const newStakingContract = $('stakingContractInput').value.trim();
+      const newVansToken = $('vansTokenInput').value.trim();
+      const newOwner = $('ownerAddressInput').value.trim();
+      
+      if (!newStakingContract || !newVansToken) {
+        showError('configError', 'Please enter both contract addresses');
+        return;
+      }
+      
+      try {
+        // Validate addresses
+        ethers.utils.getAddress(newStakingContract);
+        ethers.utils.getAddress(newVansToken);
+        
+        STAKING_CONTRACT = newStakingContract;
+        VANS_TOKEN = newVansToken;
+        CONTRACT_OWNER = newOwner;
+        
+        saveConfig();
+        
+        $('configStatus').textContent = 'Configuration updated successfully!';
+        hideError('configError');
+        
+        // Reconnect if wallet is already connected
+        if (account) {
+          $('healthStatus').textContent = 'Reconnecting with new configuration...';
+          initializeContracts();
+        }
+        
+      } catch (error) {
+        showError('configError', 'Invalid address format: ' + error.message);
+      }
+    }
+
+    // RESET CONFIG
+    function resetConfig() {
+      STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
+      VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
+      CONTRACT_OWNER = "";
+      
+      $('stakingContractInput').value = STAKING_CONTRACT;
+      $('vansTokenInput').value = VANS_TOKEN;
+      $('ownerAddressInput').value = "";
+      
+      saveConfig();
+      $('configStatus').textContent = 'Configuration reset to defaults';
+    }
+
+    // INITIALIZE CONTRACTS
+    async function initializeContracts() {
+      try {
+        if (!provider || !signer) {
+          $('healthStatus').textContent = 'Please connect wallet first';
+          return;
+        }
+        
+        $('contractStatus').textContent = 'Connecting...';
+        $('vansTokenStatus').textContent = 'Connecting...';
+        
+        // Initialize contracts
+        stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
+        vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+        
+        // Test connection to contracts
+        try {
+          // Test staking contract
+          await stakingContract.getContractBalance();
+          $('contractStatus').textContent = 'Connected ✓';
+          $('contractStatus').style.color = 'var(--success)';
+        } catch (error) {
+          $('contractStatus').textContent = 'Error connecting';
+          $('contractStatus').style.color = 'var(--danger)';
+          throw new Error('Staking contract connection failed');
+        }
+        
+        try {
+          // Test VANS token
+          vansDecimals = await vansToken.decimals();
+          $('vansTokenStatus').textContent = 'Connected ✓';
+          $('vansTokenStatus').style.color = 'var(--success)';
+        } catch (error) {
+          $('vansTokenStatus').textContent = 'Error connecting';
+          $('vansTokenStatus').style.color = 'var(--danger)';
+          throw new Error('VANS token connection failed');
+        }
+        
+        // Check if connected wallet is owner
+        await checkOwnership();
+        
+        $('healthStatus').textContent = 'Contracts connected successfully';
+        await loadAllData();
+        startAutoRefresh();
+        
+      } catch (error) {
+        console.error('Initialize contracts failed:', error);
+        $('healthStatus').textContent = 'Failed to initialize contracts: ' + error.message;
+        showError('balanceError', 'Contract initialization failed: ' + error.message);
+      }
+    }
+
+    // CHECK OWNERSHIP
+    async function checkOwnership() {
+      try {
+        // Update current wallet display
+        $('currentWallet').textContent = account;
+        $('walletStatus').textContent = 'Connected ✓';
+        $('walletStatus').style.color = 'var(--success)';
+        
+        // If owner address is provided manually, check against it
+        if (CONTRACT_OWNER) {
+          isOwner = (account.toLowerCase() === CONTRACT_OWNER.toLowerCase());
+          if (isOwner) {
+            $('ownerInfo').style.display = 'block';
+            $('contractOwnerAddress').textContent = CONTRACT_OWNER;
+            $('connectBtn').style.background = 'var(--success)';
+            $('connectBtn').textContent = shortenAddress(account) + ' (Owner)';
+            enableAdminFunctions();
+          } else {
+            $('connectBtn').style.background = 'var(--danger)';
+            $('connectBtn').textContent = shortenAddress(account) + ' (Not Owner)';
+            $('healthStatus').textContent = 'Connected wallet is not the contract owner!';
+            disableAdminFunctions();
+          }
+          return;
+        }
+        
+        // Try to get owner from contract (if function exists)
+        try {
+          // Try with extended ABI that includes owner()
+          const extendedABI = [...STAKING_ABI, 'function owner() view returns (address)'];
+          const extendedContract = new ethers.Contract(STAKING_CONTRACT, extendedABI, provider);
+          const contractOwner = await extendedContract.owner();
+          
+          CONTRACT_OWNER = contractOwner;
+          isOwner = (account.toLowerCase() === CONTRACT_OWNER.toLowerCase());
+          
+          $('ownerInfo').style.display = 'block';
+          $('contractOwnerAddress').textContent = CONTRACT_OWNER;
+          
+          if (isOwner) {
+            $('connectBtn').style.background = 'var(--success)';
+            $('connectBtn').textContent = shortenAddress(account) + ' (Owner)';
+            enableAdminFunctions();
+          } else {
+            $('connectBtn').style.background = 'var(--danger)';
+            $('connectBtn').textContent = shortenAddress(account) + ' (Not Owner)';
+            $('healthStatus').textContent = 'Connected wallet is not the contract owner!';
+            disableAdminFunctions();
+          }
+        } catch (error) {
+          console.log('Contract does not have owner() function or error accessing it');
+          
+          // If no owner function, assume user is owner and show manual owner input
+          $('healthStatus').textContent = 'Contract has no owner() function. Please set owner address manually.';
+          $('configStatus').textContent = 'Please enter owner address manually in configuration';
+          isOwner = false;
+          disableAdminFunctions();
+        }
+        
+      } catch (error) {
+        console.error('Check ownership failed:', error);
+        isOwner = false;
+        disableAdminFunctions();
+      }
+    }
+
     // WALLET CONNECTION
     async function connectWallet() {
+      if (isConnecting) return;
+      isConnecting = true;
+      
       if (typeof window.ethereum === 'undefined') {
         alert('Please install MetaMask or another Web3 wallet!');
         $('healthStatus').textContent = 'Web3 wallet not found';
+        isConnecting = false;
         return;
       }
 
@@ -438,41 +763,11 @@
         signer = provider.getSigner();
         account = await signer.getAddress();
 
-        stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
-        vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
-
-        // Get VANS token decimals
-        try {
-          vansDecimals = await vansToken.decimals();
-        } catch (error) {
-          console.warn('Could not get VANS decimals, using default 18');
-          vansDecimals = 18;
-        }
-
         $('connectBtn').textContent = shortenAddress(account);
-        $('healthStatus').textContent = 'Connected - Verifying ownership...';
-
-        // Check if connected wallet is owner
-        try {
-          const contractOwner = await stakingContract.owner();
-          isOwner = (account.toLowerCase() === contractOwner.toLowerCase());
-
-          if (!isOwner) {
-            $('connectBtn').textContent = 'Not Owner!';
-            $('connectBtn').style.background = 'var(--danger)';
-            $('healthStatus').textContent = 'Connected wallet is not contract owner!';
-            disableAdminFunctions();
-            return;
-          }
-
-          $('connectBtn').style.background = 'var(--success)';
-          $('healthStatus').textContent = 'Owner verified - Loading data...';
-          await loadAllData();
-
-        } catch (error) {
-          console.error('Owner check failed:', error);
-          $('healthStatus').textContent = 'Error verifying ownership';
-        }
+        $('healthStatus').textContent = 'Wallet connected - Initializing contracts...';
+        
+        // Initialize contracts with current configuration
+        await initializeContracts();
 
       } catch (error) {
         console.error('Connection failed:', error);
@@ -480,369 +775,431 @@
           $('healthStatus').textContent = 'Connection rejected by user';
           $('connectBtn').textContent = 'Connect Wallet';
         } else {
-          $('healthStatus').textContent = 'Connection failed';
+          $('healthStatus').textContent = 'Connection failed: ' + error.message;
           $('connectBtn').textContent = 'Try Again';
         }
+        showError('balanceError', 'Connection failed: ' + error.message);
       } finally {
+        isConnecting = false;
         $('connectBtn').disabled = false;
       }
+    }
+
+    // ENABLE/DISABLE ADMIN FUNCTIONS
+    function enableAdminFunctions() {
+      const adminButtons = [
+        'refreshHealth', 'withdrawVanaBtn', 'withdrawVansBtn',
+        'returnVanaBtn', 'returnVansBtn'
+      ];
+      
+      adminButtons.forEach(btnId => {
+        const btn = $(btnId);
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      });
+    }
+
+    function disableAdminFunctions() {
+      const adminButtons = [
+        'refreshHealth', 'withdrawVanaBtn', 'withdrawVansBtn',
+        'returnVanaBtn', 'returnVansBtn'
+      ];
+      
+      adminButtons.forEach(btnId => {
+        const btn = $(btnId);
+        if (btn) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        }
+      });
     }
 
     // LOAD ALL CONTRACT DATA
     async function loadAllData() {
       try {
         await loadContractHealth();
-        await updateTokenInfo();
         $('healthStatus').textContent = 'All data loaded successfully';
+        hideError('balanceError');
       } catch (error) {
         console.error('Load data failed:', error);
-        $('healthStatus').textContent = 'Failed to load data';
+        $('healthStatus').textContent = 'Failed to load data: ' + error.message;
+        showError('balanceError', 'Load failed: ' + error.message);
       }
     }
 
-    // LOAD CONTRACT HEALTH DATA - FIXED VERSION
+    // LOAD CONTRACT HEALTH DATA
     async function loadContractHealth() {
       try {
-        // Clear previous data
-        $('rawData').textContent = 'Loading...';
+        hideError('balanceError');
         
-        // Get all contract data
-        let vanaBalance = ethers.constants.Zero;
-        let vansBalance = ethers.constants.Zero;
-        let rewardPool = ethers.constants.Zero;
-        let totalStaked = ethers.constants.Zero;
-        let stakersCount = 0;
-        let isPaused = false;
+        // Get contract balances
+        const [vansBalance, vanaBalance, rewardPool] = await getContractBalances();
         
+        // Get total staked (as VANA)
+        let totalStakedVana;
         try {
-          // Get contract balances
-          const contractBalance = await stakingContract.getContractBalance();
-          vansBalance = contractBalance[0];
-          vanaBalance = contractBalance[1];
-          rewardPool = contractBalance[2];
-          
-          // Get total staked
-          totalStaked = await stakingContract.totalStaked();
-          
-          // Get stakers count
-          stakersCount = await stakingContract.stakersCount();
-          
-          // Check if paused
-          isPaused = await stakingContract.paused();
-          
+          totalStakedVana = await stakingContract.totalStaked();
         } catch (error) {
-          console.error('Error reading contract data:', error);
-          // Try alternative method for totalStaked
-          try {
-            // Check individual stakers to get real total staked
-            // This is a fallback if totalStaked() returns wrong data
-            const realStaked = await calculateRealTotalStaked();
-            if (realStaked) {
-              totalStaked = realStaked;
-            }
-          } catch (e) {
-            console.error('Fallback also failed:', e);
-          }
+          console.warn('totalStaked failed:', error);
+          totalStakedVana = ethers.constants.Zero;
         }
 
-        // Display formatted data
-        $('vanaBalance').textContent = formatUnits(vanaBalance, 18);
-        $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals);
-        $('rewardPool').textContent = formatUnits(rewardPool, vansDecimals);
-        $('totalStaked').textContent = formatUnits(totalStaked, 18);
-        $('stakersCount').textContent = stakersCount.toString();
-        $('contractStatus').textContent = isPaused ? 'Paused' : 'Active';
-        $('contractStatus').className = `stat-value ${isPaused ? 'danger' : 'success'}`;
+        // For demo purposes, assume VANS staking is 0
+        const totalStakedVans = ethers.constants.Zero;
+
+        // Format and display balances
+        displayBalances(vanaBalance, vansBalance, rewardPool, totalStakedVana, totalStakedVans);
         
-        // Update info box
-        if (stakersCount === 0 && totalStaked.isZero()) {
-          $('infoMessage').textContent = '✅ Kontrak sehat - Belum ada yang stake';
-          $('emergencyAlert').style.display = 'none';
-          $('fixDataBtn').style.display = 'none';
-        } else if (stakersCount === 0 && !totalStaked.isZero()) {
-          // BUG DETECTED: Ada totalStaked tapi stakersCount = 0
-          $('infoMessage').textContent = '⚠️ Data tidak konsisten: Ada total staked tapi tidak ada stakers';
-          $('emergencyAlert').style.display = 'block';
-          $('emergencyMessage').textContent = 
-            `Data kontrak tidak valid: totalStaked = ${formatUnits(totalStaked, 18)} VANA, tapi stakersCount = 0`;
-          $('fixDataBtn').style.display = 'block';
-        } else {
-          $('infoMessage').textContent = `✅ Kontrak aktif dengan ${stakersCount} stakers`;
-          // Check if contract has enough balance
-          if (totalStaked.gt(vanaBalance)) {
-            $('emergencyAlert').style.display = 'block';
-            const shortage = totalStaked.sub(vanaBalance);
-            $('emergencyMessage').textContent = 
-              `⚠️ Kekurangan ${formatUnits(shortage, 18)} VANA untuk memenuhi unstake`;
-          } else {
-            $('emergencyAlert').style.display = 'none';
-          }
-          $('fixDataBtn').style.display = 'none';
-        }
+        // Update detailed view
+        updateDetailedView(vanaBalance, vansBalance, rewardPool, totalStakedVana);
         
-        // Update rewards info
-        $('availableVans').textContent = formatUnits(vansBalance, vansDecimals);
-        if (rewardPool.gt(vansBalance)) {
-          const needed = rewardPool.sub(vansBalance);
-          $('rewardsNeeded').textContent = formatUnits(needed, vansDecimals);
-          $('rewardsNeeded').className = 'stat-value warning';
-        } else {
-          $('rewardsNeeded').textContent = '0.0000';
-          $('rewardsNeeded').className = 'stat-value';
-        }
-        
-        // Display raw data for debugging
-        $('rawData').textContent = `VANA: ${vanaBalance.toString()}, VANS: ${vansBalance.toString()}, RewardPool: ${rewardPool.toString()}, TotalStaked: ${totalStaked.toString()}, Stakers: ${stakersCount}`;
+        // Check for warnings
+        checkForWarnings(vanaBalance, vansBalance, rewardPool, totalStakedVana);
 
       } catch (error) {
         console.error('Load health failed:', error);
-        $('healthStatus').textContent = 'Error loading health data';
-        $('infoMessage').textContent = 'Error loading contract data';
+        throw error;
       }
     }
 
-    // CALCULATE REAL TOTAL STAKED (Fallback method)
-    async function calculateRealTotalStaked() {
-      // This is a simplified version - in real contract you might need to iterate through stakers
-      try {
-        // Check if we can get pool totals
-        let total = ethers.constants.Zero;
-        try {
-          const poolCount = await stakingContract.poolCount();
-          for (let i = 0; i < poolCount; i++) {
-            const pool = await stakingContract.pools(i);
-            total = total.add(pool.totalStaked);
-          }
-          return total;
-        } catch (e) {
-          console.log('Cannot get pool count');
-        }
-      } catch (error) {
-        console.error('Calculate real total staked failed:', error);
-      }
-      return null;
-    }
-
-    // UPDATE TOKEN INFO
-    async function updateTokenInfo() {
-      try {
-        // Get wallet balances
-        if (account) {
-          const walletVana = await provider.getBalance(account);
-          const walletVans = await vansToken.balanceOf(account);
-          
-          $('vanaInfo').textContent = formatUnits(walletVana, 18);
-          $('vansInfo').textContent = formatUnits(walletVans, vansDecimals);
-        }
-      } catch (error) {
-        console.error('Update token info failed:', error);
-      }
-    }
-
-    // EXECUTE TOKEN MANAGEMENT
-    async function executeTokenAction() {
-      const token = $('manageToken').value;
-      const action = $('manageAction').value;
-      const amount = $('manageAmount').value;
+    // GET CONTRACT BALANCES
+    async function getContractBalances() {
+      // Get VANS balance from token contract
+      const vansBalance = await vansToken.balanceOf(STAKING_CONTRACT);
       
+      let vanaBalance, rewardPool;
+      try {
+        const balance = await stakingContract.getContractBalance();
+        vanaBalance = balance[1]; // VANA balance
+        rewardPool = balance[2]; // Reward pool
+      } catch (error) {
+        console.warn('getContractBalance failed:', error);
+        vanaBalance = ethers.constants.Zero;
+        rewardPool = ethers.constants.Zero;
+      }
+      
+      return [vansBalance, vanaBalance, rewardPool];
+    }
+
+    // DISPLAY BALANCES
+    function displayBalances(vanaBalance, vansBalance, rewardPool, totalStakedVana, totalStakedVans) {
+      // Main balances
+      $('vanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
+      $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
+      
+      // Staked amounts
+      $('totalStakedVana').textContent = formatUnits(totalStakedVana, 18) + ' VANA';
+      $('totalStakedVans').textContent = formatUnits(totalStakedVans, vansDecimals) + ' VANS';
+      
+      // Display for summary
+      $('totalStakedVanaDisplay').textContent = formatUnits(totalStakedVana, 18);
+      $('totalStakedVansDisplay').textContent = formatUnits(totalStakedVans, vansDecimals);
+      
+      // Calculate needed funds
+      const vanaNeeded = totalStakedVana.gt(vanaBalance) ? totalStakedVana.sub(vanaBalance) : ethers.constants.Zero;
+      const vansNeeded = rewardPool.gt(vansBalance) ? rewardPool.sub(vansBalance) : ethers.constants.Zero;
+      
+      $('vanaNeeded').textContent = formatUnits(vanaNeeded, 18) + ' VANA';
+      $('vansNeeded').textContent = formatUnits(vansNeeded, vansDecimals) + ' VANS';
+    }
+
+    // UPDATE DETAILED VIEW
+    function updateDetailedView(vanaBalance, vansBalance, rewardPool, totalStakedVana) {
+      $('detailVanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
+      $('detailVansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
+      $('detailRewardPool').textContent = formatUnits(rewardPool, vansDecimals) + ' VANS';
+      $('detailUserStakedVana').textContent = formatUnits(totalStakedVana, 18) + ' VANA';
+    }
+
+    // CHECK FOR WARNINGS
+    function checkForWarnings(vanaBalance, vansBalance, rewardPool, totalStakedVana) {
+      const vanaNeeded = totalStakedVana.gt(vanaBalance) ? totalStakedVana.sub(vanaBalance) : ethers.constants.Zero;
+      const vansNeeded = rewardPool.gt(vansBalance) ? rewardPool.sub(vansBalance) : ethers.constants.Zero;
+      
+      // Check withdrawal history for active warnings
+      const hasVanaWarning = withdrawalHistory.some(w => w.token === 'VANA' && !w.returned);
+      const hasVansWarning = withdrawalHistory.some(w => w.token === 'VANS' && !w.returned);
+      
+      // Emergency alert for insufficient funds
+      if (!vanaNeeded.isZero() || !vansNeeded.isZero()) {
+        $('emergencyAlert').style.display = 'block';
+        $('emergencyMessage').textContent = 
+          `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS untuk memenuhi kewajiban unstake user!`;
+      } else {
+        $('emergencyAlert').style.display = 'none';
+      }
+      
+      // VANA withdrawal warning
+      if (hasVanaWarning) {
+        $('vanaWarningAlert').style.display = 'block';
+        const warning = withdrawalHistory.find(w => w.token === 'VANA' && !w.returned);
+        $('vanaWarningMessage').textContent = 
+          `${formatUnits(warning.amount, 18)} VANA telah di-withdraw pada ${warning.time}. Deadline: ${warning.deadline}`;
+      } else {
+        $('vanaWarningAlert').style.display = 'none';
+      }
+      
+      // VANS withdrawal warning
+      if (hasVansWarning) {
+        $('vansWarningAlert').style.display = 'block';
+        const warning = withdrawalHistory.find(w => w.token === 'VANS' && !w.returned);
+        $('vansWarningMessage').textContent = 
+          `${formatUnits(warning.amount, vansDecimals)} VANS telah di-withdraw pada ${warning.time}. Deadline: ${warning.deadline}`;
+      } else {
+        $('vansWarningAlert').style.display = 'none';
+      }
+      
+      // Update status indicators
+      $('vanaStatus').textContent = vanaNeeded.isZero() && !hasVanaWarning ? 'Status: OK' : 'Status: WARNING';
+      $('vanaStatus').style.color = vanaNeeded.isZero() && !hasVanaWarning ? 'var(--vana-color)' : 'var(--warning)';
+      
+      $('vansStatus').textContent = vansNeeded.isZero() && !hasVansWarning ? 'Status: OK' : 'Status: WARNING';
+      $('vansStatus').style.color = vansNeeded.isZero() && !hasVansWarning ? 'var(--vans-color)' : 'var(--warning)';
+      
+      // Update health summary
+      let summary = [];
+      if (!vanaNeeded.isZero()) summary.push(`Kekurangan ${formatUnits(vanaNeeded, 18)} VANA`);
+      if (!vansNeeded.isZero()) summary.push(`Kekurangan ${formatUnits(vansNeeded, vansDecimals)} VANS`);
+      if (hasVanaWarning) summary.push('Ada withdrawal VANA aktif');
+      if (hasVansWarning) summary.push('Ada withdrawal VANS aktif');
+      
+      $('healthSummary').textContent = summary.length > 0 ? summary.join(' • ') : 'All balances are sufficient';
+    }
+
+    // TEST CONNECTION
+    async function testConnection() {
+      try {
+        $('adminStatus').innerHTML = '<span class="spinner"></span>Testing connection...';
+        
+        if (!provider) {
+          throw new Error('Provider not initialized');
+        }
+        
+        // Test network
+        const network = await provider.getNetwork();
+        $('adminStatus').textContent = `Connected to network: ${network.name} (Chain ID: ${network.chainId})`;
+        
+        // Test contract addresses
+        const stakingCode = await provider.getCode(STAKING_CONTRACT);
+        const vansCode = await provider.getCode(VANS_TOKEN);
+        
+        if (stakingCode === '0x') {
+          $('adminStatus').textContent = 'ERROR: Staking contract not found at address';
+        } else if (vansCode === '0x') {
+          $('adminStatus').textContent = 'ERROR: VANS token not found at address';
+        } else {
+          $('adminStatus').textContent = '✅ All contracts found at addresses';
+        }
+        
+      } catch (error) {
+        console.error('Test connection failed:', error);
+        $('adminStatus').textContent = 'Test failed: ' + error.message;
+      }
+    }
+
+    // CHECK BALANCES
+    async function checkBalances() {
+      try {
+        $('adminStatus').innerHTML = '<span class="spinner"></span>Checking balances...';
+        
+        if (!stakingContract || !vansToken) {
+          throw new Error('Contracts not initialized');
+        }
+        
+        // Get balances
+        const vanaBalance = await provider.getBalance(STAKING_CONTRACT);
+        const vansBalance = await vansToken.balanceOf(STAKING_CONTRACT);
+        
+        $('adminStatus').textContent = 
+          `Balances: ${formatUnits(vanaBalance, 18)} VANA, ${formatUnits(vansBalance, vansDecimals)} VANS`;
+        
+      } catch (error) {
+        console.error('Check balances failed:', error);
+        $('adminStatus').textContent = 'Check balances failed: ' + error.message;
+      }
+    }
+
+    // EMERGENCY WITHDRAWAL
+    function openWithdrawModal(type) {
+      if (!account) {
+        alert('Please connect wallet first');
+        return;
+      }
+      
+      if (!isOwner) {
+        alert('Only contract owner can perform withdrawals');
+        return;
+      }
+      
+      currentWithdrawType = type;
+      $('modalWithdrawAmount').value = $('withdrawAmount').value || '';
+      $('modalWithdrawInfo').textContent = `Withdraw ${type.toUpperCase()} from contract`;
+      $('withdrawModal').style.display = 'flex';
+    }
+
+    async function confirmWithdraw() {
+      const amount = $('modalWithdrawAmount').value;
       if (!amount || amount <= 0) {
         alert('Please enter valid amount');
         return;
       }
 
       try {
-        $('tokenStatus').innerHTML = '<span class="spinner"></span>Processing...';
-        $('executeBtn').disabled = true;
+        hideError('withdrawError');
+        $('withdrawStatus').innerHTML = '<span class="spinner"></span>Processing withdrawal...';
+        $('confirmWithdrawBtn').disabled = true;
 
-        const decimals = token === 'VANA' ? 18 : vansDecimals;
+        const decimals = currentWithdrawType === 'vana' ? 18 : vansDecimals;
         const amountWei = ethers.utils.parseUnits(amount.toString(), decimals);
         let tx;
 
-        if (action === 'withdraw') {
-          // Withdraw from contract
-          if (token === 'VANA') {
-            tx = await stakingContract.emergencyWithdrawVANA(amountWei);
-          } else {
-            tx = await stakingContract.emergencyWithdrawVANS(amountWei);
-          }
+        if (currentWithdrawType === 'vana') {
+          tx = await stakingContract.emergencyWithdrawVANA(amountWei);
+          
+          // Add to withdrawal history
+          const withdrawal = {
+            id: withdrawalHistory.length + 1,
+            token: 'VANA',
+            amount: amountWei,
+            time: new Date().toLocaleString(),
+            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleString(),
+            returned: false
+          };
+          withdrawalHistory.push(withdrawal);
+          
         } else {
-          // Deposit to contract
-          if (token === 'VANA') {
-            tx = await stakingContract.returnVanaToContract({ value: amountWei });
-          } else {
-            // First approve
-            const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
-            if (allowance.lt(amountWei)) {
-              const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
-              await approveTx.wait();
-            }
-            tx = await stakingContract.returnVansToContract(amountWei);
-          }
+          tx = await stakingContract.emergencyWithdrawVANS(amountWei);
+          
+          // Add to withdrawal history
+          const withdrawal = {
+            id: withdrawalHistory.length + 1,
+            token: 'VANS',
+            amount: amountWei,
+            time: new Date().toLocaleString(),
+            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleString(),
+            returned: false
+          };
+          withdrawalHistory.push(withdrawal);
         }
 
-        $('tokenStatus').textContent = 'Transaction submitted...';
+        $('withdrawStatus').textContent = 'Withdrawal submitted...';
         await tx.wait();
 
-        $('tokenStatus').textContent = `${action === 'withdraw' ? 'Withdrawal' : 'Deposit'} successful!`;
-        $('manageAmount').value = '';
+        $('withdrawStatus').textContent = 'Withdrawal successful! Warning aktif.';
+        $('withdrawAmount').value = '';
+        closeModal('withdrawModal');
+        
+        // Reload data to show warnings
         await loadAllData();
-        await updateTokenInfo();
 
       } catch (error) {
-        console.error('Token action failed:', error);
-        $('tokenStatus').textContent = 'Action failed: ' + (error.reason || error.message);
+        console.error('Withdrawal failed:', error);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('withdrawStatus').textContent = 'Withdrawal failed!';
+        showError('withdrawError', 'Withdrawal failed: ' + errorMsg);
       } finally {
-        $('executeBtn').disabled = false;
+        $('confirmWithdrawBtn').disabled = false;
       }
     }
 
-    // CHECK ALLOWANCE
-    async function checkAllowance() {
-      try {
-        $('tokenStatus').innerHTML = '<span class="spinner"></span>Checking allowance...';
-        
-        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
-        $('tokenStatus').textContent = `Allowance: ${formatUnits(allowance, vansDecimals)} VANS`;
-        
-      } catch (error) {
-        console.error('Check allowance failed:', error);
-        $('tokenStatus').textContent = 'Check allowance failed';
-      }
-    }
-
-    // DEBUG CONTRACT
-    async function debugContract() {
-      const action = $('debugAction').value;
-      
-      try {
-        $('debugResult').innerHTML = '<span class="spinner"></span>Debugging...';
-        $('debugBtn').disabled = true;
-
-        let result = '';
-
-        switch (action) {
-          case 'checkTotalStaked':
-            const totalStaked = await stakingContract.totalStaked();
-            result = `totalStaked(): ${formatUnits(totalStaked, 18)} VANA (raw: ${totalStaked.toString()})`;
-            break;
-            
-          case 'checkStakers':
-            const stakersCount = await stakingContract.stakersCount();
-            result = `stakersCount(): ${stakersCount}`;
-            break;
-            
-          case 'checkPools':
-            try {
-              const poolCount = await stakingContract.poolCount();
-              result = `Total Pools: ${poolCount}\n`;
-              for (let i = 0; i < poolCount; i++) {
-                const pool = await stakingContract.pools(i);
-                result += `Pool ${i}: APY ${formatUnits(pool.apy, 16)}%, Staked: ${formatUnits(pool.totalStaked, 18)}, Active: ${pool.active}\n`;
-              }
-            } catch (e) {
-              result = 'Cannot get pool count, checking first 4 pools:\n';
-              for (let i = 0; i < 4; i++) {
-                try {
-                  const pool = await stakingContract.pools(i);
-                  result += `Pool ${i}: APY ${formatUnits(pool.apy, 16)}%, Staked: ${formatUnits(pool.totalStaked, 18)}, Active: ${pool.active}\n`;
-                } catch (e2) {
-                  result += `Pool ${i}: Error\n`;
-                }
-              }
-            }
-            break;
-            
-          case 'checkOwner':
-            const owner = await stakingContract.owner();
-            result = `Contract Owner: ${owner}\nConnected: ${account}\nIs Owner: ${account.toLowerCase() === owner.toLowerCase()}`;
-            break;
-            
-          case 'checkPaused':
-            const paused = await stakingContract.paused();
-            result = `Contract is ${paused ? 'PAUSED' : 'ACTIVE'}`;
-            break;
-        }
-
-        $('debugResult').textContent = result;
-
-      } catch (error) {
-        console.error('Debug failed:', error);
-        $('debugResult').textContent = 'Debug failed: ' + error.message;
-      } finally {
-        $('debugBtn').disabled = false;
-      }
-    }
-
-    // FIX CONTRACT DATA (Reset totalStaked if bug detected)
-    async function fixContractData() {
-      if (!confirm('⚠️ This will attempt to fix contract data. Are you sure? This may require special functions in the contract.')) {
+    // RETURN FUNDS TO CONTRACT
+    async function returnVana() {
+      if (!account) {
+        alert('Please connect wallet first');
         return;
       }
-
-      try {
-        $('healthStatus').innerHTML = '<span class="spinner"></span>Attempting to fix data...';
-        $('fixDataBtn').disabled = true;
-
-        // Try to call reset function if exists
-        try {
-          const tx = await stakingContract.resetTotalStaked();
-          await tx.wait();
-          $('healthStatus').textContent = 'Data reset successful!';
-        } catch (error) {
-          $('healthStatus').textContent = 'No reset function found. Manual fix may be required.';
-        }
-
-        await loadAllData();
-
-      } catch (error) {
-        console.error('Fix data failed:', error);
-        $('healthStatus').textContent = 'Fix failed: ' + error.message;
-      } finally {
-        $('fixDataBtn').disabled = false;
-      }
-    }
-
-    // ADD REWARDS
-    async function addRewards() {
-      const amount = $('addRewardsAmount').value;
       
+      const amount = $('returnVanaAmount').value;
       if (!amount || amount <= 0) {
         alert('Please enter valid amount');
         return;
       }
 
       try {
-        $('rewardsStatus').innerHTML = '<span class="spinner"></span>Adding rewards...';
-        $('addRewardsBtn').disabled = true;
+        hideError('returnError');
+        $('returnStatus').innerHTML = '<span class="spinner"></span>Returning VANA...';
+        $('returnVanaBtn').disabled = true;
 
-        const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
-        
-        // First approve
-        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
-        if (allowance.lt(amountWei)) {
-          const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
-          await approveTx.wait();
-        }
-        
-        const tx = await stakingContract.addRewards(amountWei);
+        const amountWei = ethers.utils.parseEther(amount);
+        const tx = await stakingContract.returnVanaToContract({ value: amountWei });
+
+        $('returnStatus').textContent = 'Returning VANA...';
         await tx.wait();
 
-        $('rewardsStatus').textContent = 'Rewards added successfully!';
-        $('addRewardsAmount').value = '';
+        // Mark VANA withdrawals as returned
+        withdrawalHistory.forEach(w => {
+          if (w.token === 'VANA' && !w.returned) {
+            w.returned = true;
+          }
+        });
+
+        $('returnStatus').textContent = 'VANA returned successfully! Warning cleared.';
+        $('returnVanaAmount').value = '';
         await loadAllData();
 
       } catch (error) {
-        console.error('Add rewards failed:', error);
-        $('rewardsStatus').textContent = 'Add rewards failed: ' + error.message;
+        console.error('Return VANA failed:', error);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('returnStatus').textContent = 'Return failed!';
+        showError('returnError', 'Return VANA failed: ' + errorMsg);
       } finally {
-        $('addRewardsBtn').disabled = false;
+        $('returnVanaBtn').disabled = false;
       }
     }
 
-    // CLOSE MODAL
-    function closeModal(modalId) {
-      $(modalId).style.display = 'none';
-      currentAction = null;
+    async function returnVans() {
+      if (!account) {
+        alert('Please connect wallet first');
+        return;
+      }
+      
+      const amount = $('returnVansAmount').value;
+      if (!amount || amount <= 0) {
+        alert('Please enter valid amount');
+        return;
+      }
+
+      try {
+        hideError('returnError');
+        $('returnStatus').innerHTML = '<span class="spinner"></span>Returning VANS...';
+        $('returnVansBtn').disabled = true;
+
+        const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
+
+        // Check allowance first
+        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+        if (allowance.lt(amountWei)) {
+          const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+          $('returnStatus').textContent = 'Approving VANS...';
+          await approveTx.wait();
+        }
+
+        const tx = await stakingContract.returnVansToContract(amountWei);
+
+        $('returnStatus').textContent = 'Returning VANS...';
+        await tx.wait();
+
+        // Mark VANS withdrawals as returned
+        withdrawalHistory.forEach(w => {
+          if (w.token === 'VANS' && !w.returned) {
+            w.returned = true;
+          }
+        });
+
+        $('returnStatus').textContent = 'VANS returned successfully! Warning cleared.';
+        $('returnVansAmount').value = '';
+        await loadAllData();
+
+      } catch (error) {
+        console.error('Return VANS failed:', error);
+        const errorMsg = error.reason || error.data?.message || error.message;
+        $('returnStatus').textContent = 'Return failed!';
+        showError('returnError', 'Return VANS failed: ' + errorMsg);
+      } finally {
+        $('returnVansBtn').disabled = false;
+      }
     }
 
     // UTILITY FUNCTIONS
@@ -859,51 +1216,57 @@
       return address.substring(0, 6) + '...' + address.substring(38);
     }
 
-    // DISABLE ADMIN FUNCTIONS IF NOT OWNER
-    function disableAdminFunctions() {
-      const adminButtons = [
-        'refreshHealth', 'executeBtn', 'checkAllowanceBtn', 'debugBtn',
-        'resetStakedBtn', 'addRewardsBtn', 'withdrawExcessBtn', 'fixDataBtn'
-      ];
-      
-      adminButtons.forEach(btnId => {
-        const btn = $(btnId);
-        if (btn) {
-          btn.disabled = true;
-          btn.style.opacity = '0.5';
-        }
-      });
+    function showError(elementId, message) {
+      const element = $(elementId);
+      if (element) {
+        element.textContent = message;
+        element.style.display = 'block';
+      }
+    }
+
+    function hideError(elementId) {
+      const element = $(elementId);
+      if (element) {
+        element.style.display = 'none';
+      }
+    }
+
+    function closeModal(modalId) {
+      $(modalId).style.display = 'none';
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      autoRefreshInterval = setInterval(loadAllData, 30000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
     }
 
     // EVENT LISTENERS SETUP
     function setupEventListeners() {
-      // Wallet connection
       $('connectBtn').addEventListener('click', connectWallet);
-      
-      // Refresh buttons
       $('refreshHealth').addEventListener('click', loadAllData);
-      
-      // Token management
-      $('executeBtn').addEventListener('click', executeTokenAction);
-      $('checkAllowanceBtn').addEventListener('click', checkAllowance);
-      
-      // Debug functions
-      $('debugBtn').addEventListener('click', debugContract);
-      $('fixDataBtn').addEventListener('click', fixContractData);
-      
-      // Rewards management
-      $('addRewardsBtn').addEventListener('click', addRewards);
-      
-      // Reset staked data (emergency)
-      $('resetStakedBtn').addEventListener('click', async () => {
-        if (confirm('⚠️ EMERGENCY: This will try to reset staked data. Only use if totalStaked shows wrong value. Are you sure?')) {
-          await fixContractData();
-        }
-      });
+      $('withdrawVanaBtn').addEventListener('click', () => openWithdrawModal('vana'));
+      $('withdrawVansBtn').addEventListener('click', () => openWithdrawModal('vans'));
+      $('confirmWithdrawBtn').addEventListener('click', confirmWithdraw);
+      $('returnVanaBtn').addEventListener('click', returnVana);
+      $('returnVansBtn').addEventListener('click', returnVans);
+      $('updateConfigBtn').addEventListener('click', updateConfiguration);
+      $('resetConfigBtn').addEventListener('click', resetConfig);
+      $('testConnectionBtn').addEventListener('click', testConnection);
+      $('checkBalancesBtn').addEventListener('click', checkBalances);
 
-      // Wallet event listeners
+      // Handle wallet changes
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', async (accounts) => {
+          console.log('Accounts changed:', accounts);
           if (accounts.length === 0) {
             // User disconnected wallet
             $('connectBtn').textContent = 'Connect Wallet';
@@ -913,7 +1276,11 @@
             signer = null;
             stakingContract = null;
             vansToken = null;
+            stopAutoRefresh();
             disableAdminFunctions();
+            $('currentWallet').textContent = 'Not connected';
+            $('walletStatus').textContent = 'Not connected';
+            $('walletStatus').style.color = 'var(--text)';
           } else {
             // User switched accounts
             account = accounts[0];
@@ -924,8 +1291,21 @@
         });
 
         window.ethereum.on('chainChanged', async (chainId) => {
+          console.log('Chain changed to:', chainId);
           updateNetworkIndicator(chainId);
-          location.reload();
+          
+          // Re-initialize provider with new chain
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          
+          if (account) {
+            // Re-create contracts with new provider
+            stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
+            vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+            
+            $('healthStatus').textContent = 'Network changed, reloading data...';
+            await loadAllData();
+          }
         });
       }
     }
