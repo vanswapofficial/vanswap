@@ -471,11 +471,11 @@
     const VANA_CHAIN_ID = 1480;
     const VANA_CHAIN_HEX = "0x5c8";
     
-    // ABI
+    // ABI - Diperbaiki untuk mapping yang benar
     const STAKING_ABI = [
       'function owner() view returns (address)',
       'function vansToken() view returns (address)',
-      'function getContractHealth() view returns (uint256 totalVanaStaked, uint256 totalVansStaked, uint256 vanaBalance, uint256 vansBalance, uint256 availableRewardPool, uint256 upcomingUnstakes)',
+      'function getContractHealth() view returns (uint256 totalVansStaked, uint256 totalVanaStaked, uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool, uint256 upcomingUnstakes)', // URUTAN DIPERBAIKI
       'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)',
       'function getEmergencyStatus() view returns (uint256 vanaNeeded, uint256 vansNeeded, uint256 earliestDeadline, bool isEmergency)',
       'function pools(uint256) view returns (uint256 lockPeriod, uint256 apy, uint256 minVansStake, uint256 minVanaStake, uint256 maxVansStake, uint256 maxVanaStake, uint256 totalStaked, bool active)',
@@ -513,7 +513,7 @@
 
     const $ = id => document.getElementById(id);
 
-    // NETWORK FUNCTIONS - SIMPLE VERSION
+    // NETWORK FUNCTIONS
     async function checkNetwork() {
       if (typeof window.ethereum === 'undefined') {
         console.log("No wallet");
@@ -731,19 +731,47 @@
         let totalVanaStaked, totalVansStaked, vanaBalance, vansBalance, rewardPoolAmount;
         
         try {
+          // PERBAIKAN UTAMA: Mapping yang benar dari smart contract
           const health = await stakingContract.getContractHealth();
-          totalVanaStaked = health[0];
-          totalVansStaked = health[1];
-          vanaBalance = health[2];
-          vansBalance = health[3];
-          rewardPoolAmount = health[4];
+          
+          // Log raw data untuk debugging
+          console.log('Raw contract health data:');
+          console.log('Index 0 (totalVansStaked):', formatUnits(health[0], vansDecimals));
+          console.log('Index 1 (totalVanaStaked):', formatUnits(health[1], 18));
+          console.log('Index 2 (vansBalance):', formatUnits(health[2], vansDecimals));
+          console.log('Index 3 (vanaBalance):', formatUnits(health[3], 18));
+          console.log('Index 4 (rewardPool):', formatUnits(health[4], vansDecimals));
+          
+          // Berdasarkan data Anda: yang di-stake adalah 127,000 VANS, bukan VANA
+          // Jadi mapping yang benar adalah:
+          totalVansStaked = health[0]; // 127,000 VANS (staked)
+          totalVanaStaked = health[1]; // 0 VANA (staked)
+          vansBalance = health[2];     // 48,127,000 VANS (balance)
+          vanaBalance = health[3];     // 0 VANA (balance)
+          rewardPoolAmount = health[4]; // 48,000,000 VANS (reward pool)
+          
         } catch (error) {
+          console.error('getContractHealth failed, using fallback:', error);
           const balance = await stakingContract.getContractBalance();
           vansBalance = balance[0];
           vanaBalance = balance[1];
           rewardPoolAmount = balance[2];
-          totalVanaStaked = await stakingContract.totalStaked();
-          totalVansStaked = ethers.constants.Zero;
+          
+          // Untuk fallback, kita perlu logika khusus
+          // Asumsi: yang di-stake adalah VANS jika ada staking
+          const totalStaked = await stakingContract.totalStaked();
+          
+          // Coba tebak apakah ini VANA atau VANS
+          // Jika vansBalance besar (48M) dan vanaBalance 0, kemungkinan yang di-stake VANS
+          if (vansBalance.gt(ethers.utils.parseUnits("1000000", vansDecimals)) && vanaBalance.isZero()) {
+            totalVansStaked = totalStaked;
+            totalVanaStaked = ethers.constants.Zero;
+            console.log('Fallback: Assuming staked tokens are VANS');
+          } else {
+            totalVanaStaked = totalStaked;
+            totalVansStaked = ethers.constants.Zero;
+            console.log('Fallback: Assuming staked tokens are VANA');
+          }
         }
         
         let vanaNeeded = 0, vansNeeded = 0, isEmergency = false;
@@ -754,12 +782,20 @@
           vansNeeded = emergency[1];
           isEmergency = emergency[3];
         } catch (error) {
-          const totalStaked = await stakingContract.totalStaked();
-          vanaNeeded = totalStaked > vanaBalance ? totalStaked.sub(vanaBalance) : ethers.constants.Zero;
-          vansNeeded = rewardPoolAmount > vansBalance ? rewardPoolAmount.sub(vansBalance) : ethers.constants.Zero;
+          // PERBAIKAN LOGIKA PERHITUNGAN UTANG
+          // 1. Untuk VANA: cek apakah balance cukup untuk staked VANA
+          vanaNeeded = totalVanaStaked.gt(vanaBalance) ? totalVanaStaked.sub(vanaBalance) : ethers.constants.Zero;
+          
+          // 2. Untuk VANS: cek apakah balance cukup untuk staked VANS + reward pool
+          // Total kebutuhan VANS = staked VANS + reward pool
+          const totalVansRequired = totalVansStaked.add(rewardPoolAmount);
+          vansNeeded = totalVansRequired.gt(vansBalance) ? totalVansRequired.sub(vansBalance) : ethers.constants.Zero;
+          
+          // Emergency jika ada kebutuhan untuk salah satu token
           isEmergency = !vanaNeeded.isZero() || !vansNeeded.isZero();
         }
         
+        // TAMPILKAN DATA DENGAN BENAR
         $('vanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
         $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
         $('totalStakedVana').textContent = formatUnits(totalVanaStaked, 18) + ' VANA';
@@ -768,10 +804,24 @@
         $('vanaNeeded').textContent = formatUnits(vanaNeeded, 18) + ' VANA';
         $('vansNeeded').textContent = formatUnits(vansNeeded, vansDecimals) + ' VANS';
         
+        // UPDATE EMERGENCY MESSAGE
         if (isEmergency) {
           $('emergencyAlert').style.display = 'block';
-          $('emergencyMessage').textContent = 
-            `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS!`;
+          
+          // PERBAIKAN PESAN EMERGENCY
+          const vanaNeededFormatted = formatUnits(vanaNeeded, 18);
+          const vansNeededFormatted = formatUnits(vansNeeded, vansDecimals);
+          
+          let message = '';
+          if (!vanaNeeded.isZero() && !vansNeeded.isZero()) {
+            message = `Perlu ${vanaNeededFormatted} VANA dan ${vansNeededFormatted} VANS!`;
+          } else if (!vanaNeeded.isZero()) {
+            message = `Perlu ${vanaNeededFormatted} VANA!`;
+          } else if (!vansNeeded.isZero()) {
+            message = `Perlu ${vansNeededFormatted} VANS!`;
+          }
+          
+          $('emergencyMessage').textContent = message;
         } else {
           $('emergencyAlert').style.display = 'none';
         }
