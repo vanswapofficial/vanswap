@@ -39,6 +39,22 @@
     .logo span{font-weight:700;font-size:18px}
     .connect-wallet{background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative}
 
+    /* Network Warning */
+    .network-warning{
+      background:var(--danger);
+      color:white;
+      padding:10px 20px;
+      text-align:center;
+      font-weight:600;
+      display:none;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{
+      0%{opacity:0.8}
+      50%{opacity:1}
+      100%{opacity:0.8}
+    }
+
     /* Main Content */
     .main{max-width:1200px;margin:32px auto;padding:0 20px}
     .admin-container{display:grid;grid-template-columns:1fr 1fr;gap:24px}
@@ -125,7 +141,7 @@
 
     /* Network Indicator */
     .network-indicator{position:fixed;top:70px;right:20px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;z-index:1000}
-    .network-bsc{background:#f0b90b;color:#000}
+    .network-vana{background:#ff9800;color:#000}
     .network-wrong{background:var(--danger);color:white}
     
     /* Owner Info */
@@ -146,7 +162,13 @@
 </head>
 <body>
 
-  <div id="networkIndicator" class="network-indicator" style="display:none"></div>
+  <!-- NETWORK WARNING BANNER -->
+  <div id="networkWarning" class="network-warning">
+    ⚠️ WRONG NETWORK! Please switch to VANA Chain (Chain ID: 1480)
+  </div>
+
+  <!-- NETWORK INDICATOR -->
+  <div id="networkIndicator" class="network-indicator network-wrong" style="display:none"></div>
 
   <header class="header">
     <div class="nav-container">
@@ -470,35 +492,67 @@
     </div>
   </div>
 
+  <!-- NETWORK SWITCH MODAL -->
+  <div id="networkModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Switch to VANA Chain</div>
+        <button class="close-modal" onclick="closeModal('networkModal')">×</button>
+      </div>
+
+      <div style="padding:20px 0;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:16px;font-weight:600;margin-bottom:10px;">⚠️ Wrong Network Detected</div>
+          <div style="color:var(--muted);font-size:14px;">
+            You are connected to wrong network.<br>
+            Please switch to VANA Chain to continue.
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05);padding:15px;border-radius:10px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:var(--muted)">Required Network:</span>
+            <span style="color:var(--success);font-weight:600">VANA Chain (1480)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--muted)">Current Network:</span>
+            <span style="color:var(--danger);font-weight:600" id="currentChainDisplay">Unknown</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button id="switchNetworkBtn" class="btn-warning">Switch to VANA Chain</button>
+        <button class="btn-secondary" onclick="closeModal('networkModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
-    // CONFIGURATION - Sesuai dengan contract Anda
-    const STAKING_CONTRACT = "0x69c0261f0f590072b3AB5D100ae655eB9eF55344";
-    const VANS_TOKEN = "0x82741ff5937933244eb562A4b396f8079F1de914";
-    const VANA_CHAIN_ID = "0x5c8"; // VANA Mainnet 1480 dalam decimal
+    // ============================================
+    // CONFIGURATION - VANA CHAIN ONLY
+    // ============================================
+    const CONFIG = {
+      STAKING_CONTRACT: "0x69c0261f0f590072b3AB5D100ae655eB9eF55344",
+      VANS_TOKEN: "0x82741ff5937933244eb562A4b396f8079F1de914",
+      VANA_CHAIN_ID: 1480, // Decimal
+      VANA_CHAIN_HEX: "0x5c8" // Hexadecimal
+    };
     
-    // ABI yang sesuai dengan kontrak Anda
+    // ABI
     const STAKING_ABI = [
-      // Basic functions
       'function owner() view returns (address)',
       'function vansToken() view returns (address)',
-      
-      // Health and balance functions
       'function getContractHealth() view returns (uint256 totalVanaStaked, uint256 totalVansStaked, uint256 vanaBalance, uint256 vansBalance, uint256 availableRewardPool, uint256 upcomingUnstakes)',
       'function getContractBalance() view returns (uint256 vansBalance, uint256 vanaBalance, uint256 availableRewardPool)',
       'function getEmergencyStatus() view returns (uint256 vanaNeeded, uint256 vansNeeded, uint256 earliestDeadline, bool isEmergency)',
-      
-      // Pool functions
       'function pools(uint256) view returns (uint256 lockPeriod, uint256 apy, uint256 minVansStake, uint256 minVanaStake, uint256 maxVansStake, uint256 maxVanaStake, uint256 totalStaked, bool active)',
       'function poolTotalStaked(uint8) view returns (uint256)',
       'function totalStaked() view returns (uint256)',
       'function rewardPool() view returns (uint256)',
-      
-      // Withdrawal functions
       'function getActiveWithdrawals() view returns (tuple(uint256 amount, bool isVana, uint256 withdrawTime, uint256 returnDeadline, bool returned, address returnedBy, uint256 returnTime)[])',
       'function withdrawalRecords(uint256) view returns (uint256 amount, bool isVana, uint256 withdrawTime, uint256 returnDeadline, bool returned, address returnedBy, uint256 returnTime)',
-      
-      // Admin functions
       'function emergencyWithdrawVANA(uint256 amount)',
       'function emergencyWithdrawVANS(uint256 amount)',
       'function returnWithdrawnFunds(uint256 withdrawalId) payable',
@@ -510,7 +564,7 @@
       'function balanceOf(address) view returns (uint256)',
       'function transfer(address,uint256) returns (bool)',
       'function approve(address,uint256) returns (bool)',
-      'function transferFrom(address,address,uint256) returns (bool)',
+      'function allowance(address,address) view returns (uint256)',
       'function decimals() view returns (uint8)',
       'function symbol() view returns (string)'
     ];
@@ -522,76 +576,130 @@
     let stakingContract = null;
     let vansToken = null;
     let vansDecimals = 18;
-    let vanaDecimals = 18;
     let currentWithdrawType = null;
-    let autoRefreshInterval = null;
     let isConnecting = false;
     let isOwner = false;
     let contractOwnerAddress = null;
-    
-    // Active withdrawals tracking
-    let activeWithdrawals = [];
-    let allWithdrawals = [];
+    let currentChainId = null;
 
     const $ = id => document.getElementById(id);
 
-    // INITIALIZATION
-    async function init() {
-      setupEventListeners();
-      
-      // Check for cached connection
-      if (typeof window.ethereum !== 'undefined' && window.ethereum.isConnected()) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            await connectWallet();
-          }
-        } catch (error) {
-          console.log('No cached connection');
-        }
-      }
-      
-      checkNetwork();
-    }
-
-    // CHECK NETWORK
+    // ============================================
+    // NETWORK FUNCTIONS
+    // ============================================
     async function checkNetwork() {
-      if (typeof window.ethereum === 'undefined') return;
+      if (typeof window.ethereum === 'undefined') {
+        showNetworkWarning('Please install MetaMask');
+        return false;
+      }
       
       try {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        updateNetworkIndicator(chainId);
+        currentChainId = chainId;
+        
+        const isVanaChain = chainId === CONFIG.VANA_CHAIN_HEX || 
+                           parseInt(chainId, 16) === CONFIG.VANA_CHAIN_ID;
+        
+        updateNetworkUI(isVanaChain, chainId);
+        
+        if (!isVanaChain) {
+          showNetworkSwitchModal(chainId);
+          return false;
+        }
+        
+        return true;
       } catch (error) {
-        console.log('Cannot get chainId');
+        console.error('Network check failed:', error);
+        return false;
       }
     }
 
-    function updateNetworkIndicator(chainId) {
+    function updateNetworkUI(isVanaChain, chainId) {
       const indicator = $('networkIndicator');
-      if (!indicator) return;
+      const warning = $('networkWarning');
+      const networkStatus = $('networkStatus');
       
-      if (chainId === VANA_CHAIN_ID) {
-        indicator.textContent = 'VANA Mainnet';
-        indicator.className = 'network-indicator network-bsc';
+      if (isVanaChain) {
+        indicator.textContent = 'VANA Chain ✓';
+        indicator.className = 'network-indicator network-vana';
         indicator.style.display = 'block';
-        $('networkStatus').textContent = 'VANA Mainnet ✓';
-        $('networkStatus').style.color = 'var(--success)';
+        warning.style.display = 'none';
+        networkStatus.textContent = 'VANA Chain ✓';
+        networkStatus.style.color = 'var(--success)';
       } else {
-        indicator.textContent = 'Wrong Network! Switch to VANA';
+        indicator.textContent = 'Wrong Network!';
         indicator.className = 'network-indicator network-wrong';
         indicator.style.display = 'block';
-        $('networkStatus').textContent = 'Wrong Network!';
-        $('networkStatus').style.color = 'var(--danger)';
+        warning.style.display = 'block';
+        networkStatus.textContent = 'Wrong Network!';
+        networkStatus.style.color = 'var(--danger)';
       }
     }
 
+    function showNetworkWarning(message) {
+      $('networkWarning').textContent = message;
+      $('networkWarning').style.display = 'block';
+    }
+
+    function showNetworkSwitchModal(chainId) {
+      $('currentChainDisplay').textContent = `Chain ID: ${chainId}`;
+      $('networkModal').style.display = 'flex';
+    }
+
+    async function switchToVanaChain() {
+      try {
+        $('switchNetworkBtn').innerHTML = '<span class="spinner"></span>Switching...';
+        $('switchNetworkBtn').disabled = true;
+        
+        try {
+          // Try to switch to VANA Chain
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: CONFIG.VANA_CHAIN_HEX }]
+          });
+        } catch (switchError) {
+          // If chain is not added, add it
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: CONFIG.VANA_CHAIN_HEX,
+                chainName: 'VANA Chain',
+                nativeCurrency: {
+                  name: 'VANA',
+                  symbol: 'VANA',
+                  decimals: 18
+                },
+                rpcUrls: ['https://rpc.vana.org'],
+                blockExplorerUrls: ['https://vanascan.io']
+              }]
+            });
+          } else {
+            throw switchError;
+          }
+        }
+        
+        closeModal('networkModal');
+        alert('Successfully switched to VANA Chain! Page will reload...');
+        location.reload();
+        
+      } catch (error) {
+        console.error('Failed to switch network:', error);
+        alert(`Failed to switch network: ${error.message}`);
+        $('switchNetworkBtn').innerHTML = 'Switch to VANA Chain';
+        $('switchNetworkBtn').disabled = false;
+      }
+    }
+
+    // ============================================
     // WALLET CONNECTION
+    // ============================================
     async function connectWallet() {
       if (isConnecting) return;
       isConnecting = true;
       
       if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask or another Web3 wallet!');
+        alert('Please install MetaMask!');
         $('healthStatus').textContent = 'Web3 wallet not found';
         isConnecting = false;
         return;
@@ -601,14 +709,20 @@
         $('connectBtn').innerHTML = '<span class="spinner"></span>Connecting...';
         $('connectBtn').disabled = true;
 
+        // Check network first
+        const isCorrectNetwork = await checkNetwork();
+        if (!isCorrectNetwork) {
+          $('connectBtn').innerHTML = 'Wrong Network';
+          $('connectBtn').disabled = false;
+          isConnecting = false;
+          return;
+        }
+
         provider = new ethers.providers.Web3Provider(window.ethereum);
-        
-        // Request accounts
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         account = await signer.getAddress();
 
-        // Initialize contracts
         await initializeContracts();
 
       } catch (error) {
@@ -627,30 +741,18 @@
       }
     }
 
-    // INITIALIZE CONTRACTS
+    // ============================================
+    // CONTRACT INITIALIZATION
+    // ============================================
     async function initializeContracts() {
       try {
         $('connectBtn').textContent = shortenAddress(account);
         $('currentWallet').textContent = account;
         $('healthStatus').textContent = 'Initializing contracts...';
         
-        // Initialize staking contract
-        stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
+        stakingContract = new ethers.Contract(CONFIG.STAKING_CONTRACT, STAKING_ABI, signer);
+        vansToken = new ethers.Contract(CONFIG.VANS_TOKEN, ERC20_ABI, signer);
         
-        // Get VANS token address from contract
-        try {
-          const vansTokenAddress = await stakingContract.vansToken();
-          if (vansTokenAddress && vansTokenAddress !== '0x0000000000000000000000000000000000000000') {
-            VANS_TOKEN = vansTokenAddress;
-          }
-        } catch (error) {
-          console.log('Could not get VANS token address from contract, using default');
-        }
-        
-        // Initialize VANS token contract
-        vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
-        
-        // Get token decimals
         try {
           vansDecimals = await vansToken.decimals();
         } catch (error) {
@@ -658,54 +760,38 @@
           vansDecimals = 18;
         }
         
-        // Update status
         $('contractStatus').textContent = 'Connected ✓';
         $('contractStatus').style.color = 'var(--success)';
         $('vansTokenStatus').textContent = 'Connected ✓';
         $('vansTokenStatus').style.color = 'var(--success)';
         
-        // Check ownership
         await checkOwnership();
-        
-        // Load all data
         await loadAllData();
-        
-        // Start auto-refresh
-        startAutoRefresh();
         
       } catch (error) {
         console.error('Initialize contracts failed:', error);
         $('healthStatus').textContent = 'Failed to initialize contracts: ' + error.message;
-        $('contractStatus').textContent = 'Connection failed';
-        $('contractStatus').style.color = 'var(--danger)';
-        $('vansTokenStatus').textContent = 'Connection failed';
-        $('vansTokenStatus').style.color = 'var(--danger)';
         throw error;
       }
     }
 
-    // CHECK OWNERSHIP
     async function checkOwnership() {
       try {
-        // Get contract owner
         contractOwnerAddress = await stakingContract.owner();
-        
-        // Check if connected wallet is owner
         isOwner = (account.toLowerCase() === contractOwnerAddress.toLowerCase());
         
-        // Display owner info
         $('ownerInfo').style.display = 'block';
         $('contractOwnerAddress').textContent = contractOwnerAddress;
         
         if (isOwner) {
           $('connectBtn').style.background = 'var(--success)';
           $('connectBtn').textContent = shortenAddress(account) + ' (Owner)';
-          $('healthStatus').textContent = 'Owner verified - Loading data...';
+          $('healthStatus').textContent = 'Owner verified';
           enableAdminFunctions();
         } else {
           $('connectBtn').style.background = 'var(--warning)';
           $('connectBtn').textContent = shortenAddress(account) + ' (Not Owner)';
-          $('healthStatus').textContent = 'Connected - Read-only mode';
+          $('healthStatus').textContent = 'Connected - Read-only';
           disableAdminFunctions();
         }
         
@@ -716,40 +802,9 @@
       }
     }
 
-    // ENABLE/DISABLE ADMIN FUNCTIONS
-    function enableAdminFunctions() {
-      const adminButtons = [
-        'refreshHealth', 'withdrawVanaBtn', 'withdrawVansBtn',
-        'returnVanaBtn', 'returnVansBtn', 'addRewardsBtn',
-        'updatePoolBtn', 'refreshPools', 'refreshWithdrawals'
-      ];
-      
-      adminButtons.forEach(btnId => {
-        const btn = $(btnId);
-        if (btn) {
-          btn.disabled = false;
-          btn.style.opacity = '1';
-        }
-      });
-    }
-
-    function disableAdminFunctions() {
-      const adminButtons = [
-        'withdrawVanaBtn', 'withdrawVansBtn',
-        'returnVanaBtn', 'returnVansBtn', 'addRewardsBtn',
-        'updatePoolBtn'
-      ];
-      
-      adminButtons.forEach(btnId => {
-        const btn = $(btnId);
-        if (btn) {
-          btn.disabled = true;
-          btn.style.opacity = '0.5';
-        }
-      });
-    }
-
-    // LOAD ALL DATA
+    // ============================================
+    // DATA LOADING FUNCTIONS
+    // ============================================
     async function loadAllData() {
       try {
         await loadContractHealth();
@@ -764,12 +819,8 @@
       }
     }
 
-    // LOAD CONTRACT HEALTH
     async function loadContractHealth() {
       try {
-        hideError('balanceError');
-        
-        // Try getContractHealth first (from your contract)
         let totalVanaStaked, totalVansStaked, vanaBalance, vansBalance, rewardPoolAmount;
         
         try {
@@ -780,37 +831,28 @@
           vansBalance = health[3];
           rewardPoolAmount = health[4];
         } catch (error) {
-          console.log('getContractHealth failed, trying getContractBalance');
-          // Fallback to getContractBalance
           const balance = await stakingContract.getContractBalance();
           vansBalance = balance[0];
           vanaBalance = balance[1];
           rewardPoolAmount = balance[2];
-          
-          // Get total staked separately
           totalVanaStaked = await stakingContract.totalStaked();
-          totalVansStaked = 0; // You might need to track this separately
+          totalVansStaked = ethers.constants.Zero;
         }
         
-        // Get emergency status
-        let vanaNeeded = 0, vansNeeded = 0, earliestDeadline = 0, isEmergency = false;
+        let vanaNeeded = 0, vansNeeded = 0, isEmergency = false;
         
         try {
           const emergency = await stakingContract.getEmergencyStatus();
           vanaNeeded = emergency[0];
           vansNeeded = emergency[1];
-          earliestDeadline = emergency[2];
           isEmergency = emergency[3];
         } catch (error) {
-          console.log('getEmergencyStatus failed');
-          // Calculate manually
           const totalStaked = await stakingContract.totalStaked();
           vanaNeeded = totalStaked > vanaBalance ? totalStaked.sub(vanaBalance) : ethers.constants.Zero;
           vansNeeded = rewardPoolAmount > vansBalance ? rewardPoolAmount.sub(vansBalance) : ethers.constants.Zero;
           isEmergency = !vanaNeeded.isZero() || !vansNeeded.isZero();
         }
         
-        // Display balances
         $('vanaBalance').textContent = formatUnits(vanaBalance, 18) + ' VANA';
         $('vansBalance').textContent = formatUnits(vansBalance, vansDecimals) + ' VANS';
         $('totalStakedVana').textContent = formatUnits(totalVanaStaked, 18) + ' VANA';
@@ -819,11 +861,10 @@
         $('vanaNeeded').textContent = formatUnits(vanaNeeded, 18) + ' VANA';
         $('vansNeeded').textContent = formatUnits(vansNeeded, vansDecimals) + ' VANS';
         
-        // Show alerts
         if (isEmergency) {
           $('emergencyAlert').style.display = 'block';
           $('emergencyMessage').textContent = 
-            `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS untuk memenuhi kewajiban!`;
+            `Perlu ${formatUnits(vanaNeeded, 18)} VANA dan ${formatUnits(vansNeeded, vansDecimals)} VANS!`;
         } else {
           $('emergencyAlert').style.display = 'none';
         }
@@ -834,13 +875,11 @@
       }
     }
 
-    // LOAD POOL INFORMATION
     async function loadPoolInformation() {
       try {
         const poolsContainer = $('poolsContainer');
         poolsContainer.innerHTML = '';
         
-        // Load all 4 pools
         for (let i = 0; i < 4; i++) {
           try {
             const pool = await stakingContract.pools(i);
@@ -895,23 +934,17 @@
       }
     }
 
-    // LOAD WITHDRAWAL DATA
     async function loadWithdrawalData() {
       try {
-        // Get active withdrawals
         let activeWithdrawalsList = [];
         try {
           activeWithdrawalsList = await stakingContract.getActiveWithdrawals();
         } catch (error) {
-          console.log('getActiveWithdrawals failed, trying manual tracking');
+          console.log('getActiveWithdrawals failed');
         }
         
-        activeWithdrawals = activeWithdrawalsList;
-        
-        // Update UI
         updateWithdrawalUI(activeWithdrawalsList);
         
-        // Show/hide warning
         if (activeWithdrawalsList.length > 0) {
           $('withdrawalAlert').style.display = 'block';
           const totalActive = activeWithdrawalsList.reduce((sum, w) => 
@@ -927,16 +960,13 @@
       }
     }
 
-    // UPDATE WITHDRAWAL UI
     function updateWithdrawalUI(withdrawals) {
-      // Update counts
       const totalWithdrawals = withdrawals.length;
       const activeWithdrawalsCount = withdrawals.filter(w => !w.returned).length;
       
       $('totalWithdrawals').textContent = totalWithdrawals;
       $('activeWithdrawalsCount').textContent = activeWithdrawalsCount;
       
-      // Calculate totals
       let totalVanaWithdrawn = 0;
       let totalVansWithdrawn = 0;
       
@@ -951,7 +981,6 @@
       $('totalVanaWithdrawn').textContent = totalVanaWithdrawn.toFixed(2);
       $('totalVansWithdrawn').textContent = totalVansWithdrawn.toFixed(2);
       
-      // Update table
       const tableBody = $('withdrawalsTable');
       tableBody.innerHTML = '';
       
@@ -966,7 +995,6 @@
         return;
       }
       
-      // Show recent withdrawals (limit to 5)
       const recentWithdrawals = withdrawals.slice(-5).reverse();
       
       recentWithdrawals.forEach((w, index) => {
@@ -986,11 +1014,9 @@
         tableBody.appendChild(row);
       });
       
-      // Update dropdowns for returning funds
       updateReturnDropdowns(withdrawals);
     }
 
-    // UPDATE RETURN DROPDOWNS
     function updateReturnDropdowns(withdrawals) {
       const vanaSelect = $('vanaWithdrawalSelect');
       const vansSelect = $('vansWithdrawalSelect');
@@ -1014,7 +1040,9 @@
       });
     }
 
-    // EMERGENCY WITHDRAWAL
+    // ============================================
+    // TRANSACTION FUNCTIONS
+    // ============================================
     function openWithdrawModal(type) {
       if (!account) {
         alert('Please connect wallet first');
@@ -1060,8 +1088,6 @@
         $('withdrawStatus').textContent = 'Withdrawal successful!';
         $('withdrawAmount').value = '';
         closeModal('withdrawModal');
-        
-        // Reload data
         await loadAllData();
 
       } catch (error) {
@@ -1074,7 +1100,6 @@
       }
     }
 
-    // RETURN FUNDS
     async function returnVana() {
       if (!account) {
         alert('Please connect wallet first');
@@ -1096,15 +1121,13 @@
 
         const amountWei = ethers.utils.parseEther(amount);
         
-        // If withdrawal ID is selected, use returnWithdrawnFunds
         if (withdrawalId !== '') {
           const tx = await stakingContract.returnWithdrawnFunds(withdrawalId, { value: amountWei });
           $('returnStatus').textContent = 'Returning specific withdrawal...';
           await tx.wait();
         } else {
-          // Fallback: Just send VANA to contract
           const tx = await signer.sendTransaction({
-            to: STAKING_CONTRACT,
+            to: CONFIG.STAKING_CONTRACT,
             value: amountWei
           });
           $('returnStatus').textContent = 'Sending VANA to contract...';
@@ -1147,22 +1170,18 @@
 
         const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
         
-        // If withdrawal ID is selected, use returnWithdrawnFunds
         if (withdrawalId !== '') {
-          // First approve
-          const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+          const allowance = await vansToken.allowance(account, CONFIG.STAKING_CONTRACT);
           if (allowance.lt(amountWei)) {
-            const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+            const approveTx = await vansToken.approve(CONFIG.STAKING_CONTRACT, amountWei);
             await approveTx.wait();
           }
           
-          // Then return via contract
           const tx = await stakingContract.returnWithdrawnFunds(withdrawalId);
           $('returnStatus').textContent = 'Returning specific withdrawal...';
           await tx.wait();
         } else {
-          // Fallback: Just transfer VANS to contract
-          const tx = await vansToken.transfer(STAKING_CONTRACT, amountWei);
+          const tx = await vansToken.transfer(CONFIG.STAKING_CONTRACT, amountWei);
           $('returnStatus').textContent = 'Sending VANS to contract...';
           await tx.wait();
         }
@@ -1182,7 +1201,6 @@
       }
     }
 
-    // ADD REWARDS
     async function addRewards() {
       if (!account) {
         alert('Please connect wallet first');
@@ -1207,10 +1225,9 @@
 
         const amountWei = ethers.utils.parseUnits(amount.toString(), vansDecimals);
 
-        // Check allowance first
-        const allowance = await vansToken.allowance(account, STAKING_CONTRACT);
+        const allowance = await vansToken.allowance(account, CONFIG.STAKING_CONTRACT);
         if (allowance.lt(amountWei)) {
-          const approveTx = await vansToken.approve(STAKING_CONTRACT, amountWei);
+          const approveTx = await vansToken.approve(CONFIG.STAKING_CONTRACT, amountWei);
           $('adminStatus').textContent = 'Approving VANS...';
           await approveTx.wait();
         }
@@ -1234,7 +1251,6 @@
       }
     }
 
-    // UPDATE POOL CONFIG
     async function updatePoolConfig() {
       if (!account) {
         alert('Please connect wallet first');
@@ -1261,10 +1277,9 @@
         $('adminStatus').innerHTML = '<span class="spinner"></span>Updating pool...';
         $('updatePoolBtn').disabled = true;
 
-        // Get current pool config for other values
         const pool = await stakingContract.pools(poolId);
 
-        const newApyWei = ethers.utils.parseUnits(newApy, 2); // basis points
+        const newApyWei = ethers.utils.parseUnits(newApy, 2);
         const newMinVansWei = newMinVans ? ethers.utils.parseUnits(newMinVans, vansDecimals) : pool.minVansStake;
         const newMinVanaWei = newMinVana ? ethers.utils.parseEther(newMinVana) : pool.minVanaStake;
 
@@ -1286,8 +1301,6 @@
         $('newApy').value = '';
         $('newMinVans').value = '';
         $('newMinVana').value = '';
-        
-        // Reload pool information
         await loadPoolInformation();
 
       } catch (error) {
@@ -1300,7 +1313,9 @@
       }
     }
 
+    // ============================================
     // UTILITY FUNCTIONS
+    // ============================================
     function formatUnits(wei, decimals) {
       try {
         return parseFloat(ethers.utils.formatUnits(wei, decimals)).toFixed(4);
@@ -1333,21 +1348,41 @@
       $(modalId).style.display = 'none';
     }
 
-    function startAutoRefresh() {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
-      autoRefreshInterval = setInterval(loadAllData, 30000);
+    function enableAdminFunctions() {
+      const adminButtons = [
+        'refreshHealth', 'withdrawVanaBtn', 'withdrawVansBtn',
+        'returnVanaBtn', 'returnVansBtn', 'addRewardsBtn',
+        'updatePoolBtn', 'refreshPools', 'refreshWithdrawals'
+      ];
+      
+      adminButtons.forEach(btnId => {
+        const btn = $(btnId);
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      });
     }
 
-    function stopAutoRefresh() {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-      }
+    function disableAdminFunctions() {
+      const adminButtons = [
+        'withdrawVanaBtn', 'withdrawVansBtn',
+        'returnVanaBtn', 'returnVansBtn', 'addRewardsBtn',
+        'updatePoolBtn'
+      ];
+      
+      adminButtons.forEach(btnId => {
+        const btn = $(btnId);
+        if (btn) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        }
+      });
     }
 
-    // EVENT LISTENERS SETUP
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
     function setupEventListeners() {
       $('connectBtn').addEventListener('click', connectWallet);
       $('refreshHealth').addEventListener('click', loadAllData);
@@ -1360,13 +1395,11 @@
       $('returnVansBtn').addEventListener('click', returnVans);
       $('addRewardsBtn').addEventListener('click', addRewards);
       $('updatePoolBtn').addEventListener('click', updatePoolConfig);
+      $('switchNetworkBtn').addEventListener('click', switchToVanaChain);
 
-      // Handle wallet changes
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', async (accounts) => {
-          console.log('Accounts changed:', accounts);
           if (accounts.length === 0) {
-            // User disconnected wallet
             $('connectBtn').textContent = 'Connect Wallet';
             $('connectBtn').style.background = 'var(--accent)';
             $('healthStatus').textContent = 'Wallet disconnected';
@@ -1374,12 +1407,10 @@
             signer = null;
             stakingContract = null;
             vansToken = null;
-            stopAutoRefresh();
             disableAdminFunctions();
             $('currentWallet').textContent = 'Not connected';
             $('ownerInfo').style.display = 'none';
           } else {
-            // User switched accounts
             account = accounts[0];
             $('connectBtn').textContent = shortenAddress(account);
             $('healthStatus').textContent = 'Account changed, reconnecting...';
@@ -1389,25 +1420,44 @@
 
         window.ethereum.on('chainChanged', async (chainId) => {
           console.log('Chain changed to:', chainId);
-          updateNetworkIndicator(chainId);
+          await checkNetwork();
           
-          // Re-initialize provider with new chain
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          
-          if (account) {
-            // Re-create contracts with new provider
-            stakingContract = new ethers.Contract(STAKING_CONTRACT, STAKING_ABI, signer);
-            vansToken = new ethers.Contract(VANS_TOKEN, ERC20_ABI, signer);
+          if (provider && signer) {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
             
-            $('healthStatus').textContent = 'Network changed, reloading data...';
-            await loadAllData();
+            if (account) {
+              stakingContract = new ethers.Contract(CONFIG.STAKING_CONTRACT, STAKING_ABI, signer);
+              vansToken = new ethers.Contract(CONFIG.VANS_TOKEN, ERC20_ABI, signer);
+              
+              $('healthStatus').textContent = 'Network changed, reloading data...';
+              await loadAllData();
+            }
           }
         });
       }
     }
 
-    // Initialize on load
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    async function init() {
+      setupEventListeners();
+      
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            await connectWallet();
+          }
+        } catch (error) {
+          console.log('No cached connection');
+        }
+        
+        await checkNetwork();
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
