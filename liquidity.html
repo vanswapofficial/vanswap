@@ -159,6 +159,7 @@
     .slippage-info{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px}
     .slippage-info .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
 
+    /* Custom token feature - IMPROVED */
     .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
     .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
     .add-token-btn span{font-weight:600;font-size:14px}
@@ -177,6 +178,17 @@
     .token-verified{color:var(--accent);font-size:11px;margin-left:6px}
     .token-imported{color:var(--primary);font-size:11px;margin-left:6px}
     .token-warning{color:var(--warning);font-size:11px;margin-left:6px}
+    .token-copy-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);font-size:11px;cursor:pointer;margin-left:8px;transition:all 0.2s}
+    .token-copy-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+    .token-copy-btn.copied{background:var(--success);color:white}
+    .custom-token-list{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05)}
+    .custom-token-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
+    .custom-token-item:hover{background:rgba(255,255,255,0.04)}
+    .custom-token-symbol{font-weight:600;min-width:60px}
+    .custom-token-addr{flex:1;font-size:11px;color:var(--muted);word-break:break-all}
+    .custom-token-remove{color:var(--danger);cursor:pointer;font-size:14px;padding:4px;opacity:0.7}
+    .custom-token-remove:hover{opacity:1}
+    .token-option-actions{display:flex;gap:4px;align-items:center;margin-left:8px}
 
     .tvl-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
     .tvl-stat{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
@@ -201,6 +213,7 @@
       .connect-wallet{min-width:120px;padding:6px 10px;font-size:14px}
       .wallet-network-container{position:static}
       .network-dropdown{right:20px !important;left:20px !important;width:auto}
+      .token-option-actions{flex-direction:column;gap:2px}
     }
   </style>
 </head>
@@ -617,6 +630,99 @@
     const networkManager = new NetworkManager();
 
     // ==============================
+    // CUSTOM TOKEN MANAGER - SAMA SEPERTI SWAP.HTML
+    // ==============================
+    class CustomTokenManager {
+      constructor() {
+        this.customTokens = this.loadCustomTokens();
+      }
+      
+      loadCustomTokens() {
+        const tokens = localStorage.getItem('vanswap-custom-tokens');
+        return tokens ? JSON.parse(tokens) : [];
+      }
+      
+      saveCustomTokens() {
+        localStorage.setItem('vanswap-custom-tokens', JSON.stringify(this.customTokens));
+      }
+      
+      addToken(token) {
+        // Check if token already exists
+        const exists = this.customTokens.find(t => 
+          t.address.toLowerCase() === token.address.toLowerCase()
+        );
+        
+        if (!exists) {
+          this.customTokens.push(token);
+          this.saveCustomTokens();
+          return true;
+        }
+        return false;
+      }
+      
+      removeToken(address) {
+        this.customTokens = this.customTokens.filter(t => 
+          t.address.toLowerCase() !== address.toLowerCase()
+        );
+        this.saveCustomTokens();
+      }
+      
+      getTokensForNetwork(network) {
+        return this.customTokens.filter(token => token.network === network);
+      }
+      
+      getTokenByAddress(address) {
+        return this.customTokens.find(t => 
+          t.address.toLowerCase() === address.toLowerCase()
+        );
+      }
+    }
+
+    const customTokenManager = new CustomTokenManager();
+
+    // ==============================
+    // COPY ADDRESS FUNCTIONALITY - SAMA SEPERTI SWAP.HTML
+    // ==============================
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Address copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showToast('Address copied to clipboard!');
+        } catch (err) {
+          showToast('Failed to copy address');
+        }
+        document.body.removeChild(textArea);
+      });
+    }
+
+    function createCopyButton(address, tokenName = '') {
+      const button = document.createElement('button');
+      button.className = 'token-copy-btn';
+      button.innerHTML = '📋';
+      button.title = `Copy ${tokenName ? tokenName + ' ' : ''}address`;
+      button.onclick = (e) => {
+        e.stopPropagation();
+        copyToClipboard(address);
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '✓';
+        button.classList.add('copied');
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.classList.remove('copied');
+        }, 2000);
+      };
+      return button;
+    }
+
+    // ==============================
     // KONFIGURASI VARIABEL GLOBAL
     // ==============================
     let ROUTER, FACTORY, WVANA, VANS, USDC, RPC, CHAIN_ID_HEX;
@@ -670,7 +776,6 @@
     let userPools = [];
     let currentRemovePool = null;
     let currentRemovePercentage = 0;
-    let tokenPrices = {};
     let tokens = [];
     let selectedFrom = null;
     let selectedTo = null;
@@ -759,30 +864,32 @@
         USDC = config.contracts.usdc;
       }
       
-      // Initialize tokens for current network
-      tokens = getTokensForNetwork(currentNetwork);
+      // Initialize tokens for current network (base + custom)
+      const baseTokens = getBaseTokensForNetwork(currentNetwork);
+      const customTokens = customTokenManager.getTokensForNetwork(currentNetwork);
+      tokens = [...baseTokens, ...customTokens];
       selectedFrom = tokens[0];
       selectedTo = tokens[2]; // USDC
     }
 
-    function getTokensForNetwork(network) {
+    function getBaseTokensForNetwork(network) {
       const config = NETWORK_CONFIG[network];
       
       if (network === 'vana') {
         return [
-          { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true },
-          { symbol: 'WVANA', address: config.contracts.wvana, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true },
-          { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
-          { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true }
+          { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true, type: 'native', displayAddress: 'Native Token' },
+          { symbol: 'WVANA', address: config.contracts.wvana, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true, type: 'wrapped' },
+          { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true, type: 'stablecoin' },
+          { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true, type: 'utility' },
+          { symbol: 'BERY', address: BERY, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true, type: 'token' }
         ];
       } else { // zerog
         return [
-          { symbol: '0G', address: '0G_NATIVE', logo: 'https://vanswap.xyz/assets/0g.png', decimals: 18, verified: true },
-          { symbol: 'W0G', address: config.contracts.w0g, logo: 'https://vanswap.xyz/assets/w0g.png', decimals: 18, verified: true },
-          { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true },
-          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
+          { symbol: '0G', address: '0G_NATIVE', logo: 'https://vanswap.xyz/assets/0g.png', decimals: 18, verified: true, type: 'native', displayAddress: 'Native Token' },
+          { symbol: 'W0G', address: config.contracts.w0g, logo: 'https://vanswap.xyz/assets/w0g.png', decimals: 18, verified: true, type: 'wrapped' },
+          { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true, type: 'stablecoin' },
+          { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true, type: 'token' },
+          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true, type: 'utility' }
         ];
       }
     }
@@ -791,13 +898,13 @@
       if (selectedFrom) {
         const fromLogo = $('fromLogo');
         const fromSymbol = $('fromSymbol');
-        if (fromLogo) fromLogo.src = selectedFrom.logo;
+        if (fromLogo) fromLogo.src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
         if (fromSymbol) fromSymbol.textContent = selectedFrom.symbol;
       }
       if (selectedTo) {
         const toLogo = $('toLogo');
         const toSymbol = $('toSymbol');
-        if (toLogo) toLogo.src = selectedTo.logo;
+        if (toLogo) toLogo.src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
         if (toSymbol) toSymbol.textContent = selectedTo.symbol;
       }
     }
@@ -1108,6 +1215,386 @@
     }
 
     // ==============================
+    // TOKEN SELECTION - DENGAN COPY BUTTON UNTUK SEMUA TOKEN
+    // ==============================
+    function buildTokenListHtml(type) {
+      const listEl = type === 'from' ? $('fromList') : $('toList');
+      if (!listEl) return;
+      
+      listEl.innerHTML = '';
+      
+      // Search input
+      const searchDiv = document.createElement('div');
+      searchDiv.className = 'token-search';
+      searchDiv.innerHTML = `<input placeholder="Search token by name, symbol or address..." oninput="filterTokens('${type}', this.value)" />`;
+      listEl.appendChild(searchDiv);
+      
+      // Base tokens header
+      const baseHeader = document.createElement('div');
+      baseHeader.style.cssText = 'color: var(--muted); font-size: 13px; margin-bottom: 8px; margin-top: 8px;';
+      baseHeader.textContent = 'Default Tokens';
+      listEl.appendChild(baseHeader);
+      
+      // Base tokens - ALL WITH COPY BUTTON
+      const baseTokens = getBaseTokensForNetwork(networkManager.getCurrentNetwork());
+      for (const token of baseTokens) {
+        const option = document.createElement('div');
+        option.className = 'token-option';
+        option.setAttribute('data-addr', token.address);
+        
+        // Format display address
+        let displayAddr = token.displayAddress || 
+          (token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' ? 
+           'Native Token' : 
+           (token.address.substring(0,6) + '...' + token.address.substring(38)));
+        
+        option.innerHTML = `
+          <img src="${token.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;display:flex;align-items:center">
+              ${token.symbol} <span class="token-verified">✓ Verified</span>
+            </div>
+            <div class="token-addr">${displayAddr}</div>
+          </div>
+          <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+        `;
+        
+        // Add copy button for ALL tokens (including native with their wrapped address)
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'token-option-actions';
+        
+        // For native tokens, copy wrapped address, otherwise copy token address
+        const copyAddress = token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' ? 
+          (networkManager.getCurrentNetwork() === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g) : 
+          token.address;
+        
+        const copyBtn = createCopyButton(copyAddress, token.symbol);
+        actionsDiv.appendChild(copyBtn);
+        option.appendChild(actionsDiv);
+        
+        option.addEventListener('click', (e) => {
+          if (!e.target.closest('.token-copy-btn')) {
+            selectToken(type, token);
+          }
+        });
+        
+        listEl.appendChild(option);
+      }
+      
+      // Custom tokens section
+      const customTokens = customTokenManager.getTokensForNetwork(networkManager.getCurrentNetwork());
+      if (customTokens.length > 0) {
+        const customHeader = document.createElement('div');
+        customHeader.style.cssText = 'color: var(--muted); font-size: 13px; margin-bottom: 8px; margin-top: 16px;';
+        customHeader.textContent = 'Custom Tokens';
+        listEl.appendChild(customHeader);
+        
+        for (const token of customTokens) {
+          const option = document.createElement('div');
+          option.className = 'token-option';
+          option.setAttribute('data-addr', token.address);
+          
+          option.innerHTML = `
+            <img src="${token.logo || 'https://vanswap.xyz/assets/token.png'}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;display:flex;align-items:center">
+                ${token.symbol} <span class="token-imported">Imported</span>
+              </div>
+              <div class="token-addr">${token.address.substring(0,6) + '...' + token.address.substring(38)}</div>
+            </div>
+            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+          `;
+          
+          // Add copy button
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'token-option-actions';
+          const copyBtn = createCopyButton(token.address, token.symbol);
+          actionsDiv.appendChild(copyBtn);
+          option.appendChild(actionsDiv);
+          
+          option.addEventListener('click', (e) => {
+            if (!e.target.closest('.token-copy-btn')) {
+              selectToken(type, token);
+            }
+          });
+          
+          listEl.appendChild(option);
+        }
+      }
+      
+      // Add custom token button (with improved form)
+      const addTokenBtn = document.createElement('div');
+      addTokenBtn.className = 'add-token-btn';
+      addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
+      addTokenBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showAddTokenForm(type, listEl);
+      });
+      listEl.appendChild(addTokenBtn);
+      
+      listEl.style.display = 'block';
+      
+      // Update balances in dropdown
+      if (account) {
+        updateDropdownBalances();
+      }
+    }
+
+    function filterTokens(type, term) {
+      const listEl = type === 'from' ? $('fromList') : $('toList');
+      if (!listEl) return;
+      
+      const options = listEl.querySelectorAll('.token-option');
+      const searchTerm = (term || '').toLowerCase();
+      
+      options.forEach(option => {
+        const symbol = option.querySelector('div div:first-child')?.textContent.toLowerCase() || '';
+        const address = option.querySelector('.token-addr')?.textContent.toLowerCase() || '';
+        const show = symbol.includes(searchTerm) || address.includes(searchTerm);
+        option.style.display = show ? 'flex' : 'none';
+      });
+    }
+
+    async function selectToken(type, token) {
+      if (type === 'from') {
+        selectedFrom = token;
+        $('fromLogo').src = token.logo || 'https://vanswap.xyz/assets/token.png';
+        $('fromSymbol').textContent = token.symbol;
+        $('fromList').style.display = 'none';
+      } else {
+        selectedTo = token;
+        $('toLogo').src = token.logo || 'https://vanswap.xyz/assets/token.png';
+        $('toSymbol').textContent = token.symbol;
+        $('toList').style.display = 'none';
+      }
+      
+      // Reset input values ketika ganti token
+      $('fromAmount').value = '';
+      $('toAmount').value = '';
+      
+      await updateBalances(); 
+      await updateLiquidityInfo();
+      updateActionBtn();
+    }
+
+    // ==============================
+    // ADD CUSTOM TOKEN FUNCTIONALITY - SAMA SEPERTI SWAP.HTML
+    // ==============================
+    window.showAddTokenForm = function(type, parentElement) {
+      const listEl = type === 'from' ? $('fromList') : $('toList');
+      
+      // Remove existing form if any
+      const existingForm = listEl.querySelector('.add-token-form');
+      if (existingForm) {
+        existingForm.remove();
+        return;
+      }
+      
+      const form = document.createElement('div');
+      form.className = 'add-token-form';
+      form.innerHTML = `
+        <div class="warning-box">
+          <div class="warning-header">⚠️ Warning</div>
+          <div class="warning-text">
+            Adding custom tokens can be risky. Only add tokens from trusted sources.
+            Verify the contract address carefully.
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Token Contract Address</label>
+          <input type="text" class="form-input" id="tokenAddress" placeholder="0x..." maxlength="42">
+          <div style="display:flex; gap:8px; margin-top:4px">
+            <button class="token-copy-btn" onclick="pasteFromClipboard('tokenAddress')" type="button" style="font-size:12px">Paste</button>
+            <button class="token-copy-btn" onclick="clearTokenForm()" type="button" style="font-size:12px">Clear</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Token Symbol (optional)</label>
+          <input type="text" class="form-input" id="tokenSymbol" placeholder="ABC" maxlength="10">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Decimals (optional)</label>
+          <input type="number" class="form-input" id="tokenDecimals" placeholder="18" min="0" max="36">
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="cancelAddToken('${type}')">Cancel</button>
+          <button class="btn btn-primary" onclick="addCustomToken('${type}')">Add Token</button>
+        </div>
+      `;
+      
+      listEl.appendChild(form);
+      
+      // Auto-detect token info when address is entered
+      const addressInput = form.querySelector('#tokenAddress');
+      addressInput.addEventListener('blur', async () => {
+        const address = addressInput.value.trim();
+        if (address && ethers.utils.isAddress(address)) {
+          await detectTokenInfo(address, form);
+        }
+      });
+      
+      // Focus on address input
+      addressInput.focus();
+    };
+
+    window.pasteFromClipboard = async function(inputId) {
+      try {
+        const text = await navigator.clipboard.readText();
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.value = text.trim();
+          
+          // Auto-detect if it's a token address
+          if (inputId === 'tokenAddress' && ethers.utils.isAddress(text.trim())) {
+            const form = input.closest('.add-token-form');
+            if (form) {
+              await detectTokenInfo(text.trim(), form);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to paste:', err);
+        showToast('Failed to paste from clipboard');
+      }
+    };
+
+    window.clearTokenForm = function() {
+      const addressInput = document.getElementById('tokenAddress');
+      const symbolInput = document.getElementById('tokenSymbol');
+      const decimalsInput = document.getElementById('tokenDecimals');
+      
+      if (addressInput) addressInput.value = '';
+      if (symbolInput) symbolInput.value = '';
+      if (decimalsInput) decimalsInput.value = '';
+      
+      if (addressInput) addressInput.focus();
+    };
+
+    window.cancelAddToken = function(type) {
+      const listEl = type === 'from' ? $('fromList') : $('toList');
+      const form = listEl.querySelector('.add-token-form');
+      if (form) {
+        form.remove();
+      }
+    };
+
+    async function detectTokenInfo(address, form) {
+      if (!provider || !ethers.utils.isAddress(address)) return;
+      
+      try {
+        const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+        
+        // Try to get token info
+        const [symbol, decimals, name] = await Promise.all([
+          tokenContract.symbol().catch(() => ''),
+          tokenContract.decimals().catch(() => 18),
+          tokenContract.name().catch(() => '')
+        ]);
+        
+        const symbolInput = form.querySelector('#tokenSymbol');
+        const decimalsInput = form.querySelector('#tokenDecimals');
+        
+        if (symbol && symbolInput && !symbolInput.value) {
+          symbolInput.value = symbol;
+        }
+        
+        if (decimals && decimalsInput && !decimalsInput.value) {
+          decimalsInput.value = decimals;
+        }
+        
+        if (symbol || name) {
+          showToast(`Token detected: ${name || ''} (${symbol || 'No symbol'})`);
+        }
+      } catch (error) {
+        console.error('Error detecting token info:', error);
+        showToast('Could not auto-detect token info');
+      }
+    }
+
+    window.addCustomToken = async function(type) {
+      const listEl = type === 'from' ? $('fromList') : $('toList');
+      const form = listEl.querySelector('.add-token-form');
+      
+      if (!form) return;
+      
+      const addressInput = form.querySelector('#tokenAddress');
+      const symbolInput = form.querySelector('#tokenSymbol');
+      const decimalsInput = form.querySelector('#tokenDecimals');
+      
+      const address = addressInput.value.trim();
+      const symbol = symbolInput.value.trim();
+      const decimals = parseInt(decimalsInput.value) || 18;
+      
+      // Validation
+      if (!address) {
+        showToast('Please enter token contract address');
+        addressInput.focus();
+        return;
+      }
+      
+      if (!ethers.utils.isAddress(address)) {
+        showToast('Invalid contract address');
+        addressInput.focus();
+        return;
+      }
+      
+      if (!symbol) {
+        showToast('Please enter token symbol');
+        symbolInput.focus();
+        return;
+      }
+      
+      // Check if token already exists (in base or custom)
+      const allTokens = [...getBaseTokensForNetwork(networkManager.getCurrentNetwork()), 
+                         ...customTokenManager.getTokensForNetwork(networkManager.getCurrentNetwork())];
+      
+      const existingToken = allTokens.find(t => 
+        t.address.toLowerCase() === address.toLowerCase()
+      );
+      
+      if (existingToken) {
+        showToast(`Token ${existingToken.symbol} already in list`);
+        cancelAddToken(type);
+        return;
+      }
+      
+      // Create custom token object
+      const customToken = {
+        symbol: symbol.toUpperCase(),
+        address: address,
+        decimals: decimals,
+        verified: false,
+        custom: true,
+        network: networkManager.getCurrentNetwork(),
+        logo: 'https://vanswap.xyz/assets/token.png' // Default logo
+      };
+      
+      // Save to custom token manager
+      const added = customTokenManager.addToken(customToken);
+      
+      if (added) {
+        showToast('Custom token added successfully!');
+        
+        // Refresh token list
+        initNetworkConfig();
+        
+        // Rebuild the token list
+        buildTokenListHtml(type);
+        
+        // Auto-select the new token
+        setTimeout(() => {
+          selectToken(type, customToken);
+        }, 100);
+      } else {
+        showToast('Token already exists in custom tokens');
+      }
+    };
+
+    // ==============================
     // BALANCE FUNCTIONS
     // ==============================
     async function updateBalances() {
@@ -1203,112 +1690,6 @@
         console.error('Set max error:', error);
         showToast('Failed to read balance');
       }
-    }
-
-    // ==============================
-    // TOKEN SELECTION
-    // ==============================
-    function buildTokenListHtml(type) {
-      const listEl = type === 'from' ? $('fromList') : $('toList');
-      if (!listEl) return;
-      
-      listEl.innerHTML = '';
-      
-      // Search input
-      const searchDiv = document.createElement('div');
-      searchDiv.className = 'token-search';
-      searchDiv.innerHTML = `<input placeholder="Search token..." oninput="filterTokens('${type}', this.value)" />`;
-      listEl.appendChild(searchDiv);
-      
-      // Header
-      const header = document.createElement('div');
-      header.style.cssText = 'color: var(--muted); font-size: 13px; margin-bottom: 8px;';
-      header.textContent = `Select Token (${tokens.length})`;
-      listEl.appendChild(header);
-      
-      // Token options
-      for (const token of tokens) {
-        const option = document.createElement('div');
-        option.className = 'token-option';
-        option.setAttribute('data-addr', token.address);
-        
-        let statusBadge = '';
-        if (token.verified) {
-          statusBadge = '<span class="token-verified">✓ Verified</span>';
-        } else if (token.custom) {
-          statusBadge = '<span class="token-imported">Imported</span>';
-        } else if (token.warning) {
-          statusBadge = '<span class="token-warning">⚠️ Unknown</span>';
-        }
-        
-        option.innerHTML = `
-          <img src="${token.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700">${token.symbol} ${statusBadge}</div>
-            <div class="token-addr">${token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' ? 'Native Token' : (token.address.substring(0,6) + '...' + token.address.substring(38))}</div>
-          </div>
-          <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px">—</div>
-        `;
-        
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectToken(type, token);
-        });
-        
-        listEl.appendChild(option);
-      }
-      
-      // Add custom token button
-      const addTokenBtn = document.createElement('div');
-      addTokenBtn.className = 'add-token-btn';
-      addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
-      addTokenBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showAddTokenForm(type);
-      });
-      listEl.appendChild(addTokenBtn);
-      
-      listEl.style.display = 'block';
-      
-      // Update balances in dropdown
-      if (account) {
-        updateDropdownBalances();
-      }
-    }
-
-    function filterTokens(type, term) {
-      const listEl = type === 'from' ? $('fromList') : $('toList');
-      if (!listEl) return;
-      
-      const options = listEl.querySelectorAll('.token-option');
-      const searchTerm = (term || '').toLowerCase();
-      
-      options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-      });
-    }
-
-    async function selectToken(type, token) {
-      if (type === 'from') {
-        selectedFrom = token;
-        $('fromLogo').src = token.logo;
-        $('fromSymbol').textContent = token.symbol;
-        $('fromList').style.display = 'none';
-      } else {
-        selectedTo = token;
-        $('toLogo').src = token.logo;
-        $('toSymbol').textContent = token.symbol;
-        $('toList').style.display = 'none';
-      }
-      
-      // Reset input values ketika ganti token
-      $('fromAmount').value = '';
-      $('toAmount').value = '';
-      
-      await updateBalances(); 
-      await updateLiquidityInfo();
-      updateActionBtn();
     }
 
     // ==============================
@@ -1759,9 +2140,9 @@
         selectedFrom = tokenAObj;
         selectedTo = tokenBObj;
 
-        $('fromLogo').src = selectedFrom.logo;
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
         $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
         $('toSymbol').textContent = selectedTo.symbol;
 
         switchToAddView();
@@ -1778,9 +2159,9 @@
         selectedFrom = tokenA;
         selectedTo = tokenB;
 
-        $('fromLogo').src = selectedFrom.logo;
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
         $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
         $('toSymbol').textContent = selectedTo.symbol;
 
         switchToAddView();
@@ -2090,7 +2471,8 @@
           decimals: decimalsA,
           logo: `https://vanswap.xyz/assets/${symbolA.toLowerCase()}.png`,
           custom: true,
-          verified: false
+          verified: false,
+          network: networkManager.getCurrentNetwork()
         };
 
         const tokenBObj = {
@@ -2099,23 +2481,23 @@
           decimals: decimalsB,
           logo: `https://vanswap.xyz/assets/${symbolB.toLowerCase()}.png`,
           custom: true,
-          verified: false
+          verified: false,
+          network: networkManager.getCurrentNetwork()
         };
 
-        if (!tokens.some(t => t.address.toLowerCase() === tokenAInput.toLowerCase())) {
-          tokens.push(tokenAObj);
-        }
+        // Add to custom token manager
+        customTokenManager.addToken(tokenAObj);
+        customTokenManager.addToken(tokenBObj);
 
-        if (!tokens.some(t => t.address.toLowerCase() === tokenBInput.toLowerCase())) {
-          tokens.push(tokenBObj);
-        }
+        // Refresh tokens list
+        initNetworkConfig();
 
         selectedFrom = tokenAObj;
         selectedTo = tokenBObj;
 
-        $('fromLogo').src = selectedFrom.logo;
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
         $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
         $('toSymbol').textContent = selectedTo.symbol;
 
         switchToAddView();
@@ -2137,9 +2519,9 @@
     function getWrappedNativeAddress() {
       const currentNetwork = networkManager.getCurrentNetwork();
       if (currentNetwork === 'vana') {
-        return '0x00eddd9621fb08436d0331c149d1690909a5906d'; // WVANA
+        return NETWORK_CONFIG.vana.contracts.wvana;
       } else {
-        return '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c'; // W0G
+        return NETWORK_CONFIG.zerog.contracts.w0g;
       }
     }
 
@@ -2464,6 +2846,10 @@
     window.importPool = importPool;
     window.connectWallet = connectWallet;
     window.disconnectWallet = disconnectWallet;
+    window.pasteFromClipboard = pasteFromClipboard;
+    window.clearTokenForm = clearTokenForm;
+    window.cancelAddToken = cancelAddToken;
+    window.addCustomToken = addCustomToken;
   </script>
 </body>
 </html>
