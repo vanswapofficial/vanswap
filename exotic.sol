@@ -6,13 +6,16 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // Import IERC20 yang benar
 
 /**
  * @title Exotic Token (EXO)
+ * @dev Token ERC20 standar dengan max supply 23,000 token, 18 decimals
+ * @notice Token tanpa fungsi mint/burn setelah deployment
  */
 contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20; // Gunakan IERC20 dari OpenZeppelin
     
     // Constants
     uint256 public constant MAX_SUPPLY = 23000 * 10**18; // 23,000 token dengan 18 decimals
@@ -45,8 +48,8 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
      * @param recipient Alamat penerima seluruh supply awal
      */
     function mintInitialSupply(address recipient) external onlyOwner nonReentrant {
-        require(!_initialSupplyMinted, "Initial supply already minted");
-        require(recipient != address(0), "Cannot mint to zero address");
+        require(!_initialSupplyMinted, "EXO: Initial supply already minted");
+        require(recipient != address(0), "EXO: Cannot mint to zero address");
         
         _initialSupplyMinted = true;
         _totalMinted = MAX_SUPPLY;
@@ -86,10 +89,7 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
      * @param amount Jumlah token
      */
     function transfer(address to, uint256 amount) public override nonReentrant returns (bool) {
-        require(to != address(0), "EXO: transfer to zero address");
-        require(amount > 0, "EXO: amount must be greater than 0");
-        require(balanceOf(msg.sender) >= amount, "EXO: insufficient balance");
-        
+        _validateTransfer(msg.sender, to, amount);
         return super.transfer(to, amount);
     }
     
@@ -104,13 +104,20 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
         address to, 
         uint256 amount
     ) public override nonReentrant returns (bool) {
+        _validateTransfer(from, to, amount);
+        require(allowance(from, msg.sender) >= amount, "EXO: insufficient allowance");
+        
+        return super.transferFrom(from, to, amount);
+    }
+    
+    /**
+     * @dev Validasi transfer internal
+     */
+    function _validateTransfer(address from, address to, uint256 amount) private view {
         require(from != address(0), "EXO: transfer from zero address");
         require(to != address(0), "EXO: transfer to zero address");
         require(amount > 0, "EXO: amount must be greater than 0");
         require(balanceOf(from) >= amount, "EXO: insufficient balance");
-        require(allowance(from, msg.sender) >= amount, "EXO: insufficient allowance");
-        
-        return super.transferFrom(from, to, amount);
     }
     
     /**
@@ -120,9 +127,8 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
      */
     function approve(address spender, uint256 amount) public override nonReentrant returns (bool) {
         require(spender != address(0), "EXO: approve to zero address");
-        require(amount > 0 || allowance(msg.sender, spender) == 0, "EXO: use zero amount to clear allowance");
         
-        // Untuk mencegah front-running attack, set ke 0 dulu lalu ke amount baru
+        // Untuk mencegah front-running attack, set ke 0 dulu jika mengubah dari non-zero
         if (amount != 0 && allowance(msg.sender, spender) != 0) {
             super.approve(spender, 0);
         }
@@ -154,15 +160,6 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
         
         return super.decreaseAllowance(spender, subtractedValue);
     }
-    
-    /**
-     * @dev Pause transfers (emergency only) - nonReentrant sudah cukup untuk keamanan
-     * @notice Tidak ada pause mechanism karena permintaan "sama dengan vBTC"
-     */
-    
-    // ============================================================
-    // FUNGSI UNTUK MENGELOLA ASET LAIN YANG TERKIRIM KE KONTRAK
-    // ============================================================
     
     /**
      * @dev Menerima ETH (native)
@@ -223,7 +220,7 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
         require(tokenAddress != address(0), "EXO: invalid token address");
         require(to != address(0), "EXO: send to zero address");
         require(amount > 0, "EXO: amount must be greater than 0");
-        require(tokenAddress != address(this), "EXO: use transfer() for EXO tokens");
+        require(tokenAddress != address(this), "EXO: use rescueEXOTokens() for EXO tokens");
         
         IERC20 token = IERC20(tokenAddress);
         uint256 tokenBalance = token.balanceOf(address(this));
@@ -242,7 +239,7 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
     function sendAllERC20(address tokenAddress, address to) external onlyOwner nonReentrant {
         require(tokenAddress != address(0), "EXO: invalid token address");
         require(to != address(0), "EXO: send to zero address");
-        require(tokenAddress != address(this), "EXO: use transfer() for EXO tokens");
+        require(tokenAddress != address(this), "EXO: use rescueEXOTokens() for EXO tokens");
         
         IERC20 token = IERC20(tokenAddress);
         uint256 tokenBalance = token.balanceOf(address(this));
@@ -283,22 +280,23 @@ contract ExoticToken is ERC20, Ownable, ReentrancyGuard {
     ) internal override {
         super._beforeTokenTransfer(from, to, amount);
         
-        // Tambahan validasi bisa ditambahkan di sini
-        // Contoh: cek blacklist, pause, dll
+        // Tambahan validasi bisa ditambahkan di sini jika diperlukan
+        // Misalnya: require(!paused, "EXO: transfers are paused");
     }
-}
-
-/**
- * @dev Interface IERC20 untuk SafeERC20
- */
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
     
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    /**
+     * @dev Hook after token transfer (untuk logging atau aksi tambahan)
+     * @param from Alamat pengirim
+     * @param to Alamat penerima
+     * @param amount Jumlah token
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._afterTokenTransfer(from, to, amount);
+        
+        // Aksi setelah transfer jika diperlukan
+    }
 }
