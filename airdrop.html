@@ -461,6 +461,18 @@
             margin: 20px 0;
         }
         
+        /* Referral Auto-fill Badge */
+        .referral-auto-fill {
+            background: rgba(76,175,80,0.1);
+            border: 1px solid rgba(76,175,80,0.3);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -502,6 +514,20 @@
                     <button id="connectWallet" class="connect-btn">Connect Wallet</button>
                 </div>
             </header>
+
+            <!-- Referral Auto-fill Notification -->
+            <div id="referralAutoFill" class="referral-auto-fill" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--success); font-size: 20px;">✓</span>
+                    <div>
+                        <div style="font-weight: 600; color: var(--success);">Referral Code Auto-filled!</div>
+                        <div style="color: var(--muted); font-size: 12px;" id="autoFillCode">CODE</div>
+                    </div>
+                </div>
+                <button id="clearReferralCode" style="background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 12px;">
+                    Clear
+                </button>
+            </div>
 
             <!-- Network Warning -->
             <div id="networkWarning" class="network-warning" style="display: none;">
@@ -734,7 +760,6 @@
     <script>
         // ==================== CONFIGURATION ====================
         const AIRDROP_CONTRACT_ADDRESS = "0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6";
-        const REFERRAL_BASE_URL = "https://vanswap.xyz/airdrop/";
         
         // Vana Network Configuration
         const VANA_NETWORK = {
@@ -785,6 +810,9 @@
             walletSection: document.getElementById('walletSection'),
             networkWarning: document.getElementById('networkWarning'),
             switchNetworkBtn: document.getElementById('switchNetworkBtn'),
+            referralAutoFill: document.getElementById('referralAutoFill'),
+            autoFillCode: document.getElementById('autoFillCode'),
+            clearReferralCode: document.getElementById('clearReferralCode'),
             
             // Global Stats
             totalUsers: document.getElementById('totalUsers'),
@@ -889,6 +917,82 @@
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
             });
+        }
+
+        // ==================== REFERRAL URL HANDLING ====================
+        function getReferralCodeFromURL() {
+            // Method 1: Dari path /airdrop/CODE
+            const path = window.location.pathname;
+            
+            if (path.includes('/airdrop/')) {
+                const parts = path.split('/');
+                const airdropIndex = parts.indexOf('airdrop');
+                
+                if (airdropIndex !== -1 && airdropIndex + 1 < parts.length) {
+                    const code = parts[airdropIndex + 1];
+                    if (code && code.length >= 3 && /^[A-Z0-9]+$/.test(code)) {
+                        return code.toUpperCase();
+                    }
+                }
+            }
+            
+            // Method 2: Dari query parameter ?ref=CODE
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref') || urlParams.get('code') || urlParams.get('referral');
+            if (refCode && refCode.length >= 3) {
+                return refCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            }
+            
+            // Method 3: Dari hash #ref-CODE
+            const hash = window.location.hash;
+            if (hash.includes('ref-')) {
+                const codeMatch = hash.match(/ref-([A-Z0-9]+)/i);
+                if (codeMatch && codeMatch[1]) {
+                    return codeMatch[1].toUpperCase();
+                }
+            }
+            
+            return null;
+        }
+
+        function autoFillReferralCode() {
+            const referralCode = getReferralCodeFromURL();
+            
+            if (referralCode && elements.referralCodeInput) {
+                // Auto-fill input field
+                elements.referralCodeInput.value = referralCode;
+                
+                // Show auto-fill notification
+                elements.autoFillCode.textContent = referralCode;
+                elements.referralAutoFill.style.display = 'flex';
+                
+                // Show notification
+                showNotification(`Referral code "${referralCode}" auto-filled!`, 'success');
+                
+                // Clean URL (remove referral code from URL for privacy)
+                cleanURL();
+                
+                return true;
+            }
+            
+            return false;
+        }
+
+        function cleanURL() {
+            if (window.history.replaceState) {
+                // Remove referral code from URL
+                const cleanPath = window.location.pathname.replace(/\/airdrop\/[^/]+/, '');
+                const cleanSearch = new URLSearchParams(window.location.search);
+                cleanSearch.delete('ref');
+                cleanSearch.delete('code');
+                cleanSearch.delete('referral');
+                
+                const cleanSearchString = cleanSearch.toString() ? '?' + cleanSearch.toString() : '';
+                const cleanHash = window.location.hash.replace(/ref-[^&]+/, '');
+                
+                const cleanURL = cleanPath + cleanSearchString + cleanHash;
+                window.history.replaceState({}, document.title, cleanURL);
+            }
         }
 
         // ==================== COUNTDOWN TIMER ====================
@@ -1021,7 +1125,12 @@
             if (!code) return;
             
             elements.referralCodeDisplay.textContent = code;
-            elements.referralLinkDisplay.textContent = REFERRAL_BASE_URL + code;
+            
+            // Generate referral link dengan domain yang benar
+            const baseUrl = window.location.origin;
+            const referralLink = `${baseUrl}/airdrop/${code}`;
+            elements.referralLinkDisplay.textContent = referralLink;
+            
             userReferralCode = code;
         }
 
@@ -1209,7 +1318,6 @@
                 const userReferralCode = userInfo[9];
                 
                 if (isRegistered) {
-                    // User SUDAH register
                     showRegistrationUI(true);
                     await loadUserData();
                     
@@ -1230,7 +1338,6 @@
                     }
                     
                 } else {
-                    // User BELUM register
                     showRegistrationUI(false);
                     elements.registerBtn.disabled = false;
                 }
@@ -1328,6 +1435,9 @@
                 // Generate referral code setelah registrasi
                 const newCode = await generateReferralCode();
                 updateReferralDisplay(newCode);
+                
+                // Hide auto-fill notification setelah register
+                elements.referralAutoFill.style.display = 'none';
                 
                 await checkUserRegistration();
                 
@@ -1435,7 +1545,7 @@
 
         function copyReferralLink() {
             const link = elements.referralLinkDisplay.textContent;
-            if (!link || link === REFERRAL_BASE_URL) return;
+            if (!link || link.includes('/airdrop/')) return;
             
             navigator.clipboard.writeText(link).then(() => {
                 const btn = elements.copyReferralLink;
@@ -1453,6 +1563,12 @@
                     btn.style.color = 'white';
                 }, 2000);
             });
+        }
+
+        function clearAutoFillReferral() {
+            elements.referralCodeInput.value = '';
+            elements.referralAutoFill.style.display = 'none';
+            showNotification('Referral code cleared', 'info');
         }
 
         // ==================== AUTO UPDATE ====================
@@ -1478,6 +1594,7 @@
         elements.claimBonus.addEventListener('click', claimReferralBonus);
         elements.copyReferralCode.addEventListener('click', copyReferralCode);
         elements.copyReferralLink.addEventListener('click', copyReferralLink);
+        elements.clearReferralCode.addEventListener('click', clearAutoFillReferral);
 
         elements.referralCodeInput.addEventListener('input', function() {
             this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
@@ -1519,6 +1636,7 @@
                     elements.rewardsSection.style.display = 'none';
                     elements.userStatsCard.style.display = 'none';
                     elements.referralCard.style.display = 'none';
+                    elements.referralAutoFill.style.display = 'none';
                     
                     claimTimer.stop();
                     showNotification('Wallet disconnected', 'info');
@@ -1536,10 +1654,13 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            // Check network first
+            // STEP 1: Auto-fill referral code dari URL (jika ada)
+            const hasAutoFilled = autoFillReferralCode();
+            
+            // STEP 2: Check network
             await checkAndSwitchNetwork();
             
-            // Check if wallet is already connected
+            // STEP 3: Check jika wallet sudah connected
             if (window.ethereum && window.ethereum.selectedAddress && isCorrectNetwork) {
                 try {
                     showLoading(true, 'Loading airdrop...');
@@ -1564,7 +1685,7 @@
                 }
             }
             
-            // Update data every minute
+            // Auto-update data setiap menit
             setInterval(updateData, 60000);
         });
 
