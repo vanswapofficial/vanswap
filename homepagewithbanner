@@ -1,49 +1,69 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Primary Meta Tags -->
-  <title>VanSwap - Vana Swap Decentralized Exchange on Vana Chain | Trade, Earn, Grow</title>
+
+  <!-- ==================== -->
+  <!-- SECURITY HEADERS -->
+  <!-- ==================== -->
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self' https://vanswap.xyz; 
+               script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com https://walletconnect.com https://cdn.walletconnect.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+               font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+               img-src 'self' data: https: blob:;
+               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
+               frame-src 'self' https:;
+               frame-ancestors 'none'; 
+               base-uri 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
+  <!-- ==================== -->
+  <!-- SEO PRIMARY TAGS -->
+  <!-- ==================== -->
+  <title>VanSwap - Swap on Vana Chain and Beyond | Trade, Earn, Grow</title>
   <meta name="google-site-verification" content="jtn_hlAfPbAOul0xNc9EbHGeko6e5CwWGHV2GYQ0_dY" />
-  <meta name="title" content="VanSwap - Decentralized Exchange on Vana Chain | Trade, Earn, Grow">
-  <meta name="description" content="Experience lightning-fast swaps, yield farming, and seamless liquidity provision on Vana Chain's premier decentralized exchange. Low fees, high security, and competitive APY.">
-  <meta name="keywords" content="vanswap, vana chain,vana swap,vana dex, decentralized exchange, defi, swap, liquidity, yield farming, crypto, blockchain, DEX, vanaswap.xyz">
+  <meta name="description" content="VanSwap DEX: Lightning-fast token swaps on Vana Chain & 0G Network. Multi-chain decentralized exchange with yield farming, liquidity pools, and ultra-low fees.">
+  <meta name="keywords" content="vanswap, vana chain, 0g network, multi-chain dex, decentralized exchange, defi, swap tokens, liquidity provider, yield farming, crypto trading, blockchain, DEX, vanaswap.xyz">
   <meta name="author" content="VanSwap">
   <meta name="robots" content="index, follow">
 
-  <!-- Preload critical resources -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" as="style">
-  <link rel="preload" href="https://vanswap.xyz/assets/vans.png" as="image">
-
-  <!-- Open Graph / Facebook -->
+  <!-- ==================== -->
+  <!-- OPEN GRAPH -->
+  <!-- ==================== -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://vanswap.xyz/">
-  <meta property="og:title" content="VanSwap - Decentralized Exchange on Vana Chain">
-  <meta property="og:description" content="Trade, Earn, and Grow on Vana Chain. Experience lightning-fast swaps, yield farming, and seamless liquidity provision.">
+  <meta property="og:title" content="VanSwap - Swap on Vana Chain and Beyond">
+  <meta property="og:description" content="Trade, Earn, and Grow on Vana Chain & 0G Network. Experience lightning-fast swaps, yield farming, and liquidity provision.">
   <meta property="og:image" content="https://vanswap.xyz/assets/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="VanSwap">
+  <meta property="og:locale" content="en_US">
 
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://vanswap.xyz/">
-  <meta property="twitter:title" content="VanSwap - Decentralized Exchange on Vana Chain">
-  <meta property="twitter:description" content="Trade, Earn, and Grow on Vana Chain. Experience lightning-fast swaps, yield farming, and seamless liquidity provision.">
-  <meta property="twitter:image" content="https://vanswap.xyz/assets/twitter-image.png">
+  <!-- ==================== -->
+  <!-- TWITTER -->
+  <!-- ==================== -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://vanswap.xyz/">
+  <meta name="twitter:title" content="VanSwap - Swap on Vana Chain and Beyond">
+  <meta name="twitter:description" content="Trade, Earn, and Grow on Vana Chain & 0G Network. Fast and low-fee decentralized trading.">
+  <meta name="twitter:image" content="https://vanswap.xyz/assets/twitter-image.png">
   <meta name="twitter:site" content="@vanswap_xyz">
   <meta name="twitter:creator" content="@vanswap_xyz">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="https://vanswap.xyz/assets/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="https://vanswap.xyz/assets/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="https://vanswap.xyz/assets/favicon-96x96.png">
+  <!-- ==================== -->
+  <!-- FAVICON -->
+  <!-- ==================== -->
+  <link rel="icon" type="image/png" href="https://vanswap.xyz/assets/favicon-32x32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="https://vanswap.xyz/assets/apple-touch-icon.png">
-
-  <!-- Canonical URL -->
+  <link rel="manifest" href="https://vanswap.xyz/manifest.json">
   <link rel="canonical" href="https://vanswap.xyz/">
 
+  <!-- ==================== -->
+  <!-- STRUCTURED DATA -->
+  <!-- ==================== -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -51,8 +71,7 @@
     "name": "VanSwap",
     "url": "https://vanswap.xyz/",
     "logo": "https://vanswap.xyz/assets/vans.png",
-    "description": "VanSwap is a decentralized exchange (DEX) built on Vana Chain | Trade, Earn, Grow.",
-    "foundingDate": "2025",
+    "description": "VanSwap is a multi chain decentralized exchange (DEX) built on Vana Chain and Beyond — Trade, Earn, Grow.",
     "sameAs": [
       "https://twitter.com/VanSwap_xyz",
       "https://t.me/VanSwap_xyz",
@@ -61,24 +80,62 @@
   }
   </script>
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "Vanswap Vana DEX",
-  "url": "https://vanswap.xyz/",
-  "description": "DEX Decentralized Exchange on Vana Network",
-  "applicationCategory": "FinanceApplication",
-  "operatingSystem": "All",
-  "offers": {
-    "@type": "Offer",
-    "category": "FinancialService",
-    "description": "Decentralized token swapping, liquidity provision, and yield farming"
-  }
-}
-</script>
+  <!-- NOSCRIPT -->
+  <noscript>
+    <div style="background:linear-gradient(135deg,#ff6b35,#ff8e53);color:white;padding:20px;text-align:center;position:fixed;top:0;width:100%;z-index:9999;">
+      <h3>🚫 JavaScript Required</h3>
+      <p>VanSwap DEX requires JavaScript for wallet connection and trading features. Please enable JavaScript to continue.</p>
+    </div>
+  </noscript>
 
   <style>
+    /* 0G Network Banner */
+    .network-banner {
+      background: rgba(49,208,170,0.1);
+      border: 1px solid var(--accent);
+      padding: 16px;
+      border-radius: 12px;
+      margin: 20px 0;
+      text-align: center;
+      animation: fadeInUp 0.8s ease;
+    }
+
+    .network-banner p {
+      color: var(--accent);
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .network-logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .network-logo-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .network-logo-item img {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .network-logo-item span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .network-divider {
+      color: var(--muted);
+    }
+
     .presale-banner-enhanced {
       background: linear-gradient(135deg, #ff6b35, #ff8e53, #ff6b35);
       background-size: 200% 200%;
@@ -207,6 +264,29 @@
 
     /* Mobile responsive */
     @media (max-width: 768px) {
+      .network-banner {
+        padding: 14px;
+        margin: 15px 0;
+      }
+      
+      .network-banner p {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      
+      .network-logos {
+        gap: 12px;
+      }
+      
+      .network-logo-item img {
+        width: 18px;
+        height: 18px;
+      }
+      
+      .network-logo-item span {
+        font-size: 12px;
+      }
+
       .presale-banner-enhanced {
         font-size: 14px;
         padding: 12px 0;
@@ -847,14 +927,14 @@
   <header class="header">
     <div class="nav-container">
       <a href="/" class="logo">
-        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap DEX Logo - Decentralized Exchange on Vana Chain" loading="lazy">
+        <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap - Swap on Vana Chain and Beyond" loading="lazy">
         <span>VANSWAP</span>
       </a>
 
       <nav class="nav-links">
         <a href="swap.html" class="nav-link">Swap</a>
         <a href="liquidity.html" class="nav-link">Liquidity</a>
-        <a href="tokencreator.html" class="nav-link">Create Token</a>
+        <a href="factorytokendeployer0g.html" class="nav-link">Create Token</a>
         <a href="staking.html" class="nav-link">Staking</a>
         <a href="presale.html" class="nav-link" style="color: var(--accent)">Presale</a>
         <a href="docs.html" class="nav-link">Docs</a>
@@ -873,6 +953,22 @@
     </div>
 
     <div class="hero-content">
+      <!-- 0G Network Banner -->
+      <div class="network-banner">
+        <p>⚡ <strong>0G Network Live!</strong> Experience lightning-fast trades with high throughput</p>
+        <div class="network-logos">
+          <div class="network-logo-item">
+            <img src="https://vanswap.xyz/assets/vana.png" alt="Vana Network">
+            <span>Vana</span>
+          </div>
+          <div class="network-divider">+</div>
+          <div class="network-logo-item">
+            <img src="https://vanswap.xyz/assets/0g.png" alt="0G Network">
+            <span>0G</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Banner dengan multiple flash effects -->
       <div class="presale-banner-enhanced" style="margin-bottom: 40px;">
         <div class="flash-container">
@@ -882,7 +978,7 @@
         </div>
         <span class="flash-text-intense">LIVE NOW</span>
         🚀 VANS TOKEN PRESALE 
-        <a href="https://vanswap.xyz/presalefix">
+        <a href="https://vanswap.xyz/presale">
           <span style="font-size: 18px;">🔥</span>
           JOIN PRESALE →
         </a>
@@ -893,13 +989,13 @@
         </div>
       </div>
 
-      <h1>Trade, Earn, and Grow on Vana Chain</h1>
+      <h1>Trade, Earn, and Grow on Vana Chain & 0G Network</h1>
       <p class="tagline">
         Experience <span class="highlight">lightning-fast swaps</span>, 
         <span class="highlight">yield farming</span>, and 
         <span class="highlight">seamless liquidity provision</span> 
-        on Vana Chain's premier decentralized exchange
-      </p>
+  on our multi-chain decentralized exchange
+</p>
 
       <!-- Feature Columns Section -->
       <div class="feature-columns">
@@ -929,7 +1025,7 @@
             <div class="column-icon">🪙</div>
             <h3>Create Token</h3>
             <p>Launch your own token easily</p>
-            <a href="tokencreator.html" class="column-link">Create Token</a>
+            <a href="factorytokendeployer0g.html" class="column-link">Create Token</a>
           </div>
         </div>
       </div>
@@ -968,22 +1064,22 @@
   <section class="stats">
     <div class="stats-grid">
       <div class="stat-item" style="animation-delay: 0.2s">
-        <div class="stat-number" id="tvl">$12.5M</div>
+        <div class="stat-number" id="tvl">update soon</div>
         <div class="stat-label">Total Value Locked</div>
       </div>
 
       <div class="stat-item" style="animation-delay: 0.4s">
-        <div class="stat-number" id="pairs">50+</div>
+        <div class="stat-number" id="pairs">update soon</div>
         <div class="stat-label">Trading Pairs</div>
       </div>
 
       <div class="stat-item" style="animation-delay: 0.6s">
-        <div class="stat-number" id="users">15K+</div>
+        <div class="stat-number" id="users">update soon</div>
         <div class="stat-label">Active Users</div>
       </div>
 
       <div class="stat-item" style="animation-delay: 0.8s">
-        <div class="stat-number" id="fees">0.25%</div>
+        <div class="stat-number" id="fees">0.3%</div>
         <div class="stat-label">Trading Fees</div>
       </div>
     </div>
@@ -992,12 +1088,12 @@
   <!-- SEO Content Section -->
   <section class="seo-content">
     <div class="seo-container">
-      <h2>VanSwap - Leading Decentralized Exchange on Vana Chain</h2>
+      <h2>VanSwap - Leading Decentralized Exchange on Vana Chain and 0G Network</h2>
 
       <div class="seo-grid">
         <div class="seo-item">
           <h3>What is VanSwap?</h3>
-          <p>VanSwap is a cutting-edge decentralized exchange (DEX) built on Vana Chain, offering lightning-fast token swaps, yield farming opportunities, and advanced liquidity provision features. As the premier DEX on Vana Chain, VanSwap provides users with secure, low-fee trading experiences while maintaining complete decentralization and user control over assets.</p>
+         <p>VanSwap is a cutting-edge multi-chain decentralized exchange (DEX) built on Vana Chain and 0G Network, offering lightning-fast token swaps, yield farming opportunities, and advanced liquidity provision features. As the premier multi-chain DEX, VanSwap provides users with secure, low-fee trading experiences across multiple networks while maintaining complete decentralization and user control over assets.</p>
         </div>
 
         <div class="seo-item">
@@ -1013,9 +1109,9 @@
         </div>
 
         <div class="seo-item">
-          <h3>Why Choose VanSwap on Vana Chain?</h3>
-          <p>VanSwap leverages Vana Chain's high-throughput blockchain technology to deliver sub-second transaction finality with fees that are significantly lower than traditional networks. Our platform combines the security of decentralized finance with the speed and efficiency modern traders demand. Whether you're looking to swap tokens, provide liquidity, or farm yields, VanSwap offers the tools and infrastructure to grow your cryptocurrency portfolio efficiently and securely.</p>
-          <p>Join thousands of satisfied users who trust VanSwap for their decentralized trading needs on Vana Chain. Experience the future of DeFi with our robust, scalable, and user-centric platform that puts you in control of your financial journey.</p>
+          <h3>Why Choose VanSwap on Vana Chain & 0G Network?</h3>
+<p>VanSwap leverages both Vana Chain's and 0G Network's high-throughput blockchain technology to deliver sub-second transaction finality with fees that are significantly lower than traditional networks. Our multi-chain platform combines the security of decentralized finance with the speed and efficiency modern traders demand across different networks.</p>
+<p>Join our growing community of users who trust VanSwap for their decentralized trading needs across multiple chains. Experience the future of DeFi with our robust, scalable, and user-centric platform that puts you in control of your financial journey.</p>
         </div>
       </div>
     </div>
@@ -1050,7 +1146,7 @@
     </div>
 
     <div class="footer-text">
-      <p>© 2025 VanSwap. Built on Vana Chain</p>
+      <p>© 2025 VanSwap DEX- Built on Vana Chain and Beyond</p>
       <p>Decentralized Exchange Revolutionizing DeFi</p>
     </div>
   </div>
