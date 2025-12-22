@@ -809,7 +809,6 @@
         let isCorrectNetwork = false;
         let userReferralCode = '';
         let userReferralLink = '';
-        let lastClaimTime = 0;
         
         // Storage untuk menyimpan referral code secara permanen
         const REFERRAL_STORAGE_KEY = 'vanswap_referral_codes';
@@ -870,8 +869,6 @@
         };
 
         // ==================== REFERRAL CODE MANAGER ====================
-        // Sistem untuk membuat dan menyimpan referral code yang TETAP/TIDAK BERUBAH
-        
         function getStoredReferralCodes() {
             try {
                 const stored = localStorage.getItem(REFERRAL_STORAGE_KEY);
@@ -900,39 +897,24 @@
         }
 
         function generateDeterministicReferralCode(walletAddress) {
-            // Fungsi ini menghasilkan referral code yang TETAP untuk wallet tertentu
-            // Menggunakan hash dari alamat wallet untuk konsistensi
-            
-            // Ambil 8 karakter terakhir dari address
             const addressSuffix = walletAddress.slice(-8).toUpperCase();
-            
-            // Buat hash sederhana dari alamat
             let hash = 0;
             for (let i = 0; i < walletAddress.length; i++) {
                 hash = ((hash << 5) - hash) + walletAddress.charCodeAt(i);
                 hash = hash & hash;
             }
-            
-            // Ambil 4 karakter dari hash (konversi ke base36)
             const hashPart = Math.abs(hash).toString(36).slice(0, 4).toUpperCase();
-            
-            // Gabungkan dengan prefix "VAN" dan buat total 10 karakter
             const code = `VAN${addressSuffix}${hashPart}`.slice(0, 10);
-            
             return code;
         }
 
         function generateUniqueReferralCode(walletAddress) {
-            // Cek apakah sudah ada code untuk wallet ini
             const existingCode = getReferralCodeForWallet(walletAddress);
             if (existingCode) {
                 return existingCode;
             }
             
-            // Generate code baru yang deterministik
             const newCode = generateDeterministicReferralCode(walletAddress);
-            
-            // Simpan ke storage
             saveReferralCode(walletAddress, newCode);
             
             return newCode;
@@ -1088,17 +1070,23 @@
             });
         }
 
-        // ==================== TIMER FUNCTIONS (24 JAM) ====================
+        // ==================== TIMER FUNCTIONS (PERBAIKAN UTAMA) ====================
         function updateClaimTimer(secondsUntilNextClaim) {
+            console.log("Updating timer with seconds:", secondsUntilNextClaim);
+            
+            // Clear existing timer
             if (claimTimerInterval) {
                 clearInterval(claimTimerInterval);
+                claimTimerInterval = null;
             }
 
-            // Jika waktu sudah habis
+            // Jika waktu sudah habis atau 0
             if (secondsUntilNextClaim <= 0) {
+                console.log("Timer expired or zero, enabling claim button");
                 elements.claimTimer.textContent = '00:00:00';
                 elements.claimDaily.disabled = false;
                 elements.claimDaily.textContent = 'Claim Daily Reward';
+                elements.claimDaily.innerHTML = '<span>🎁</span> Claim Daily Reward';
                 elements.lastClaimInfo.textContent = 'Ready to claim!';
                 return;
             }
@@ -1107,11 +1095,12 @@
             elements.claimTimer.textContent = formatTime(secondsUntilNextClaim);
             elements.claimDaily.disabled = true;
             elements.claimDaily.textContent = 'Wait for Timer';
+            elements.claimDaily.innerHTML = '<span class="loading"></span> Wait for Timer';
             
-            // Update info klaim terakhir
+            // Hitung waktu last claim
             const now = Math.floor(Date.now() / 1000);
-            const lastClaim = now - (TWENTY_FOUR_HOURS - secondsUntilNextClaim);
-            elements.lastClaimInfo.textContent = `Last claim: ${formatDateTime(lastClaim)}`;
+            const lastClaimTime = now - (TWENTY_FOUR_HOURS - secondsUntilNextClaim);
+            elements.lastClaimInfo.textContent = `Last claim: ${formatDateTime(lastClaimTime)}`;
             
             // Update timer setiap detik
             claimTimerInterval = setInterval(() => {
@@ -1119,9 +1108,13 @@
                 
                 if (secondsUntilNextClaim <= 0) {
                     clearInterval(claimTimerInterval);
+                    claimTimerInterval = null;
+                    
+                    console.log("Timer finished, enabling button");
                     elements.claimTimer.textContent = '00:00:00';
                     elements.claimDaily.disabled = false;
                     elements.claimDaily.textContent = 'Claim Daily Reward';
+                    elements.claimDaily.innerHTML = '<span>🎁</span> Claim Daily Reward';
                     elements.lastClaimInfo.textContent = 'Ready to claim!';
                 } else {
                     elements.claimTimer.textContent = formatTime(secondsUntilNextClaim);
@@ -1133,6 +1126,13 @@
             const now = Math.floor(Date.now() / 1000);
             const timeSinceLastClaim = now - lastClaimTimestamp;
             const timeUntilNextClaim = Math.max(0, TWENTY_FOUR_HOURS - timeSinceLastClaim);
+            
+            console.log(`Timer calculation:
+                Now: ${now}
+                Last Claim: ${lastClaimTimestamp}
+                Time Since: ${timeSinceLastClaim}
+                Time Until: ${timeUntilNextClaim}
+                24 Hours: ${TWENTY_FOUR_HOURS}`);
             
             return timeUntilNextClaim;
         }
@@ -1153,7 +1153,7 @@
                         }
                     }
                 } catch (error) {
-                    console.log('Cannot get referral code from blockchain');
+                    console.log('Cannot get referral code from blockchain:', error.message);
                 }
                 
                 // 2. Cek di local storage
@@ -1178,17 +1178,13 @@
                     // Coba simpan ke blockchain jika memungkinkan
                     try {
                         if (airdropContract) {
-                            // Cek apakah fungsi generateCustomReferralCode tersedia
-                            const canGenerate = await canGenerateCustomCode();
-                            if (canGenerate) {
-                                showLoading(true, 'Saving referral code to blockchain...');
-                                const tx = await airdropContract.generateCustomReferralCode(userReferralCode.toLowerCase());
-                                await tx.wait();
-                                showNotification('Referral code saved to blockchain!', 'success');
-                            }
+                            showLoading(true, 'Saving referral code...');
+                            const tx = await airdropContract.generateCustomReferralCode(userReferralCode.toLowerCase());
+                            await tx.wait();
+                            showNotification('Referral code saved!', 'success');
                         }
                     } catch (error) {
-                        console.log('Cannot save referral code to blockchain, using local only');
+                        console.log('Cannot save referral code to blockchain, using local only:', error.message);
                     }
                 }
                 
@@ -1207,36 +1203,10 @@
             }
         }
 
-        async function canGenerateCustomCode() {
-            try {
-                // Cek apakah fungsi generateCustomReferralCode tersedia
-                const code = "TEST123";
-                // Menggunakan staticCall untuk test tanpa gas
-                const result = await airdropContract.callStatic.generateCustomReferralCode(code);
-                return true;
-            } catch (error) {
-                return false;
-            }
-        }
-
         function updateReferralUI() {
             if (userReferralCode) {
                 elements.referralCodeDisplay.textContent = userReferralCode;
                 elements.referralLinkInput.value = userReferralLink;
-                
-                // Tampilkan pesan bahwa code ini permanen
-                const infoDiv = document.createElement('div');
-                infoDiv.style.color = 'var(--success)';
-                infoDiv.style.fontSize = '11px';
-                infoDiv.style.marginTop = '5px';
-                infoDiv.innerHTML = '✓ Permanent referral code';
-                
-                // Hapus pesan lama jika ada
-                const oldInfo = elements.referralCodeDisplay.parentElement.querySelector('.permanent-info');
-                if (oldInfo) oldInfo.remove();
-                
-                infoDiv.className = 'permanent-info';
-                elements.referralCodeDisplay.parentElement.appendChild(infoDiv);
             }
         }
 
@@ -1379,19 +1349,26 @@
                 
                 const userInfo = await airdropContract.users(account);
                 const isRegistered = userInfo[0];
-                const claimedInitial = await airdropContract.claimedInitial(account);
+                
+                console.log("User registration status:", isRegistered);
                 
                 if (isRegistered) {
                     showRegistrationUI(true);
                     await loadUserData();
                     await generateUserReferralCode();
                     
-                    if (claimedInitial) {
-                        elements.initialClaimed.style.display = 'inline';
-                        elements.claimInitial.disabled = true;
-                        elements.claimInitial.textContent = 'Already Claimed';
-                    } else {
-                        elements.claimInitial.disabled = false;
+                    // Cek initial claim
+                    try {
+                        const claimedInitial = await airdropContract.claimedInitial(account);
+                        if (claimedInitial) {
+                            elements.initialClaimed.style.display = 'inline';
+                            elements.claimInitial.disabled = true;
+                            elements.claimInitial.textContent = 'Already Claimed';
+                        } else {
+                            elements.claimInitial.disabled = false;
+                        }
+                    } catch (error) {
+                        console.log('Cannot check initial claim status:', error.message);
                     }
                     
                 } else {
@@ -1401,10 +1378,13 @@
                 
             } catch (error) {
                 console.error('Error checking registration:', error);
+                showRegistrationUI(false);
+                elements.registerBtn.disabled = false;
             }
         }
 
         function showRegistrationUI(isRegistered) {
+            console.log("Showing registration UI:", isRegistered);
             elements.notRegisteredMessage.style.display = isRegistered ? 'none' : 'block';
             elements.registerForm.style.display = isRegistered ? 'none' : 'block';
             elements.alreadyRegistered.style.display = isRegistered ? 'block' : 'none';
@@ -1413,37 +1393,64 @@
             elements.referralCard.style.display = isRegistered ? 'block' : 'none';
         }
 
+        // ==================== PERBAIKAN UTAMA: loadUserData() ====================
         async function loadUserData() {
             try {
                 if (!account || !isCorrectNetwork) return;
                 
-                const userStats = await airdropContract.getUserStats(account);
+                console.log("=== LOADING USER DATA ===");
                 
+                // 1. Ambil data user stats dari kontrak
+                const userStats = await airdropContract.getUserStats(account);
                 const [
-                    totalVansClaimed, totalExoClaimed, referralCount, totalClaims,
-                    lastClaimTime, referrer, referralRewardsEarned, referralCode, referralsToday
+                    totalVansClaimed, 
+                    totalExoClaimed, 
+                    referralCount, 
+                    totalClaims,
+                    lastClaimTime, 
+                    referrer, 
+                    referralRewardsEarned, 
+                    referralCode, 
+                    referralsToday
                 ] = userStats;
                 
-                // Coba dapatkan data rewards
+                console.log("Raw user stats:", {
+                    totalVansClaimed: totalVansClaimed.toString(),
+                    totalExoClaimed: totalExoClaimed.toString(),
+                    referralCount: referralCount.toString(),
+                    totalClaims: totalClaims.toString(),
+                    lastClaimTime: lastClaimTime.toString(),
+                    referralCode: referralCode
+                });
+                
+                // 2. Ambil data rewards yang tersedia
                 let vansDaily = ethers.utils.parseUnits("50", 18);
                 let exoDaily = ethers.utils.parseUnits("0.001", 8);
-                let pendingBonus = 0;
+                let pendingBonus = ethers.BigNumber.from(0);
                 
                 try {
                     const rewards = await airdropContract.getAvailableRewards(account);
+                    console.log("Available rewards:", rewards.map(r => r.toString()));
+                    
                     vansDaily = rewards[0];
                     exoDaily = rewards[1];
                     pendingBonus = rewards[4];
+                    
+                    console.log("Parsed rewards:", {
+                        vansDaily: ethers.utils.formatUnits(vansDaily, 18),
+                        exoDaily: ethers.utils.formatUnits(exoDaily, 8),
+                        pendingBonus: ethers.utils.formatUnits(pendingBonus, 8)
+                    });
                 } catch (error) {
-                    console.log('Using default reward values');
+                    console.log("Cannot get available rewards, using defaults:", error.message);
                 }
                 
-                // Update global stats
+                // 3. Update global stats
                 elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
                 elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 1);
                 elements.activeReferrals.textContent = formatNumber(referralCount);
                 
-                // Update user rewards
+                // 4. Update user rewards display
                 const dailyVans = ethers.utils.formatUnits(vansDaily, 18);
                 const dailyExo = ethers.utils.formatUnits(exoDaily, 8);
                 
@@ -1454,44 +1461,47 @@
                 elements.referralBonus.textContent = `${formatNumber(bonusExo, 2)} EXO`;
                 elements.referralCount.textContent = referralCount.toString();
                 
-                // Update user stats
+                // 5. Update user stats
                 elements.myVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
                 elements.myExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 2);
                 elements.myTotalClaims.textContent = totalClaims.toString();
                 elements.myReferrals.textContent = referralCount.toString();
                 
-                // Update timer untuk claim harian
-                lastClaimTime = parseInt(lastClaimTime.toString());
+                // 6. PERBAIKAN UTAMA: Handle timer untuk daily claim
+                const lastClaimTimestamp = parseInt(lastClaimTime.toString());
+                console.log("Last claim timestamp:", lastClaimTimestamp);
                 
                 // Jika lastClaimTime adalah 0, artinya belum pernah claim daily
-                if (lastClaimTime === 0) {
+                if (lastClaimTimestamp === 0) {
+                    console.log("User has never claimed daily reward");
                     elements.claimDaily.disabled = false;
+                    elements.claimDaily.innerHTML = '<span>🎁</span> Claim Daily Reward';
                     elements.claimTimer.textContent = '00:00:00';
                     elements.lastClaimInfo.textContent = 'Never claimed daily reward';
+                    
+                    // Clear existing timer
+                    if (claimTimerInterval) {
+                        clearInterval(claimTimerInterval);
+                        claimTimerInterval = null;
+                    }
                 } else {
                     // Hitung waktu sampai claim berikutnya (24 jam dari last claim)
-                    const timeUntilNext = calculateTimeUntilNextClaim(lastClaimTime);
+                    const timeUntilNext = calculateTimeUntilNextClaim(lastClaimTimestamp);
+                    console.log("Time until next claim:", timeUntilNext, "seconds");
+                    
+                    // Update timer
                     updateClaimTimer(timeUntilNext);
                 }
                 
-                // Cek apakah initial sudah di-claim
-                try {
-                    const claimedInitial = await airdropContract.claimedInitial(account);
-                    if (claimedInitial) {
-                        elements.initialClaimed.style.display = 'inline';
-                        elements.claimInitial.disabled = true;
-                        elements.claimInitial.textContent = 'Already Claimed';
-                    }
-                } catch (error) {
-                    console.log('Cannot check initial claim status');
-                }
+                // 7. Update referral bonus button
+                elements.claimBonus.disabled = pendingBonus.isZero();
                 
-                // Update referral bonus button
-                elements.claimBonus.disabled = pendingBonus <= 0;
+                console.log("=== USER DATA LOADED SUCCESSFULLY ===");
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
-                showNotification('Error loading user data', 'error');
+                console.error('Error details:', error.message);
+                showNotification('Error loading user data. Please refresh page.', 'error');
             }
         }
 
@@ -1518,7 +1528,7 @@
                 console.error('Registration error:', error);
                 showNotification(error.message || 'Registration failed', 'error');
                 elements.registerBtn.disabled = false;
-                elements.registerBtn.textContent = 'Register Now';
+                elements.registerBtn.innerHTML = 'Register Now';
             }
         }
 
@@ -1542,7 +1552,7 @@
                 console.error('Claim initial error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
                 elements.claimInitial.disabled = false;
-                elements.claimInitial.textContent = 'Claim Initial Reward';
+                elements.claimInitial.innerHTML = 'Claim Initial Reward';
             }
         }
 
@@ -1559,21 +1569,30 @@
                     return;
                 }
                 
+                console.log("Claiming daily reward...");
+                
                 elements.claimDaily.disabled = true;
                 elements.claimDaily.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimDaily();
+                console.log("Transaction sent:", tx.hash);
+                
                 await tx.wait();
+                console.log("Transaction confirmed!");
                 
                 showNotification('📅 Daily reward claimed! Next claim in 24 hours', 'success');
                 
-                // Update data setelah claim
-                await loadUserData();
+                // PERBAIKAN: Tunggu 2 detik sebelum load data ulang
+                // untuk memastikan blockchain sudah update
+                setTimeout(async () => {
+                    console.log("Reloading user data after claim...");
+                    await loadUserData();
+                    console.log("User data reloaded successfully");
+                }, 2000);
                 
             } catch (error) {
                 console.error('Claim daily error:', error);
                 
-                // Berikan pesan error yang lebih spesifik
                 let errorMessage = 'Claim failed';
                 if (error.message.includes('insufficient funds')) {
                     errorMessage = 'Insufficient funds for gas';
@@ -1581,14 +1600,18 @@
                     errorMessage = 'Transaction rejected by user';
                 } else if (error.message.includes('24 hours')) {
                     errorMessage = 'Please wait 24 hours between claims';
+                } else if (error.message.includes('already claimed')) {
+                    errorMessage = 'Daily reward already claimed today';
                 } else {
                     errorMessage = error.message || 'Claim failed';
                 }
                 
                 showNotification(errorMessage, 'error');
                 
-                // Re-enable button dan reload data
-                await loadUserData();
+                // Reload data untuk update status terbaru
+                setTimeout(async () => {
+                    await loadUserData();
+                }, 1000);
             }
         }
 
@@ -1612,7 +1635,7 @@
                 console.error('Claim bonus error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
                 elements.claimBonus.disabled = false;
-                elements.claimBonus.textContent = 'Claim Referral Bonus';
+                elements.claimBonus.innerHTML = 'Claim Referral Bonus';
             }
         }
 
@@ -1650,6 +1673,7 @@
         // ==================== WALLET EVENTS ====================
         if (window.ethereum) {
             window.ethereum.on('chainChanged', async (chainId) => {
+                console.log("Chain changed to:", chainId);
                 isCorrectNetwork = (chainId === VANA_NETWORK.chainId);
                 elements.networkWarning.style.display = isCorrectNetwork ? 'none' : 'block';
                 
@@ -1666,6 +1690,7 @@
             });
 
             window.ethereum.on('accountsChanged', async (accounts) => {
+                console.log("Accounts changed:", accounts);
                 if (accounts.length === 0) {
                     account = null;
                     updateWalletUI();
@@ -1685,6 +1710,8 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM loaded, initializing...");
+            
             await checkAndSwitchNetwork();
             
             if (window.ethereum && window.ethereum.selectedAddress && isCorrectNetwork) {
@@ -1706,11 +1733,13 @@
                     
                 } catch (error) {
                     console.error('Initialization error:', error);
+                    showNotification('Failed to initialize airdrop', 'error');
                 } finally {
                     showLoading(false);
                 }
             }
             
+            // Update data setiap 60 detik
             setInterval(updateData, 60000);
             
             // Performance optimizations
@@ -1727,7 +1756,6 @@
             lastScrollY = window.scrollY;
             if (!ticking) {
                 requestAnimationFrame(() => {
-                    // Update any scroll-dependent effects here
                     ticking = false;
                 });
                 ticking = true;
