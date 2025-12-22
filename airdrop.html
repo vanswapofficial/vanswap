@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>VanSwap Airdrop | Claim VANS & EXO Tokens</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -20,16 +20,19 @@
             --success: #4caf50;
         }
         
+        /* PERFORMANCE OPTIMIZATION */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
-        html, body {
+        html {
             height: 100%;
-            overflow-x: hidden;
+            overflow: hidden; /* Prevent double scroll */
         }
         
         body {
@@ -37,18 +40,35 @@
             background: linear-gradient(135deg, #04140d 0%, #07261b 100%);
             color: var(--text);
             min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
             padding: 0;
-            overflow-y: auto !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto; /* Enable scrolling only on body */
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            will-change: transform;
+            /* Hardware acceleration */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
         
-        /* Enable Scrolling */
+        /* SMOOTH SCROLL CONTAINER */
         .scroll-container {
-            min-height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding-bottom: 20px;
+            scroll-behavior: smooth;
+            /* Optimize for scrolling */
+            contain: content;
+            backface-visibility: hidden;
+            perspective: 1000;
         }
         
         .container {
@@ -56,10 +76,10 @@
             max-width: 500px;
             margin: 0 auto;
             padding: 15px;
-            overflow: visible;
+            padding-bottom: 30px; /* Extra padding at bottom */
         }
         
-        /* Header */
+        /* OPTIMIZED HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -72,6 +92,10 @@
             background: rgba(4,20,13,0.95);
             backdrop-filter: blur(10px);
             z-index: 100;
+            /* Optimize for performance */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
         }
         
         .logo {
@@ -86,6 +110,7 @@
             width: 40px;
             height: 40px;
             border-radius: 10px;
+            object-fit: cover; /* Prevent layout shift */
         }
         
         .logo-text {
@@ -96,7 +121,7 @@
             -webkit-text-fill-color: transparent;
         }
         
-        /* Wallet Button */
+        /* OPTIMIZED BUTTONS */
         .connect-btn {
             background: var(--accent);
             color: #052017;
@@ -105,13 +130,14 @@
             border-radius: 10px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
             font-size: 14px;
             white-space: nowrap;
+            /* Remove heavy transitions */
+            transition: opacity 0.2s;
         }
         
-        .connect-btn:hover {
-            background: #3ad8b1;
+        .connect-btn:active {
+            opacity: 0.8;
         }
         
         .user-address {
@@ -126,7 +152,7 @@
             text-overflow: ellipsis;
         }
         
-        /* Network Warning */
+        /* NETWORK WARNING - OPTIMIZED */
         .network-warning {
             background: rgba(255,152,0,0.1);
             border: 1px solid rgba(255,152,0,0.3);
@@ -135,6 +161,7 @@
             margin: 15px 0;
             text-align: center;
             animation: pulse 2s infinite;
+            transform: translateZ(0);
         }
         
         @keyframes pulse {
@@ -143,94 +170,83 @@
             100% { opacity: 0.7; }
         }
         
-        .switch-network-btn {
-            background: var(--warning);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        /* OPTIMIZED CARDS - LESS BLUR FOR PERFORMANCE */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            /* Reduced blur for performance */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            /* Optimize */
+            transform: translateZ(0);
+            will-change: transform;
+            contain: layout style;
         }
         
-        /* Stats Grid */
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+        
+        /* SIMPLIFIED STATS GRID */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 15px;
         }
         
         .stat-card {
             background: var(--glass);
-            padding: 20px 15px;
-            border-radius: 15px;
+            padding: 15px 10px;
+            border-radius: 12px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.05);
         }
         
         .stat-value {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             color: var(--accent);
         }
         
         .stat-label {
             color: var(--muted);
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
-        /* Cards */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 25px 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        
-        .card-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        /* Reward Cards */
+        /* OPTIMIZED REWARD CARDS */
         .reward-card {
             background: linear-gradient(135deg, rgba(26,127,94,0.2), rgba(49,208,170,0.1));
             border: 1px solid rgba(49,208,170,0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
         }
         
         .reward-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         .reward-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
         }
         
         .reward-amount {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 800;
             color: var(--accent);
         }
@@ -239,34 +255,36 @@
             display: flex;
             justify-content: space-between;
             color: var(--muted);
-            font-size: 13px;
-            margin-bottom: 15px;
+            font-size: 12px;
+            margin-bottom: 10px;
         }
         
-        /* Buttons */
+        /* OPTIMIZED BUTTONS - REMOVE HEAVY EFFECTS */
         .action-btn {
             width: 100%;
-            padding: 18px;
-            border-radius: 15px;
+            padding: 14px;
+            border-radius: 12px;
             border: none;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
             margin-top: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            /* Simple transition */
+            transition: opacity 0.2s;
+            transform: translateZ(0);
+        }
+        
+        .action-btn:active:not(:disabled) {
+            opacity: 0.8;
         }
         
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
-        }
-        
-        .btn-primary:active:not(:disabled) {
-            transform: scale(0.98);
         }
         
         .btn-success {
@@ -284,101 +302,107 @@
             cursor: not-allowed;
         }
         
-        /* Timer */
+        /* SIMPLIFIED TIMER */
         .timer {
             text-align: center;
-            margin: 20px 0;
-            padding: 20px;
+            margin: 15px 0;
+            padding: 15px;
             background: rgba(255,152,0,0.1);
-            border-radius: 15px;
+            border-radius: 12px;
             border: 1px solid rgba(255,152,0,0.3);
         }
         
-        .timer-label {
-            color: var(--warning);
-            margin-bottom: 10px;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
         .timer-display {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 800;
             color: var(--warning);
-            font-family: 'Courier New', monospace;
+            font-family: monospace;
         }
         
-        /* Loading */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: var(--text);
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Progress Bar */
+        /* PROGRESS BAR - OPTIMIZED */
         .progress-container {
-            margin: 25px 0;
-        }
-        
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            color: var(--muted);
-            font-size: 13px;
-            margin-bottom: 8px;
+            margin: 15px 0;
         }
         
         .progress-bar {
-            height: 12px;
+            height: 8px;
             background: rgba(255,255,255,0.1);
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
         }
         
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 6px;
-            transition: width 0.5s;
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
         
-        /* Footer */
+        /* REFERRAL CODE DISPLAY */
+        .referral-code-box {
+            background: var(--glass);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 15px;
+            border: 2px dashed var(--primary);
+        }
+        
+        .code-display {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        
+        /* LOADING */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--text);
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* FOOTER */
         .footer-nav {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 30px 0;
+            gap: 8px;
+            margin: 20px 0;
             text-align: center;
         }
         
         .nav-link {
             color: var(--accent);
             text-decoration: none;
-            padding: 12px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 8px;
             background: var(--glass);
-            font-size: 13px;
-            transition: all 0.3s;
+            font-size: 12px;
         }
         
         .footer {
             text-align: center;
-            padding: 30px 0;
+            padding: 20px 0;
             color: var(--muted);
             border-top: 1px solid rgba(255,255,255,0.1);
-            font-size: 12px;
+            font-size: 11px;
         }
         
-        /* Loading Overlay */
+        /* LOADING OVERLAY */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -386,51 +410,127 @@
             right: 0;
             bottom: 0;
             background: rgba(4,20,13,0.95);
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 2000;
-            display: none;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
         
         .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255,255,255,0.1);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
             border-radius: 50%;
             border-top-color: var(--accent);
             animation: spin 1s linear infinite;
         }
         
-        /* Responsive */
+        /* NOTIFICATION - LIGHTWEIGHT */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 15px;
+            right: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            z-index: 1000;
+            transform: translateY(-100px);
+            transition: transform 0.3s;
+            text-align: center;
+            border-left: 4px solid var(--accent);
+            /* Optimize */
+            will-change: transform;
+            transform: translateZ(0);
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+        }
+        
+        /* NO GENERATED CODE WARNING */
+        .no-code-warning {
+            background: rgba(255,152,0,0.1);
+            border: 1px solid rgba(255,152,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .generate-code-btn {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* SCROLL PERFORMANCE OPTIMIZATIONS */
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
+            /* Reduce animations on mobile */
+            .card {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
+            
+            /* Simplify gradients for better performance */
+            .btn-primary, .btn-success, .btn-warning {
+                background: var(--primary);
+            }
+            
+            .btn-success {
+                background: #4caf50;
+            }
+            
+            .btn-warning {
+                background: #ff9800;
             }
         }
         
-        /* Enable Touch Scrolling */
-        .touch-scroll {
-            -webkit-overflow-scrolling: touch;
-            overflow-y: auto;
+        /* HIDE SCROLLBAR BUT KEEP FUNCTIONALITY */
+        .scroll-container::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+        
+        /* PREVENT TEXT SELECTION FOR BETTER PERFORMANCE */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* IMAGE OPTIMIZATION */
+        img {
+            content-visibility: auto;
         }
     </style>
 </head>
-<body>
+<body class="no-select">
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <div id="loadingText" style="color: var(--accent); font-weight: 600;"></div>
+        <div id="loadingText" style="color: var(--accent); font-weight: 600; font-size: 14px;"></div>
     </div>
 
-    <div class="scroll-container touch-scroll">
+    <!-- Smooth Scroll Container -->
+    <div class="scroll-container" id="scrollContainer">
         <div class="container">
             <!-- Header -->
             <header class="header">
                 <a href="swap.html" class="logo">
-                    <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                    <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap" loading="lazy">
                     <div class="logo-text">VanSwap Airdrop</div>
                 </a>
                 
@@ -440,22 +540,22 @@
                 </div>
             </header>
 
-            <!-- Network Warning (Will show if not on Vana Network) -->
+            <!-- Network Warning -->
             <div id="networkWarning" class="network-warning" style="display: none;">
-                <div style="color: var(--warning); font-weight: 600; margin-bottom: 10px;">
-                    ⚠️ Wrong Network Detected
+                <div style="color: var(--warning); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                    ⚠️ Wrong Network
                 </div>
-                <div style="color: var(--muted); font-size: 14px; margin-bottom: 10px;">
-                    Please switch to Vana Network to use Airdrop
+                <div style="color: var(--muted); font-size: 12px; margin-bottom: 10px;">
+                    Switch to Vana Network to use Airdrop
                 </div>
-                <button id="switchNetworkBtn" class="switch-network-btn">
-                    🔄 Switch to Vana Network
+                <button id="switchNetworkBtn" class="generate-code-btn">
+                    🔄 Switch Network
                 </button>
             </div>
 
             <!-- Global Stats -->
             <div class="card">
-                <h2 class="card-title">Global Statistics</h2>
+                <h2 class="card-title">📊 Global Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value" id="totalUsers">0</div>
@@ -476,7 +576,7 @@
                 </div>
                 
                 <div class="progress-container">
-                    <div class="progress-label">
+                    <div style="display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 5px;">
                         <span>Registration Progress</span>
                         <span id="progressText">0%</span>
                     </div>
@@ -488,47 +588,60 @@
 
             <!-- Registration -->
             <div id="registerSection" class="card">
-                <h2 class="card-title">Start Earning</h2>
-                <div id="notRegisteredMessage" class="status-message status-info" style="padding: 20px; border-radius: 15px; background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.3); color: #2196f3; text-align: center; margin: 20px 0;">
-                    <div style="font-size: 48px; margin-bottom: 15px;">🚀</div>
-                    <h3 style="margin-bottom: 10px;">Connect Wallet & Register</h3>
-                    <p style="color: var(--muted); font-size: 14px;">
-                        Get 100 VANS + 0.01 EXO instantly! Plus daily rewards.
+                <h2 class="card-title">🚀 Start Earning</h2>
+                <div id="notRegisteredMessage" style="padding: 20px; border-radius: 15px; background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.3); color: #2196f3; text-align: center; margin: 15px 0;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🎁</div>
+                    <h3 style="margin-bottom: 8px; font-size: 16px;">Connect Wallet & Register</h3>
+                    <p style="color: var(--muted); font-size: 12px;">
+                        Get 100 VANS + 0.01 EXO instantly!
                     </p>
                 </div>
                 
                 <div id="registerForm" style="display: none;">
-                    <div style="margin-bottom: 20px;">
-                        <input type="text" id="referralCodeInput" placeholder="Enter referral code (optional)" maxlength="10" style="width: 100%; padding: 16px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text); font-size: 16px; margin-bottom: 15px;">
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="referralCodeInput" placeholder="Referral code (optional)" maxlength="10" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text); font-size: 14px; margin-bottom: 12px;">
                         <button id="registerBtn" class="action-btn btn-primary" disabled>
                             Register Now
                         </button>
                     </div>
-                    <div style="text-align: center; color: var(--muted); margin-top: 15px; font-size: 13px;">
-                        No code? Leave empty to start without referral
+                    <div style="text-align: center; color: var(--muted); font-size: 12px;">
+                        No code? Leave empty
                     </div>
                 </div>
                 
-                <div id="alreadyRegistered" style="display: none; text-align: center; padding: 20px;">
-                    <div style="font-size: 48px; margin-bottom: 15px;">🎉</div>
-                    <h3 style="margin-bottom: 10px; color: var(--accent);">You're Registered!</h3>
-                    <p style="color: var(--muted); font-size: 14px;">Start claiming your rewards below</p>
+                <div id="alreadyRegistered" style="display: none; text-align: center; padding: 15px;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
+                    <h3 style="margin-bottom: 8px; color: var(--accent); font-size: 16px;">You're Registered!</h3>
+                    <p style="color: var(--muted); font-size: 12px;">Start claiming rewards</p>
                 </div>
+            </div>
+
+            <!-- No Referral Code Warning -->
+            <div id="noCodeWarning" class="no-code-warning" style="display: none;">
+                <div style="color: var(--warning); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                    📝 No Referral Code Yet
+                </div>
+                <div style="color: var(--muted); font-size: 12px; margin-bottom: 10px;">
+                    Generate a referral code to invite friends and earn extra rewards
+                </div>
+                <button id="generateCodeBtn" class="generate-code-btn">
+                    🎯 Generate My Code
+                </button>
             </div>
 
             <!-- Rewards -->
             <div id="rewardsSection" class="card" style="display: none;">
-                <h2 class="card-title">Your Rewards</h2>
+                <h2 class="card-title">💰 Your Rewards</h2>
                 
                 <!-- Initial Reward -->
                 <div class="reward-card">
                     <div class="reward-header">
                         <div class="reward-title">🎁 Initial Reward</div>
-                        <div class="reward-amount">100 VANS + 0.01 EXO</div>
+                        <div class="reward-amount">100 VANS</div>
                     </div>
                     <div class="reward-details">
                         <span>One-time welcome gift</span>
-                        <span id="initialClaimed" style="color: var(--success); display: none;">✓ Claimed</span>
+                        <span id="initialClaimed" style="color: var(--success); display: none; font-size: 11px;">✓ Claimed</span>
                     </div>
                     <button id="claimInitial" class="action-btn btn-primary" disabled>
                         Claim Initial Reward
@@ -546,8 +659,8 @@
                         <span>+ <span id="dailyExoAmount">0.001</span> EXO</span>
                     </div>
                     <div class="timer">
-                        <div class="timer-label">Next Claim Available In</div>
-                        <div class="timer-display" id="claimTimer">00:00:00</div>
+                        <div style="color: var(--warning); font-size: 11px; margin-bottom: 5px;">Next Claim In</div>
+                        <div class="timer-display" id="claimTimer">READY</div>
                     </div>
                     <button id="claimDaily" class="action-btn btn-success" disabled>
                         Claim Daily Reward
@@ -570,63 +683,26 @@
                 </div>
             </div>
 
-            <!-- User Stats -->
-            <div id="userStatsCard" class="card" style="display: none;">
-                <h2 class="card-title">Your Statistics</h2>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
-                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myVansClaimed">0</div>
-                        <div style="color: var(--muted); font-size: 12px;">VANS Claimed</div>
-                    </div>
-                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myExoClaimed">0</div>
-                        <div style="color: var(--muted); font-size: 12px;">EXO Claimed</div>
-                    </div>
-                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myTotalClaims">0</div>
-                        <div style="color: var(--muted); font-size: 12px;">Total Claims</div>
-                    </div>
-                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myReferrals">0</div>
-                        <div style="color: var(--muted); font-size: 12px;">My Referrals</div>
+            <!-- Referral Code Display -->
+            <div id="referralCodeSection" class="card" style="display: none;">
+                <h2 class="card-title">🎯 Your Referral Code</h2>
+                <div class="referral-code-box">
+                    <div id="referralCodeDisplay" class="code-display">GENERATING...</div>
+                    <button id="copyReferralCode" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto; font-size: 13px;">
+                        📋 Copy Code
+                    </button>
+                    <div style="margin-top: 12px; color: var(--muted); font-size: 11px;">
+                        Share this code to earn referral rewards
                     </div>
                 </div>
-            </div>
-
-            <!-- Referral Program -->
-            <div id="referralCard" class="card" style="display: none;">
-                <h2 class="card-title">Referral Program</h2>
                 
-                <div style="margin-bottom: 25px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <div style="font-size: 24px;">💰</div>
-                        <div>
-                            <div style="font-weight: 700; color: var(--accent);">Earn More Tokens</div>
-                            <div style="color: var(--muted); font-size: 13px;">Invite friends and earn extra rewards</div>
-                        </div>
-                    </div>
-                    
-                    <div style="background: rgba(49,208,170,0.1); padding: 15px; border-radius: 12px; margin-top: 15px;">
-                        <div style="color: var(--accent); font-weight: 600; margin-bottom: 10px;">🎯 Benefits:</div>
-                        <div style="color: var(--muted); font-size: 13px; line-height: 1.6;">
-                            • +10 VANS per referral<br>
-                            • +0.1 EXO when friend claims<br>
-                            • Max 20 referrals per wallet<br>
-                            • Max 10 referrals per day
-                        </div>
-                    </div>
-                </div>
-
-                <div id="userReferralCode">
-                    <div style="background: var(--glass); padding: 20px; border-radius: 15px; text-align: center; margin-top: 20px;">
-                        <div style="color: var(--muted); margin-bottom: 10px; font-size: 13px;">Your Referral Code</div>
-                        <div style="font-size: 28px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 2px dashed var(--primary); word-break: break-all; font-family: monospace;" id="referralCodeDisplay">-</div>
-                        <button id="copyReferralCode" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 12px 25px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto; transition: all 0.3s; font-size: 14px;">
-                            📋 Copy Code
-                        </button>
-                        <div style="margin-top: 20px; color: var(--muted); font-size: 12px;">
-                            Share this code with friends to earn referral rewards
-                        </div>
+                <div style="margin-top: 20px; padding: 12px; background: rgba(49,208,170,0.1); border-radius: 10px;">
+                    <div style="color: var(--accent); font-weight: 600; margin-bottom: 8px; font-size: 13px;">🎁 Referral Benefits</div>
+                    <div style="color: var(--muted); font-size: 11px; line-height: 1.5;">
+                        • +10 VANS per friend who registers<br>
+                        • +0.1 EXO when friend claims rewards<br>
+                        • Max 20 referrals per wallet<br>
+                        • Max 10 referrals per day
                     </div>
                 </div>
             </div>
@@ -641,7 +717,7 @@
             <!-- Footer -->
             <footer class="footer">
                 <div>© 2024 VanSwap DEX</div>
-                <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">Built on Vana Network</div>
+                <div style="font-size: 10px; margin-top: 3px; opacity: 0.7;">Built on Vana Network</div>
             </footer>
         </div>
     </div>
@@ -654,7 +730,7 @@
         
         // Vana Network Configuration
         const VANA_NETWORK = {
-            chainId: '0x5c8', // 1480 in hex
+            chainId: '0x5c8',
             chainName: 'Vana Network',
             nativeCurrency: {
                 name: 'VANA',
@@ -665,7 +741,7 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI for the airdrop contract
+        // ABI for the airdrop contract - ADDED generateCustomReferralCode
         const AIRDROP_ABI = [
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
@@ -686,21 +762,26 @@
         let signer = null;
         let account = null;
         let airdropContract = null;
-        let updateInterval = null;
-        let claimTimerInterval = null;
         let isCorrectNetwork = false;
+        let userHasReferralCode = false;
+        
+        // Debounce variables for performance
+        let updateTimeout = null;
+        let lastUpdateTime = 0;
+        const UPDATE_COOLDOWN = 2000; // 2 seconds between updates
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
+            scrollContainer: document.getElementById('scrollContainer'),
+            
             connectWallet: document.getElementById('connectWallet'),
             userAddress: document.getElementById('userAddress'),
-            walletSection: document.getElementById('walletSection'),
             networkWarning: document.getElementById('networkWarning'),
             switchNetworkBtn: document.getElementById('switchNetworkBtn'),
             
-            // Global Stats
+            // Stats
             totalUsers: document.getElementById('totalUsers'),
             totalVansClaimed: document.getElementById('totalVansClaimed'),
             totalExoClaimed: document.getElementById('totalExoClaimed'),
@@ -716,6 +797,10 @@
             referralCodeInput: document.getElementById('referralCodeInput'),
             registerBtn: document.getElementById('registerBtn'),
             
+            // No code warning
+            noCodeWarning: document.getElementById('noCodeWarning'),
+            generateCodeBtn: document.getElementById('generateCodeBtn'),
+            
             // Rewards
             rewardsSection: document.getElementById('rewardsSection'),
             claimInitial: document.getElementById('claimInitial'),
@@ -728,37 +813,72 @@
             referralCount: document.getElementById('referralCount'),
             claimTimer: document.getElementById('claimTimer'),
             
-            // User Stats
-            userStatsCard: document.getElementById('userStatsCard'),
-            myVansClaimed: document.getElementById('myVansClaimed'),
-            myExoClaimed: document.getElementById('myExoClaimed'),
-            myTotalClaims: document.getElementById('myTotalClaims'),
-            myReferrals: document.getElementById('myReferrals'),
-            
-            // Referral
-            referralCard: document.getElementById('referralCard'),
-            userReferralCode: document.getElementById('userReferralCode'),
+            // Referral Code
+            referralCodeSection: document.getElementById('referralCodeSection'),
             referralCodeDisplay: document.getElementById('referralCodeDisplay'),
             copyReferralCode: document.getElementById('copyReferralCode')
         };
 
+        // ==================== PERFORMANCE OPTIMIZATIONS ====================
+        
+        // Debounce function for better performance
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Throttle function for scroll events
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
+
+        // Optimize scroll performance
+        function optimizeScroll() {
+            // Use passive listeners for better scroll performance
+            const options = { passive: true };
+            
+            // Prevent multiple scroll listeners
+            elements.scrollContainer.addEventListener('scroll', throttle(handleScroll, 100), options);
+            
+            // Use requestAnimationFrame for smooth updates
+            let lastScrollTime = 0;
+            function handleScroll() {
+                const now = Date.now();
+                if (now - lastScrollTime > 16) { // ~60fps
+                    lastScrollTime = now;
+                    // Minimal scroll handling
+                }
+            }
+        }
+
         // ==================== NETWORK FUNCTIONS ====================
         async function checkAndSwitchNetwork() {
             try {
-                if (!window.ethereum) {
-                    showNotification('Please install MetaMask or wallet app', 'error');
-                    return false;
-                }
+                if (!window.ethereum) return false;
 
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
                 
                 if (chainId === VANA_NETWORK.chainId) {
-                    // Already on Vana Network
                     isCorrectNetwork = true;
                     elements.networkWarning.style.display = 'none';
                     return true;
                 } else {
-                    // Wrong network, show warning
                     isCorrectNetwork = false;
                     elements.networkWarning.style.display = 'block';
                     return false;
@@ -772,7 +892,7 @@
 
         async function switchToVanaNetwork() {
             try {
-                showLoading(true, 'Switching to Vana Network...');
+                showLoading(true, 'Switching network...');
                 
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
@@ -781,14 +901,10 @@
                 
                 isCorrectNetwork = true;
                 elements.networkWarning.style.display = 'none';
-                showNotification('Switched to Vana Network successfully!', 'success');
-                
-                // Reconnect wallet after network switch
-                await connectWallet();
+                showNotification('Switched to Vana Network!');
                 
             } catch (switchError) {
                 if (switchError.code === 4902) {
-                    // Chain not added, add it
                     try {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
@@ -797,14 +913,11 @@
                         
                         isCorrectNetwork = true;
                         elements.networkWarning.style.display = 'none';
-                        showNotification('Vana Network added successfully!', 'success');
-                        
-                        // Reconnect wallet
-                        await connectWallet();
+                        showNotification('Vana Network added!');
                         
                     } catch (addError) {
                         console.error('Error adding network:', addError);
-                        showNotification('Failed to add Vana Network', 'error');
+                        showNotification('Failed to add network', 'error');
                     }
                 } else {
                     console.error('Error switching network:', switchError);
@@ -821,43 +934,41 @@
             elements.loadingText.textContent = text;
         }
 
-        function showNotification(message, type = 'info', duration = 4000) {
-            // Create notification element
+        function showNotification(message, type = 'info') {
+            // Simple notification without heavy DOM manipulation
             const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 left: 15px;
                 right: 15px;
-                padding: 20px;
-                border-radius: 15px;
+                padding: 15px;
+                border-radius: 12px;
                 background: var(--card-bg);
                 border: 1px solid var(--card-border);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
                 z-index: 1000;
+                text-align: center;
+                font-size: 14px;
+                border-left: 4px solid ${type === 'error' ? '#f44336' : type === 'success' ? '#4caf50' : '#31d0aa'};
                 transform: translateY(-100px);
                 transition: transform 0.3s;
-                max-width: 100%;
-                text-align: center;
-                border-left: 5px solid ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#31d0aa'};
             `;
             
-            notification.textContent = message;
             document.body.appendChild(notification);
             
-            // Show notification
             setTimeout(() => {
                 notification.style.transform = 'translateY(0)';
             }, 10);
             
-            // Remove notification after duration
             setTimeout(() => {
                 notification.style.transform = 'translateY(-100px)';
                 setTimeout(() => {
-                    document.body.removeChild(notification);
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
                 }, 300);
-            }, duration);
+            }, 3000);
         }
 
         function formatAddress(address) {
@@ -865,106 +976,155 @@
             return `${address.substring(0, 6)}...${address.substring(38)}`;
         }
 
-        function formatNumber(number, decimals = 2) {
-            const num = parseFloat(number);
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
-            }
-            return num.toLocaleString('en-US', {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals
-            });
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return Math.round(num).toString();
         }
 
-        function formatTime(seconds) {
-            if (seconds <= 0) return 'READY';
-            
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            
-            if (hours > 0) {
-                return `${hours}h ${minutes}m`;
-            }
-            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // ==================== WALLET FUNCTIONS ====================
-        async function connectWallet() {
+        // ==================== REFERRAL CODE FUNCTIONS ====================
+        async function checkReferralCode() {
             try {
-                showLoading(true, 'Connecting wallet...');
+                if (!account || !isCorrectNetwork) return;
                 
-                if (!window.ethereum) {
-                    showNotification('Please install MetaMask or wallet app', 'error');
-                    return;
+                const userStats = await airdropContract.getUserStats(account);
+                const referralCode = userStats[7]; // 8th element is referralCode
+                
+                userHasReferralCode = referralCode && referralCode.length > 0;
+                
+                if (userHasReferralCode) {
+                    // Show referral code section
+                    elements.noCodeWarning.style.display = 'none';
+                    elements.referralCodeSection.style.display = 'block';
+                    elements.referralCodeDisplay.textContent = referralCode.toUpperCase();
+                } else {
+                    // Show warning to generate code
+                    elements.noCodeWarning.style.display = 'block';
+                    elements.referralCodeSection.style.display = 'none';
                 }
-
-                // First check network
-                const isCorrectNetwork = await checkAndSwitchNetwork();
-                if (!isCorrectNetwork) {
-                    showLoading(false);
-                    return;
-                }
-
-                // Request accounts
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
-                
-                if (accounts.length === 0) {
-                    showNotification('Please connect your wallet', 'error');
-                    return;
-                }
-                
-                account = accounts[0];
-                
-                // Initialize provider and contract
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
-                
-                // Update UI
-                updateWalletUI();
-                showNotification('Wallet connected successfully!', 'success');
-                
-                // Load data
-                await Promise.all([
-                    loadGlobalStats(),
-                    checkUserRegistration()
-                ]);
-                
-                // Start auto-update
-                if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(updateData, 15000);
                 
             } catch (error) {
-                console.error('Wallet connection error:', error);
-                showNotification(error.message || 'Failed to connect wallet', 'error');
+                console.error('Error checking referral code:', error);
+            }
+        }
+
+        async function generateReferralCode() {
+            try {
+                if (!account || !isCorrectNetwork) {
+                    await switchToVanaNetwork();
+                    return;
+                }
+                
+                showLoading(true, 'Generating code...');
+                
+                // Generate a code based on wallet address (first 6 chars)
+                const addressPart = account.substring(2, 8).toLowerCase();
+                const customCode = 'van' + addressPart;
+                
+                const tx = await airdropContract.generateCustomReferralCode(customCode);
+                await tx.wait();
+                
+                showNotification('Referral code generated! 🎯', 'success');
+                
+                // Update UI
+                await checkReferralCode();
+                
+            } catch (error) {
+                console.error('Error generating code:', error);
+                showNotification(error.message || 'Failed to generate code', 'error');
             } finally {
                 showLoading(false);
             }
         }
 
-        function updateWalletUI() {
-            if (account) {
+        function copyReferralCodeToClipboard() {
+            const code = elements.referralCodeDisplay.textContent;
+            if (!code || code === 'GENERATING...') return;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = elements.copyReferralCode;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓ Copied!';
+                btn.style.background = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'white';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'transparent';
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.color = 'var(--accent)';
+                }, 2000);
+                
+                showNotification('Code copied to clipboard!', 'success');
+            });
+        }
+
+        // ==================== WALLET FUNCTIONS ====================
+        async function connectWallet() {
+            try {
+                showLoading(true, 'Connecting...');
+                
+                if (!window.ethereum) {
+                    showNotification('Please install a wallet app', 'error');
+                    return;
+                }
+
+                // Check network first
+                const networkOk = await checkAndSwitchNetwork();
+                if (!networkOk) {
+                    showLoading(false);
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                if (accounts.length === 0) return;
+                
+                account = accounts[0];
+                
+                // Initialize with minimal delay
+                setTimeout(() => {
+                    initWallet();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                showNotification('Connection failed', 'error');
+                showLoading(false);
+            }
+        }
+
+        async function initWallet() {
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
+                
+                // Update UI
                 elements.userAddress.textContent = formatAddress(account);
                 elements.userAddress.style.display = 'block';
                 elements.connectWallet.textContent = 'Connected';
                 elements.connectWallet.disabled = true;
-                elements.walletSection.style.display = 'flex';
-                elements.walletSection.style.alignItems = 'center';
-                elements.walletSection.style.gap = '10px';
-            } else {
-                elements.userAddress.style.display = 'none';
-                elements.connectWallet.textContent = 'Connect Wallet';
-                elements.connectWallet.disabled = false;
+                
+                showNotification('Wallet connected!', 'success');
+                
+                // Load data with cooldown
+                await Promise.all([
+                    loadGlobalStats(),
+                    checkUserRegistration()
+                ]);
+                
+            } catch (error) {
+                console.error('Init error:', error);
+            } finally {
+                showLoading(false);
             }
         }
 
-        // ==================== CONTRACT FUNCTIONS ====================
+        // ==================== DATA LOADING FUNCTIONS ====================
         async function loadGlobalStats() {
             try {
                 const [totalUsers, maxUsers] = await Promise.all([
@@ -979,7 +1139,7 @@
                 elements.progressText.textContent = `${Math.round(progress)}%`;
                 
             } catch (error) {
-                console.error('Error loading global stats:', error);
+                console.error('Stats error:', error);
             }
         }
 
@@ -992,98 +1152,74 @@
                 const claimedInitial = await airdropContract.claimedInitial(account);
                 
                 if (isRegistered) {
-                    showRegistrationUI(true);
-                    await loadUserData();
+                    // User is registered
+                    elements.notRegisteredMessage.style.display = 'none';
+                    elements.registerForm.style.display = 'none';
+                    elements.alreadyRegistered.style.display = 'block';
+                    elements.rewardsSection.style.display = 'block';
                     
+                    // Check initial claim
                     if (claimedInitial) {
                         elements.initialClaimed.style.display = 'inline';
                         elements.claimInitial.disabled = true;
-                        elements.claimInitial.textContent = 'Already Claimed';
+                        elements.claimInitial.textContent = 'Claimed';
                     } else {
                         elements.claimInitial.disabled = false;
                     }
                     
+                    // Load user data
+                    await loadUserData();
+                    // Check referral code
+                    await checkReferralCode();
+                    
                 } else {
-                    showRegistrationUI(false);
+                    // User not registered
+                    elements.notRegisteredMessage.style.display = 'block';
+                    elements.registerForm.style.display = 'block';
+                    elements.alreadyRegistered.style.display = 'none';
+                    elements.rewardsSection.style.display = 'none';
+                    elements.noCodeWarning.style.display = 'none';
+                    elements.referralCodeSection.style.display = 'none';
                     elements.registerBtn.disabled = false;
                 }
                 
             } catch (error) {
-                console.error('Error checking registration:', error);
+                console.error('Registration check error:', error);
             }
-        }
-
-        function showRegistrationUI(isRegistered) {
-            elements.notRegisteredMessage.style.display = isRegistered ? 'none' : 'block';
-            elements.registerForm.style.display = isRegistered ? 'none' : 'block';
-            elements.alreadyRegistered.style.display = isRegistered ? 'block' : 'none';
-            elements.rewardsSection.style.display = isRegistered ? 'block' : 'none';
-            elements.userStatsCard.style.display = isRegistered ? 'block' : 'none';
-            elements.referralCard.style.display = isRegistered ? 'block' : 'none';
         }
 
         async function loadUserData() {
             try {
                 if (!account || !isCorrectNetwork) return;
                 
-                const [rewards, userStats] = await Promise.all([
-                    airdropContract.getAvailableRewards(account),
-                    airdropContract.getUserStats(account)
-                ]);
+                const rewards = await airdropContract.getAvailableRewards(account);
+                const userStats = await airdropContract.getUserStats(account);
                 
-                const [
-                    vansDaily, exoDaily, timeUntilNextClaim, canClaimInitial, 
-                    pendingBonus, referralsLeft, contractVansBalance, contractExoBalance
-                ] = rewards;
-                
-                const [
-                    totalVansClaimed, totalExoClaimed, referralCount, totalClaims,
-                    lastClaimTime, referrer, referralRewardsEarned, referralCode, referralsToday
-                ] = userStats;
+                const [, , timeUntilNextClaim, canClaimInitial, pendingBonus] = rewards;
+                const [totalVansClaimed, totalExoClaimed, referralCount] = userStats;
                 
                 // Update global stats
                 elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
-                elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 1);
+                elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8));
                 elements.activeReferrals.textContent = formatNumber(referralCount);
                 
-                // Update user rewards
-                const dailyVans = ethers.utils.formatUnits(vansDaily, 18);
-                const dailyExo = ethers.utils.formatUnits(exoDaily, 8);
+                // Update referral count
+                elements.referralCount.textContent = referralCount.toString();
                 
-                elements.dailyVansAmount.textContent = `${formatNumber(dailyVans)} VANS`;
-                elements.dailyExoAmount.textContent = formatNumber(dailyExo, 3);
-                
+                // Update bonus
                 const bonusExo = ethers.utils.formatUnits(pendingBonus, 8);
-                elements.referralBonus.textContent = `${formatNumber(bonusExo, 2)} EXO`;
-                elements.referralCount.textContent = (20 - referralsLeft).toString();
-                
-                // Update user stats
-                elements.myVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
-                elements.myExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 2);
-                elements.myTotalClaims.textContent = totalClaims.toString();
-                elements.myReferrals.textContent = referralCount.toString();
-                
-                // Update referral code
-                if (referralCode && referralCode.length > 0) {
-                    elements.referralCodeDisplay.textContent = referralCode.toUpperCase();
-                }
-                
-                // Update buttons
-                elements.claimInitial.disabled = !canClaimInitial;
+                elements.referralBonus.textContent = `${parseFloat(bonusExo).toFixed(2)} EXO`;
                 elements.claimBonus.disabled = pendingBonus <= 0;
-                elements.claimDaily.disabled = timeUntilNextClaim > 0;
                 
                 // Update timer
                 updateClaimTimer(timeUntilNextClaim);
                 
             } catch (error) {
-                console.error('Error loading user data:', error);
+                console.error('User data error:', error);
             }
         }
 
         function updateClaimTimer(seconds) {
-            if (claimTimerInterval) clearInterval(claimTimerInterval);
-            
             if (seconds <= 0) {
                 elements.claimTimer.textContent = 'READY';
                 elements.claimDaily.disabled = false;
@@ -1093,16 +1229,28 @@
             elements.claimTimer.textContent = formatTime(seconds);
             elements.claimDaily.disabled = true;
             
-            claimTimerInterval = setInterval(() => {
+            // Update timer every second
+            const timer = setInterval(() => {
                 seconds--;
                 if (seconds <= 0) {
-                    clearInterval(claimTimerInterval);
+                    clearInterval(timer);
                     elements.claimTimer.textContent = 'READY';
                     elements.claimDaily.disabled = false;
                 } else {
                     elements.claimTimer.textContent = formatTime(seconds);
                 }
             }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            }
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         // ==================== USER ACTIONS ====================
@@ -1121,12 +1269,12 @@
                 const tx = await airdropContract.registerWithCode(referralCode);
                 await tx.wait();
                 
-                showNotification('Successfully registered! 🎉', 'success');
+                showNotification('Registered successfully! 🎉', 'success');
                 await checkUserRegistration();
                 
             } catch (error) {
                 console.error('Registration error:', error);
-                showNotification(error.message || 'Registration failed', 'error');
+                showNotification('Registration failed', 'error');
                 elements.registerBtn.disabled = false;
                 elements.registerBtn.textContent = 'Register Now';
             }
@@ -1145,14 +1293,14 @@
                 const tx = await airdropContract.claimInitial();
                 await tx.wait();
                 
-                showNotification('🎁 100 VANS + 0.01 EXO claimed!', 'success');
+                showNotification('100 VANS + 0.01 EXO claimed! 🎁', 'success');
                 await loadUserData();
                 
             } catch (error) {
-                console.error('Claim initial error:', error);
-                showNotification(error.message || 'Claim failed', 'error');
+                console.error('Claim error:', error);
+                showNotification('Claim failed', 'error');
                 elements.claimInitial.disabled = false;
-                elements.claimInitial.textContent = 'Claim Initial Reward';
+                elements.claimInitial.textContent = 'Claim Initial';
             }
         }
 
@@ -1169,14 +1317,14 @@
                 const tx = await airdropContract.claimDaily();
                 await tx.wait();
                 
-                showNotification('📅 Daily reward claimed!', 'success');
+                showNotification('Daily reward claimed! 📅', 'success');
                 await loadUserData();
                 
             } catch (error) {
-                console.error('Claim daily error:', error);
-                showNotification(error.message || 'Claim failed', 'error');
+                console.error('Daily claim error:', error);
+                showNotification('Claim failed', 'error');
                 elements.claimDaily.disabled = false;
-                elements.claimDaily.textContent = 'Claim Daily Reward';
+                elements.claimDaily.textContent = 'Claim Daily';
             }
         }
 
@@ -1193,78 +1341,53 @@
                 const tx = await airdropContract.claimReferralBonus();
                 await tx.wait();
                 
-                showNotification('👥 Referral bonus claimed!', 'success');
+                showNotification('Referral bonus claimed! 👥', 'success');
                 await loadUserData();
                 
             } catch (error) {
-                console.error('Claim bonus error:', error);
-                showNotification(error.message || 'Claim failed', 'error');
+                console.error('Bonus claim error:', error);
+                showNotification('Claim failed', 'error');
                 elements.claimBonus.disabled = false;
-                elements.claimBonus.textContent = 'Claim Referral Bonus';
-            }
-        }
-
-        function copyReferralCode() {
-            const code = elements.referralCodeDisplay.textContent;
-            if (!code || code === '-') return;
-            
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = elements.copyReferralCode;
-                btn.innerHTML = '✓ Copied!';
-                btn.style.background = 'var(--success)';
-                btn.style.borderColor = 'var(--success)';
-                btn.style.color = 'white';
-                
-                showNotification('Referral code copied 📋', 'success');
-                
-                setTimeout(() => {
-                    btn.innerHTML = '📋 Copy Code';
-                    btn.style.background = 'transparent';
-                    btn.style.borderColor = 'var(--accent)';
-                    btn.style.color = 'var(--accent)';
-                }, 2000);
-            });
-        }
-
-        // ==================== AUTO UPDATE ====================
-        async function updateData() {
-            try {
-                if (isCorrectNetwork) {
-                    await loadGlobalStats();
-                    if (account) {
-                        await loadUserData();
-                    }
-                }
-            } catch (error) {
-                console.error('Update error:', error);
+                elements.claimBonus.textContent = 'Claim Bonus';
             }
         }
 
         // ==================== EVENT LISTENERS ====================
-        elements.connectWallet.addEventListener('click', connectWallet);
-        elements.switchNetworkBtn.addEventListener('click', switchToVanaNetwork);
-        elements.registerBtn.addEventListener('click', registerUser);
-        elements.claimInitial.addEventListener('click', claimInitialReward);
-        elements.claimDaily.addEventListener('click', claimDailyReward);
-        elements.claimBonus.addEventListener('click', claimReferralBonus);
-        elements.copyReferralCode.addEventListener('click', copyReferralCode);
+        function setupEventListeners() {
+            // Wallet events
+            elements.connectWallet.addEventListener('click', connectWallet);
+            elements.switchNetworkBtn.addEventListener('click', switchToVanaNetwork);
+            
+            // Registration
+            elements.registerBtn.addEventListener('click', registerUser);
+            elements.referralCodeInput.addEventListener('input', function() {
+                this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+            });
+            
+            // Claims
+            elements.claimInitial.addEventListener('click', claimInitialReward);
+            elements.claimDaily.addEventListener('click', claimDailyReward);
+            elements.claimBonus.addEventListener('click', claimReferralBonus);
+            
+            // Referral code
+            elements.generateCodeBtn.addEventListener('click', generateReferralCode);
+            elements.copyReferralCode.addEventListener('click', copyReferralCodeToClipboard);
+            
+            // Double click to copy
+            elements.referralCodeDisplay.addEventListener('dblclick', copyReferralCodeToClipboard);
+        }
 
-        elements.referralCodeInput.addEventListener('input', function() {
-            this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
-        });
-
-        // Double click to copy referral code
-        elements.referralCodeDisplay.addEventListener('dblclick', copyReferralCode);
-
-        // ==================== WALLET EVENTS ====================
-        if (window.ethereum) {
-            // Listen for network changes
+        // ==================== WALLET EVENT HANDLERS ====================
+        function setupWalletEvents() {
+            if (!window.ethereum) return;
+            
+            // Network changed
             window.ethereum.on('chainChanged', async (chainId) => {
                 isCorrectNetwork = (chainId === VANA_NETWORK.chainId);
                 elements.networkWarning.style.display = isCorrectNetwork ? 'none' : 'block';
                 
                 if (isCorrectNetwork && account) {
-                    // Re-initialize contract with new network
+                    // Reinitialize
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     signer = provider.getSigner();
                     airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
@@ -1275,69 +1398,93 @@
                     ]);
                 }
             });
-
-            // Listen for account changes
+            
+            // Account changed
             window.ethereum.on('accountsChanged', async (accounts) => {
                 if (accounts.length === 0) {
                     account = null;
-                    updateWalletUI();
-                    showRegistrationUI(false);
-                    showNotification('Wallet disconnected', 'info');
+                    elements.userAddress.style.display = 'none';
+                    elements.connectWallet.textContent = 'Connect Wallet';
+                    elements.connectWallet.disabled = false;
+                    showNotification('Wallet disconnected');
+                    
+                    // Reset UI
+                    elements.notRegisteredMessage.style.display = 'block';
+                    elements.registerForm.style.display = 'none';
+                    elements.alreadyRegistered.style.display = 'none';
+                    elements.rewardsSection.style.display = 'none';
+                    elements.noCodeWarning.style.display = 'none';
+                    elements.referralCodeSection.style.display = 'none';
+                    
                 } else {
                     account = accounts[0];
-                    updateWalletUI();
+                    elements.userAddress.textContent = formatAddress(account);
+                    elements.userAddress.style.display = 'block';
+                    elements.connectWallet.textContent = 'Connected';
+                    elements.connectWallet.disabled = true;
                     
                     if (isCorrectNetwork) {
                         await checkUserRegistration();
                     }
-                    showNotification('Account switched', 'info');
+                    showNotification('Account switched');
                 }
             });
         }
 
         // ==================== INITIALIZATION ====================
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function initialize() {
+            // Optimize scroll performance
+            optimizeScroll();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
             // Check network first
             await checkAndSwitchNetwork();
             
             // Check if wallet is already connected
             if (window.ethereum && window.ethereum.selectedAddress && isCorrectNetwork) {
                 try {
-                    showLoading(true, 'Loading airdrop...');
                     account = window.ethereum.selectedAddress;
+                    
+                    // Quick initialization without loading overlay
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     signer = provider.getSigner();
                     airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
                     
-                    updateWalletUI();
+                    // Update UI
+                    elements.userAddress.textContent = formatAddress(account);
+                    elements.userAddress.style.display = 'block';
+                    elements.connectWallet.textContent = 'Connected';
+                    elements.connectWallet.disabled = true;
                     
-                    await Promise.all([
-                        loadGlobalStats(),
-                        checkUserRegistration()
-                    ]);
-                    
-                    updateInterval = setInterval(updateData, 15000);
+                    // Load data with slight delay for better UX
+                    setTimeout(async () => {
+                        await Promise.all([
+                            loadGlobalStats(),
+                            checkUserRegistration()
+                        ]);
+                    }, 500);
                     
                 } catch (error) {
                     console.error('Initialization error:', error);
-                } finally {
-                    showLoading(false);
                 }
             }
             
-            // Update data every minute
-            setInterval(updateData, 60000);
-        });
+            // Setup wallet events
+            setupWalletEvents();
+        }
 
-        // Enable touch scrolling
-        document.addEventListener('touchmove', function(e) {
-            // Allow default touch scrolling
-        }, { passive: true });
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
 
-        // Prevent pull-to-refresh on mobile
+        // Prevent pull-to-refresh
         document.addEventListener('touchstart', function(e) {
             if (e.touches.length !== 1) return;
-            
             const touch = e.touches[0];
             if (touch.clientY > window.innerHeight - 100) {
                 e.preventDefault();
