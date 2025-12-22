@@ -471,6 +471,26 @@
             background: #3ad8b1;
         }
         
+        /* Status Messages */
+        .status-message {
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .status-info {
+            background: rgba(33,150,243,0.1);
+            border: 1px solid rgba(33,150,243,0.3);
+            color: #2196f3;
+        }
+        
+        .status-success {
+            background: rgba(76,175,80,0.1);
+            border: 1px solid rgba(76,175,80,0.3);
+            color: #4caf50;
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -638,6 +658,7 @@
                     <button id="claimDaily" class="action-btn btn-success" disabled>
                         Claim Daily Reward
                     </button>
+                    <div id="lastClaimInfo" style="text-align: center; margin-top: 10px; color: var(--muted); font-size: 12px;"></div>
                 </div>
 
                 <!-- Referral Bonus -->
@@ -747,6 +768,7 @@
         // ==================== CONFIGURATION ====================
         const AIRDROP_CONTRACT_ADDRESS = "0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6";
         const REFERRAL_BASE_URL = "https://vanswap.xyz/airdrop/";
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60; // 24 jam dalam detik
         
         // Vana Network Configuration
         const VANA_NETWORK = {
@@ -761,14 +783,13 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI for the airdrop contract (ditambahkan fungsi generateReferralCode)
+        // ABI untuk kontrak airdrop
         const AIRDROP_ABI = [
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
             "function claimDaily() external",
             "function claimReferralBonus() external",
             "function generateCustomReferralCode(string code) external",
-            "function generateReferralCode() external returns (string)",
             "function getAvailableRewards(address userAddress) view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256)",
             "function getUserStats(address userAddress) view returns (uint256, uint256, uint256, uint256, uint256, address, uint256, string, uint256)",
             "function getContractInfo() view returns (uint256, uint256, uint256, uint256, uint256, bool)",
@@ -788,6 +809,8 @@
         let isCorrectNetwork = false;
         let userReferralCode = '';
         let userReferralLink = '';
+        let lastClaimTime = 0;
+        let nextClaimTime = 0;
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
@@ -826,6 +849,7 @@
             referralBonus: document.getElementById('referralBonus'),
             referralCount: document.getElementById('referralCount'),
             claimTimer: document.getElementById('claimTimer'),
+            lastClaimInfo: document.getElementById('lastClaimInfo'),
             
             // User Stats
             userStatsCard: document.getElementById('userStatsCard'),
@@ -973,16 +997,73 @@
         }
 
         function formatTime(seconds) {
-            if (seconds <= 0) return 'READY';
+            if (seconds <= 0) return '00:00:00';
             
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = seconds % 60;
             
-            if (hours > 0) {
-                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // ==================== TIMER FUNCTIONS (24 JAM) ====================
+        function updateClaimTimer(secondsUntilNextClaim) {
+            if (claimTimerInterval) {
+                clearInterval(claimTimerInterval);
             }
-            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            // Jika waktu sudah habis
+            if (secondsUntilNextClaim <= 0) {
+                elements.claimTimer.textContent = '00:00:00';
+                elements.claimDaily.disabled = false;
+                elements.claimDaily.textContent = 'Claim Daily Reward';
+                elements.lastClaimInfo.textContent = 'Ready to claim!';
+                return;
+            }
+
+            // Tampilkan waktu tersisa
+            elements.claimTimer.textContent = formatTime(secondsUntilNextClaim);
+            elements.claimDaily.disabled = true;
+            elements.claimDaily.textContent = 'Wait for Timer';
+            
+            // Update info klaim terakhir
+            const now = Math.floor(Date.now() / 1000);
+            const lastClaim = now - (TWENTY_FOUR_HOURS - secondsUntilNextClaim);
+            elements.lastClaimInfo.textContent = `Last claim: ${formatDateTime(lastClaim)}`;
+            
+            // Update timer setiap detik
+            claimTimerInterval = setInterval(() => {
+                secondsUntilNextClaim--;
+                
+                if (secondsUntilNextClaim <= 0) {
+                    clearInterval(claimTimerInterval);
+                    elements.claimTimer.textContent = '00:00:00';
+                    elements.claimDaily.disabled = false;
+                    elements.claimDaily.textContent = 'Claim Daily Reward';
+                    elements.lastClaimInfo.textContent = 'Ready to claim!';
+                } else {
+                    elements.claimTimer.textContent = formatTime(secondsUntilNextClaim);
+                }
+            }, 1000);
+        }
+
+        function calculateTimeUntilNextClaim(lastClaimTimestamp) {
+            const now = Math.floor(Date.now() / 1000);
+            const timeSinceLastClaim = now - lastClaimTimestamp;
+            const timeUntilNextClaim = Math.max(0, TWENTY_FOUR_HOURS - timeSinceLastClaim);
+            
+            return timeUntilNextClaim;
         }
 
         // ==================== REFERRAL CODE FUNCTIONS ====================
@@ -1266,41 +1347,27 @@
                 elements.myTotalClaims.textContent = totalClaims.toString();
                 elements.myReferrals.textContent = referralCount.toString();
                 
-                // Update buttons
+                // Update timer untuk claim harian
+                lastClaimTime = parseInt(lastClaimTime.toString());
+                
+                // Jika lastClaimTime adalah 0, artinya belum pernah claim daily
+                if (lastClaimTime === 0) {
+                    elements.claimDaily.disabled = false;
+                    elements.claimTimer.textContent = '00:00:00';
+                    elements.lastClaimInfo.textContent = 'Never claimed daily reward';
+                } else {
+                    // Hitung waktu sampai claim berikutnya (24 jam dari last claim)
+                    const timeUntilNext = calculateTimeUntilNextClaim(lastClaimTime);
+                    updateClaimTimer(timeUntilNext);
+                }
+                
+                // Update buttons lainnya
                 elements.claimInitial.disabled = !canClaimInitial;
                 elements.claimBonus.disabled = pendingBonus <= 0;
-                elements.claimDaily.disabled = timeUntilNextClaim > 0;
-                
-                // Update timer
-                updateClaimTimer(timeUntilNextClaim);
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
             }
-        }
-
-        function updateClaimTimer(seconds) {
-            if (claimTimerInterval) clearInterval(claimTimerInterval);
-            
-            if (seconds <= 0) {
-                elements.claimTimer.textContent = 'READY';
-                elements.claimDaily.disabled = false;
-                return;
-            }
-            
-            elements.claimTimer.textContent = formatTime(seconds);
-            elements.claimDaily.disabled = true;
-            
-            claimTimerInterval = setInterval(() => {
-                seconds--;
-                if (seconds <= 0) {
-                    clearInterval(claimTimerInterval);
-                    elements.claimTimer.textContent = 'READY';
-                    elements.claimDaily.disabled = false;
-                } else {
-                    elements.claimTimer.textContent = formatTime(seconds);
-                }
-            }, 1000);
         }
 
         // ==================== USER ACTIONS ====================
@@ -1367,14 +1434,14 @@
                 const tx = await airdropContract.claimDaily();
                 await tx.wait();
                 
-                showNotification('📅 Daily reward claimed!', 'success');
+                showNotification('📅 Daily reward claimed! Next claim in 24 hours', 'success');
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim daily error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
-                elements.claimDaily.disabled = false;
-                elements.claimDaily.textContent = 'Claim Daily Reward';
+                // Re-enable button jika error
+                await loadUserData();
             }
         }
 
