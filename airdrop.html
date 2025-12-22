@@ -46,7 +46,7 @@
             position: relative;
         }
         
-        /* Enable Scrolling - FIXED */
+        /* Enable Scrolling */
         .scroll-container {
             min-height: 100vh;
             overflow-y: auto;
@@ -54,8 +54,6 @@
             padding-bottom: 20px;
             position: relative;
             z-index: 1;
-            will-change: transform;
-            contain: content;
         }
         
         .container {
@@ -79,7 +77,6 @@
             background: rgba(4,20,13,0.95);
             backdrop-filter: blur(10px);
             z-index: 100;
-            transform: translateZ(0);
         }
         
         .logo {
@@ -179,7 +176,6 @@
             border-radius: 15px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.05);
-            transform: translateZ(0);
         }
         
         .stat-value {
@@ -205,8 +201,6 @@
             margin-bottom: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transform: translateZ(0);
-            contain: layout;
         }
         
         .card-title {
@@ -226,7 +220,6 @@
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 15px;
-            transform: translateZ(0);
         }
         
         .reward-header {
@@ -270,7 +263,6 @@
             justify-content: center;
             align-items: center;
             gap: 10px;
-            transform: translateZ(0);
         }
         
         .btn-primary {
@@ -279,7 +271,7 @@
         }
         
         .btn-primary:active:not(:disabled) {
-            transform: scale(0.98) translateZ(0);
+            transform: scale(0.98);
         }
         
         .btn-success {
@@ -297,7 +289,7 @@
             cursor: not-allowed;
         }
         
-        /* Timer - FIXED */
+        /* Timer */
         .timer {
             text-align: center;
             margin: 20px 0;
@@ -305,7 +297,6 @@
             background: rgba(255,152,0,0.1);
             border-radius: 15px;
             border: 1px solid rgba(255,152,0,0.3);
-            contain: content;
         }
         
         .timer-label {
@@ -321,7 +312,6 @@
             font-weight: 800;
             color: var(--warning);
             font-family: 'Courier New', monospace;
-            transform: translateZ(0);
         }
         
         /* Loading */
@@ -364,7 +354,6 @@
             background: linear-gradient(90deg, var(--primary), var(--accent));
             border-radius: 6px;
             transition: width 0.5s;
-            transform: translateZ(0);
         }
         
         /* Footer */
@@ -384,7 +373,6 @@
             background: var(--glass);
             font-size: 13px;
             transition: all 0.3s;
-            transform: translateZ(0);
         }
         
         .footer {
@@ -442,6 +430,37 @@
             border: 1px dashed var(--primary);
         }
         
+        /* Input Styling */
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-family: 'Kanit', sans-serif;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(49,208,170,0.2);
+        }
+        
+        /* Status Message */
+        .status-info {
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(33,150,243,0.1);
+            border: 1px solid rgba(33,150,243,0.3);
+            color: #2196f3;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -460,21 +479,6 @@
                 font-size: 24px;
             }
         }
-        
-        /* Performance Optimizations */
-        .optimized-scroll {
-            -webkit-overflow-scrolling: touch;
-            overflow-y: auto;
-            backface-visibility: hidden;
-            perspective: 1000;
-            transform-style: preserve-3d;
-        }
-        
-        .hardware-accelerated {
-            transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
-        }
     </style>
 </head>
 <body>
@@ -484,7 +488,7 @@
         <div id="loadingText" style="color: var(--accent); font-weight: 600;"></div>
     </div>
 
-    <div class="scroll-container optimized-scroll">
+    <div class="scroll-container">
         <div class="container">
             <!-- Header -->
             <header class="header">
@@ -499,7 +503,7 @@
                 </div>
             </header>
 
-            <!-- Network Warning (Will show if not on Vana Network) -->
+            <!-- Network Warning -->
             <div id="networkWarning" class="network-warning" style="display: none;">
                 <div style="color: var(--warning); font-weight: 600; margin-bottom: 10px;">
                     ⚠️ Wrong Network Detected
@@ -548,7 +552,9 @@
             <!-- Registration -->
             <div id="registerSection" class="card">
                 <h2 class="card-title">Start Earning</h2>
-                <div id="notRegisteredMessage" class="status-message status-info" style="padding: 20px; border-radius: 15px; background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.3); color: #2196f3; text-align: center; margin: 20px 0;">
+                
+                <!-- Pesan awal sebelum connect wallet -->
+                <div id="notRegisteredMessage" class="status-info">
                     <div style="font-size: 48px; margin-bottom: 15px;">🚀</div>
                     <h3 style="margin-bottom: 10px;">Connect Wallet & Register</h3>
                     <p style="color: var(--muted); font-size: 14px;">
@@ -556,10 +562,15 @@
                     </p>
                 </div>
                 
+                <!-- Form untuk user baru yang sudah connect wallet -->
                 <div id="registerForm" style="display: none;">
                     <div style="margin-bottom: 20px;">
-                        <input type="text" id="referralCodeInput" placeholder="Enter referral code (optional)" maxlength="10" style="width: 100%; padding: 16px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text); font-size: 16px; margin-bottom: 15px;">
-                        <button id="registerBtn" class="action-btn btn-primary" disabled>
+                        <input type="text" 
+                               id="referralCodeInput" 
+                               placeholder="Enter referral code (optional)" 
+                               maxlength="10"
+                               class="input-field">
+                        <button id="registerBtn" class="action-btn btn-primary">
                             Register Now
                         </button>
                     </div>
@@ -568,6 +579,7 @@
                     </div>
                 </div>
                 
+                <!-- Pesan untuk user yang sudah register -->
                 <div id="alreadyRegistered" style="display: none; text-align: center; padding: 20px;">
                     <div style="font-size: 48px; margin-bottom: 15px;">🎉</div>
                     <h3 style="margin-bottom: 10px; color: var(--accent);">You're Registered!</h3>
@@ -737,7 +749,7 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI for the airdrop contract - UPDATED FOR REFERRAL CODE GENERATION
+        // ABI for the airdrop contract
         const AIRDROP_ABI = [
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
@@ -751,7 +763,7 @@
             "function claimedInitial(address) view returns (bool)",
             "function totalRegistered() view returns (uint256)",
             "function MAX_USERS() view returns (uint256)",
-            "function generateReferralCode() external returns (string memory)" // Added function
+            "function generateReferralCode() external returns (string memory)"
         ];
 
         // ==================== GLOBAL VARIABLES ====================
@@ -818,35 +830,135 @@
             copyReferralLink: document.getElementById('copyReferralLink')
         };
 
-        // ==================== PERFORMANCE OPTIMIZATIONS ====================
-        let lastScrollTime = 0;
-        let scrollTimeout = null;
+        // ==================== UTILITY FUNCTIONS ====================
+        function showLoading(show, text = 'Loading...') {
+            elements.loadingOverlay.style.display = show ? 'flex' : 'none';
+            elements.loadingText.textContent = text;
+        }
 
-        function throttledUpdate() {
-            const now = Date.now();
-            if (now - lastScrollTime > 100) { // Update max 10 times per second
-                lastScrollTime = now;
-                updateScrollPerformance();
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 15px;
+                right: 15px;
+                padding: 20px;
+                border-radius: 15px;
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                z-index: 1000;
+                transform: translateY(-100px);
+                transition: transform 0.3s;
+                max-width: 100%;
+                text-align: center;
+                border-left: 5px solid ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#31d0aa'};
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateY(-100px)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, duration);
+        }
+
+        function formatAddress(address) {
+            if (!address) return '';
+            return `${address.substring(0, 6)}...${address.substring(38)}`;
+        }
+
+        function formatNumber(number, decimals = 2) {
+            const num = parseFloat(number);
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        // ==================== COUNTDOWN TIMER ====================
+        class CountdownTimer {
+            constructor(displayElement) {
+                this.displayElement = displayElement;
+                this.endTime = 0;
+                this.interval = null;
+                this.isRunning = false;
+            }
+            
+            start(seconds) {
+                this.stop();
+                this.endTime = Date.now() + (seconds * 1000);
+                this.isRunning = true;
+                this.update();
+                this.interval = setInterval(() => this.update(), 1000);
+            }
+            
+            update() {
+                if (!this.isRunning) return;
+                
+                const now = Date.now();
+                const remaining = Math.max(0, Math.floor((this.endTime - now) / 1000));
+                
+                if (remaining <= 0) {
+                    this.stop();
+                    this.displayElement.textContent = 'READY';
+                    this.displayElement.style.color = '#4caf50';
+                    return;
+                }
+                
+                const hours = Math.floor(remaining / 3600);
+                const minutes = Math.floor((remaining % 3600) / 60);
+                const seconds = remaining % 60;
+                
+                if (hours > 0) {
+                    this.displayElement.textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                    this.displayElement.textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                this.displayElement.style.color = '#ff9800';
+            }
+            
+            stop() {
+                this.isRunning = false;
+                if (this.interval) {
+                    clearInterval(this.interval);
+                    this.interval = null;
+                }
+            }
+            
+            reset() {
+                this.stop();
+                this.displayElement.textContent = '00:00:00';
+                this.displayElement.style.color = '#ff9800';
             }
         }
 
-        function updateScrollPerformance() {
-            // Add hardware acceleration to visible elements
-            const cards = document.querySelectorAll('.card, .reward-card, .stat-card');
-            cards.forEach(card => {
-                const rect = card.getBoundingClientRect();
-                if (rect.top < window.innerHeight && rect.bottom > 0) {
-                    card.classList.add('hardware-accelerated');
-                } else {
-                    card.classList.remove('hardware-accelerated');
-                }
-            });
-        }
+        const claimTimer = new CountdownTimer(elements.claimTimer);
 
         // ==================== REFERRAL CODE GENERATION ====================
         async function generateReferralCode() {
             try {
-                if (!account || !airdropContract) return "";
+                if (!account || !airdropContract) {
+                    return generateDeterministicCode(account || "default");
+                }
                 
                 showLoading(true, "Generating referral code...");
                 
@@ -860,16 +972,14 @@
                     const referralCode = userStats[7];
                     
                     if (referralCode && referralCode.length > 0) {
-                        userReferralCode = referralCode.toUpperCase();
-                        return userReferralCode;
+                        return referralCode.toUpperCase();
                     }
                 } catch (error) {
                     console.log("Contract code generation failed, using fallback:", error);
                 }
                 
                 // Fallback: Generate deterministic code from wallet address
-                userReferralCode = generateDeterministicCode(account);
-                return userReferralCode;
+                return generateDeterministicCode(account);
                 
             } catch (error) {
                 console.error("Error generating referral code:", error);
@@ -983,129 +1093,6 @@
             }
         }
 
-        // ==================== UTILITY FUNCTIONS ====================
-        function showLoading(show, text = 'Loading...') {
-            elements.loadingOverlay.style.display = show ? 'flex' : 'none';
-            elements.loadingText.textContent = text;
-        }
-
-        function showNotification(message, type = 'info', duration = 4000) {
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                left: 15px;
-                right: 15px;
-                padding: 20px;
-                border-radius: 15px;
-                background: var(--card-bg);
-                border: 1px solid var(--card-border);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                z-index: 1000;
-                transform: translateY(-100px);
-                transition: transform 0.3s;
-                max-width: 100%;
-                text-align: center;
-                border-left: 5px solid ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#31d0aa'};
-            `;
-            
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateY(0)';
-            }, 10);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateY(-100px)';
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, duration);
-        }
-
-        function formatAddress(address) {
-            if (!address) return '';
-            return `${address.substring(0, 6)}...${address.substring(38)}`;
-        }
-
-        function formatNumber(number, decimals = 2) {
-            const num = parseFloat(number);
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
-            }
-            return num.toLocaleString('en-US', {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals
-            });
-        }
-
-        // ==================== COUNTDOWN TIMER - FIXED ====================
-        class CountdownTimer {
-            constructor(displayElement) {
-                this.displayElement = displayElement;
-                this.endTime = 0;
-                this.interval = null;
-                this.isRunning = false;
-            }
-            
-            start(seconds) {
-                this.stop();
-                this.endTime = Date.now() + (seconds * 1000);
-                this.isRunning = true;
-                this.update();
-                this.interval = setInterval(() => this.update(), 1000);
-            }
-            
-            update() {
-                if (!this.isRunning) return;
-                
-                const now = Date.now();
-                const remaining = Math.max(0, Math.floor((this.endTime - now) / 1000));
-                
-                if (remaining <= 0) {
-                    this.stop();
-                    this.displayElement.textContent = 'READY';
-                    this.displayElement.style.color = '#4caf50';
-                    return;
-                }
-                
-                const hours = Math.floor(remaining / 3600);
-                const minutes = Math.floor((remaining % 3600) / 60);
-                const seconds = remaining % 60;
-                
-                if (hours > 0) {
-                    this.displayElement.textContent = 
-                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                } else {
-                    this.displayElement.textContent = 
-                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                }
-                
-                this.displayElement.style.color = remaining > 300 ? '#ff9800' : '#f44336';
-            }
-            
-            stop() {
-                this.isRunning = false;
-                if (this.interval) {
-                    clearInterval(this.interval);
-                    this.interval = null;
-                }
-            }
-            
-            reset() {
-                this.stop();
-                this.displayElement.textContent = '00:00:00';
-                this.displayElement.style.color = '#ff9800';
-            }
-        }
-
-        const claimTimer = new CountdownTimer(elements.claimTimer);
-
         // ==================== WALLET FUNCTIONS ====================
         async function connectWallet() {
             try {
@@ -1146,7 +1133,7 @@
                 ]);
                 
                 if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(updateData, 30000); // Reduced frequency
+                updateInterval = setInterval(updateData, 30000);
                 
             } catch (error) {
                 console.error('Wallet connection error:', error);
@@ -1169,6 +1156,27 @@
                 elements.userAddress.style.display = 'none';
                 elements.connectWallet.textContent = 'Connect Wallet';
                 elements.connectWallet.disabled = false;
+            }
+        }
+
+        // ==================== UI MANAGEMENT FUNCTIONS ====================
+        function showRegistrationUI(isRegistered) {
+            if (isRegistered) {
+                // User SUDAH register
+                elements.notRegisteredMessage.style.display = 'none';
+                elements.registerForm.style.display = 'none';
+                elements.alreadyRegistered.style.display = 'block';
+                elements.rewardsSection.style.display = 'block';
+                elements.userStatsCard.style.display = 'block';
+                elements.referralCard.style.display = 'block';
+            } else {
+                // User BELUM register (tapi sudah connect wallet)
+                elements.notRegisteredMessage.style.display = 'none'; // Sembunyikan pesan awal
+                elements.registerForm.style.display = 'block'; // Tampilkan form input
+                elements.alreadyRegistered.style.display = 'none';
+                elements.rewardsSection.style.display = 'none';
+                elements.userStatsCard.style.display = 'none';
+                elements.referralCard.style.display = 'none';
             }
         }
 
@@ -1201,10 +1209,11 @@
                 const userReferralCode = userInfo[9];
                 
                 if (isRegistered) {
+                    // User SUDAH register
                     showRegistrationUI(true);
                     await loadUserData();
                     
-                    // Generate or use existing referral code
+                    // Generate atau gunakan referral code yang ada
                     if (userReferralCode && userReferralCode.length > 0) {
                         updateReferralDisplay(userReferralCode.toUpperCase());
                     } else {
@@ -1221,6 +1230,7 @@
                     }
                     
                 } else {
+                    // User BELUM register
                     showRegistrationUI(false);
                     elements.registerBtn.disabled = false;
                 }
@@ -1228,15 +1238,6 @@
             } catch (error) {
                 console.error('Error checking registration:', error);
             }
-        }
-
-        function showRegistrationUI(isRegistered) {
-            elements.notRegisteredMessage.style.display = isRegistered ? 'none' : 'block';
-            elements.registerForm.style.display = isRegistered ? 'none' : 'block';
-            elements.alreadyRegistered.style.display = isRegistered ? 'block' : 'none';
-            elements.rewardsSection.style.display = isRegistered ? 'block' : 'none';
-            elements.userStatsCard.style.display = isRegistered ? 'block' : 'none';
-            elements.referralCard.style.display = isRegistered ? 'block' : 'none';
         }
 
         async function loadUserData() {
@@ -1280,7 +1281,7 @@
                 elements.myTotalClaims.textContent = totalClaims.toString();
                 elements.myReferrals.textContent = referralCount.toString();
                 
-                // Update referral code if not already set
+                // Update referral code jika belum di-set
                 if (referralCode && referralCode.length > 0 && !userReferralCode) {
                     updateReferralDisplay(referralCode.toUpperCase());
                 }
@@ -1324,7 +1325,7 @@
                 
                 showNotification('Successfully registered! 🎉', 'success');
                 
-                // Generate referral code after registration
+                // Generate referral code setelah registrasi
                 const newCode = await generateReferralCode();
                 updateReferralDisplay(newCode);
                 
@@ -1479,16 +1480,12 @@
         elements.copyReferralLink.addEventListener('click', copyReferralLink);
 
         elements.referralCodeInput.addEventListener('input', function() {
-            this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
         });
 
-        // Double click to copy referral code
+        // Double click to copy
         elements.referralCodeDisplay.addEventListener('dblclick', copyReferralCode);
         elements.referralLinkDisplay.addEventListener('dblclick', copyReferralLink);
-
-        // ==================== PERFORMANCE OPTIMIZATION EVENTS ====================
-        window.addEventListener('scroll', throttledUpdate, { passive: true });
-        window.addEventListener('touchmove', throttledUpdate, { passive: true });
 
         // ==================== WALLET EVENTS ====================
         if (window.ethereum) {
@@ -1514,7 +1511,15 @@
                 if (accounts.length === 0) {
                     account = null;
                     updateWalletUI();
-                    showRegistrationUI(false);
+                    
+                    // Reset ke state awal
+                    elements.notRegisteredMessage.style.display = 'block';
+                    elements.registerForm.style.display = 'none';
+                    elements.alreadyRegistered.style.display = 'none';
+                    elements.rewardsSection.style.display = 'none';
+                    elements.userStatsCard.style.display = 'none';
+                    elements.referralCard.style.display = 'none';
+                    
                     claimTimer.stop();
                     showNotification('Wallet disconnected', 'info');
                 } else {
@@ -1531,9 +1536,6 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            // Performance optimizations
-            updateScrollPerformance();
-            
             // Check network first
             await checkAndSwitchNetwork();
             
