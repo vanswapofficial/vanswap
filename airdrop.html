@@ -741,7 +741,7 @@
                             📋 Copy Code Only
                         </button>
                         <div style="margin-top: 20px; color: var(--muted); font-size: 12px;">
-                            Share your referral link to earn rewards when friends register!
+                            Your referral code is permanent and will never change.
                         </div>
                     </div>
                 </div>
@@ -783,7 +783,7 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI yang benar untuk kontrak airdrop
+        // ABI untuk kontrak airdrop
         const AIRDROP_ABI = [
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
@@ -810,6 +810,9 @@
         let userReferralCode = '';
         let userReferralLink = '';
         let lastClaimTime = 0;
+        
+        // Storage untuk menyimpan referral code secara permanen
+        const REFERRAL_STORAGE_KEY = 'vanswap_referral_codes';
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
@@ -865,6 +868,75 @@
             copyReferralCode: document.getElementById('copyReferralCode'),
             copyReferralLink: document.getElementById('copyReferralLink')
         };
+
+        // ==================== REFERRAL CODE MANAGER ====================
+        // Sistem untuk membuat dan menyimpan referral code yang TETAP/TIDAK BERUBAH
+        
+        function getStoredReferralCodes() {
+            try {
+                const stored = localStorage.getItem(REFERRAL_STORAGE_KEY);
+                return stored ? JSON.parse(stored) : {};
+            } catch (error) {
+                console.error('Error reading referral codes from storage:', error);
+                return {};
+            }
+        }
+
+        function saveReferralCode(walletAddress, referralCode) {
+            try {
+                const codes = getStoredReferralCodes();
+                codes[walletAddress.toLowerCase()] = referralCode;
+                localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify(codes));
+                return true;
+            } catch (error) {
+                console.error('Error saving referral code:', error);
+                return false;
+            }
+        }
+
+        function getReferralCodeForWallet(walletAddress) {
+            const codes = getStoredReferralCodes();
+            return codes[walletAddress.toLowerCase()] || null;
+        }
+
+        function generateDeterministicReferralCode(walletAddress) {
+            // Fungsi ini menghasilkan referral code yang TETAP untuk wallet tertentu
+            // Menggunakan hash dari alamat wallet untuk konsistensi
+            
+            // Ambil 8 karakter terakhir dari address
+            const addressSuffix = walletAddress.slice(-8).toUpperCase();
+            
+            // Buat hash sederhana dari alamat
+            let hash = 0;
+            for (let i = 0; i < walletAddress.length; i++) {
+                hash = ((hash << 5) - hash) + walletAddress.charCodeAt(i);
+                hash = hash & hash;
+            }
+            
+            // Ambil 4 karakter dari hash (konversi ke base36)
+            const hashPart = Math.abs(hash).toString(36).slice(0, 4).toUpperCase();
+            
+            // Gabungkan dengan prefix "VAN" dan buat total 10 karakter
+            const code = `VAN${addressSuffix}${hashPart}`.slice(0, 10);
+            
+            return code;
+        }
+
+        function generateUniqueReferralCode(walletAddress) {
+            // Cek apakah sudah ada code untuk wallet ini
+            const existingCode = getReferralCodeForWallet(walletAddress);
+            if (existingCode) {
+                return existingCode;
+            }
+            
+            // Generate code baru yang deterministik
+            const newCode = generateDeterministicReferralCode(walletAddress);
+            
+            // Simpan ke storage
+            saveReferralCode(walletAddress, newCode);
+            
+            return newCode;
+        }
 
         // ==================== NETWORK FUNCTIONS ====================
         async function checkAndSwitchNetwork() {
@@ -1068,39 +1140,66 @@
         // ==================== REFERRAL CODE FUNCTIONS ====================
         async function generateUserReferralCode() {
             try {
-                if (!account || !airdropContract) return;
+                if (!account) return;
                 
-                const userStats = await airdropContract.getUserStats(account);
-                const existingCode = userStats[7]; // referralCode field
-                
-                if (existingCode && existingCode.length > 0) {
-                    userReferralCode = existingCode.toUpperCase();
-                    userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
-                    updateReferralUI();
-                    return;
+                // 1. Coba ambil dari blockchain terlebih dahulu
+                let blockchainCode = '';
+                try {
+                    if (airdropContract) {
+                        const userStats = await airdropContract.getUserStats(account);
+                        blockchainCode = userStats[7]; // referralCode field dari blockchain
+                        if (blockchainCode && blockchainCode.length > 0) {
+                            blockchainCode = blockchainCode.toUpperCase();
+                        }
+                    }
+                } catch (error) {
+                    console.log('Cannot get referral code from blockchain');
                 }
                 
-                // Jika tidak ada kode, buat kode dari alamat wallet
-                userReferralCode = generateReferralCodeFromAddress();
+                // 2. Cek di local storage
+                let storageCode = getReferralCodeForWallet(account);
+                
+                // 3. Jika ada di blockchain, gunakan itu dan sync ke storage
+                if (blockchainCode && blockchainCode.length > 0) {
+                    userReferralCode = blockchainCode;
+                    // Simpan ke storage untuk cache
+                    if (!storageCode || storageCode !== blockchainCode) {
+                        saveReferralCode(account, blockchainCode);
+                    }
+                }
+                // 4. Jika ada di storage tapi tidak di blockchain, gunakan storage
+                else if (storageCode) {
+                    userReferralCode = storageCode;
+                }
+                // 5. Jika tidak ada sama sekali, generate baru
+                else {
+                    userReferralCode = generateUniqueReferralCode(account);
+                    
+                    // Coba simpan ke blockchain jika memungkinkan
+                    try {
+                        if (airdropContract) {
+                            // Cek apakah fungsi generateCustomReferralCode tersedia
+                            const canGenerate = await canGenerateCustomCode();
+                            if (canGenerate) {
+                                showLoading(true, 'Saving referral code to blockchain...');
+                                const tx = await airdropContract.generateCustomReferralCode(userReferralCode.toLowerCase());
+                                await tx.wait();
+                                showNotification('Referral code saved to blockchain!', 'success');
+                            }
+                        }
+                    } catch (error) {
+                        console.log('Cannot save referral code to blockchain, using local only');
+                    }
+                }
+                
+                // Update UI
                 userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
                 updateReferralUI();
                 
-                // Coba simpan ke kontrak jika memungkinkan
-                try {
-                    if (await canGenerateCustomCode()) {
-                        showLoading(true, 'Saving referral code to blockchain...');
-                        const tx = await airdropContract.generateCustomReferralCode(userReferralCode.toLowerCase());
-                        await tx.wait();
-                        showNotification('Referral code saved to blockchain!', 'success');
-                    }
-                } catch (error) {
-                    console.log('Cannot save referral code to contract, using local code');
-                }
-                
             } catch (error) {
                 console.error('Error generating referral code:', error);
-                // Use fallback jika contract call fails
-                userReferralCode = generateReferralCodeFromAddress();
+                // Fallback: Generate dari storage atau baru
+                userReferralCode = getReferralCodeForWallet(account) || generateUniqueReferralCode(account);
                 userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
                 updateReferralUI();
             } finally {
@@ -1111,26 +1210,33 @@
         async function canGenerateCustomCode() {
             try {
                 // Cek apakah fungsi generateCustomReferralCode tersedia
-                const code = await airdropContract.generateCustomReferralCode.staticCall("TEST123");
+                const code = "TEST123";
+                // Menggunakan staticCall untuk test tanpa gas
+                const result = await airdropContract.callStatic.generateCustomReferralCode(code);
                 return true;
             } catch (error) {
                 return false;
             }
         }
 
-        function generateReferralCodeFromAddress() {
-            if (!account) return 'VAN' + Math.random().toString(36).substring(2, 9).toUpperCase();
-            
-            // Ambil 6 karakter terakhir dari address dan tambahkan 3 karakter random
-            const addressPart = account.substring(38, 42).toUpperCase();
-            const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-            return 'VAN' + addressPart + randomPart;
-        }
-
         function updateReferralUI() {
             if (userReferralCode) {
                 elements.referralCodeDisplay.textContent = userReferralCode;
                 elements.referralLinkInput.value = userReferralLink;
+                
+                // Tampilkan pesan bahwa code ini permanen
+                const infoDiv = document.createElement('div');
+                infoDiv.style.color = 'var(--success)';
+                infoDiv.style.fontSize = '11px';
+                infoDiv.style.marginTop = '5px';
+                infoDiv.innerHTML = '✓ Permanent referral code';
+                
+                // Hapus pesan lama jika ada
+                const oldInfo = elements.referralCodeDisplay.parentElement.querySelector('.permanent-info');
+                if (oldInfo) oldInfo.remove();
+                
+                infoDiv.className = 'permanent-info';
+                elements.referralCodeDisplay.parentElement.appendChild(infoDiv);
             }
         }
 
@@ -1318,7 +1424,7 @@
                     lastClaimTime, referrer, referralRewardsEarned, referralCode, referralsToday
                 ] = userStats;
                 
-                // Coba dapatkan data rewards, jika gagal gunakan nilai default
+                // Coba dapatkan data rewards
                 let vansDaily = ethers.utils.parseUnits("50", 18);
                 let exoDaily = ethers.utils.parseUnits("0.001", 8);
                 let pendingBonus = 0;
@@ -1397,7 +1503,7 @@
                     return;
                 }
                 
-                const referralCode = elements.referralCodeInput.value.trim().toLowerCase();
+                const referralCode = elements.referralCodeInput.value.trim().toUpperCase();
                 
                 elements.registerBtn.disabled = true;
                 elements.registerBtn.innerHTML = '<span class="loading"></span> Registering...';
