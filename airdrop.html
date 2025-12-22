@@ -655,7 +655,7 @@
                         <div class="timer-label">Next Claim Available In</div>
                         <div class="timer-display" id="claimTimer">00:00:00</div>
                     </div>
-                    <button id="claimDaily" class="action-btn btn-success" disabled>
+                    <button id="claimDaily" class="action-btn btn-success">
                         Claim Daily Reward
                     </button>
                     <div id="lastClaimInfo" style="text-align: center; margin-top: 10px; color: var(--muted); font-size: 12px;"></div>
@@ -767,7 +767,7 @@
     <script>
         // ==================== CONFIGURATION ====================
         const AIRDROP_CONTRACT_ADDRESS = "0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6";
-        const REFERRAL_BASE_URL = "https://vanswap.xyz/airdrop/";
+        const REFERRAL_BASE_URL = "https://vanswap.xyz/#/airdrop/";
         const TWENTY_FOUR_HOURS = 24 * 60 * 60; // 24 jam dalam detik
         
         // Vana Network Configuration
@@ -783,7 +783,7 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI untuk kontrak airdrop
+        // ABI yang benar untuk kontrak airdrop
         const AIRDROP_ABI = [
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
@@ -810,7 +810,6 @@
         let userReferralCode = '';
         let userReferralLink = '';
         let lastClaimTime = 0;
-        let nextClaimTime = 0;
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
@@ -1081,35 +1080,27 @@
                     return;
                 }
                 
-                // Generate a referral code if user doesn't have one
+                // Jika tidak ada kode, buat kode dari alamat wallet
+                userReferralCode = generateReferralCodeFromAddress();
+                userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
+                updateReferralUI();
+                
+                // Coba simpan ke kontrak jika memungkinkan
                 try {
-                    showLoading(true, 'Generating referral code...');
-                    
-                    // Try to generate custom code based on address
-                    const shortCode = account.substring(2, 8).toUpperCase();
-                    const tx = await airdropContract.generateCustomReferralCode(shortCode);
-                    await tx.wait();
-                    
-                    // Get updated stats
-                    const updatedStats = await airdropContract.getUserStats(account);
-                    userReferralCode = updatedStats[7].toUpperCase();
-                    userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
-                    
-                    updateReferralUI();
-                    showNotification('Referral code generated!', 'success');
-                    
+                    if (await canGenerateCustomCode()) {
+                        showLoading(true, 'Saving referral code to blockchain...');
+                        const tx = await airdropContract.generateCustomReferralCode(userReferralCode.toLowerCase());
+                        await tx.wait();
+                        showNotification('Referral code saved to blockchain!', 'success');
+                    }
                 } catch (error) {
-                    console.log('Using fallback referral code generation');
-                    // Fallback: Generate code from address
-                    userReferralCode = generateFallbackReferralCode();
-                    userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
-                    updateReferralUI();
+                    console.log('Cannot save referral code to contract, using local code');
                 }
                 
             } catch (error) {
                 console.error('Error generating referral code:', error);
-                // Use fallback if contract call fails
-                userReferralCode = generateFallbackReferralCode();
+                // Use fallback jika contract call fails
+                userReferralCode = generateReferralCodeFromAddress();
                 userReferralLink = `${REFERRAL_BASE_URL}${userReferralCode.toLowerCase()}`;
                 updateReferralUI();
             } finally {
@@ -1117,12 +1108,22 @@
             }
         }
 
-        function generateFallbackReferralCode() {
-            // Generate a referral code from address if contract fails
-            if (!account) return 'VAN' + Math.random().toString(36).substring(2, 7).toUpperCase();
+        async function canGenerateCustomCode() {
+            try {
+                // Cek apakah fungsi generateCustomReferralCode tersedia
+                const code = await airdropContract.generateCustomReferralCode.staticCall("TEST123");
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function generateReferralCodeFromAddress() {
+            if (!account) return 'VAN' + Math.random().toString(36).substring(2, 9).toUpperCase();
             
-            const addressPart = account.substring(2, 8).toUpperCase();
-            const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+            // Ambil 6 karakter terakhir dari address dan tambahkan 3 karakter random
+            const addressPart = account.substring(38, 42).toUpperCase();
+            const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
             return 'VAN' + addressPart + randomPart;
         }
 
@@ -1310,20 +1311,26 @@
             try {
                 if (!account || !isCorrectNetwork) return;
                 
-                const [rewards, userStats] = await Promise.all([
-                    airdropContract.getAvailableRewards(account),
-                    airdropContract.getUserStats(account)
-                ]);
-                
-                const [
-                    vansDaily, exoDaily, timeUntilNextClaim, canClaimInitial, 
-                    pendingBonus, referralsLeft, contractVansBalance, contractExoBalance
-                ] = rewards;
+                const userStats = await airdropContract.getUserStats(account);
                 
                 const [
                     totalVansClaimed, totalExoClaimed, referralCount, totalClaims,
                     lastClaimTime, referrer, referralRewardsEarned, referralCode, referralsToday
                 ] = userStats;
+                
+                // Coba dapatkan data rewards, jika gagal gunakan nilai default
+                let vansDaily = ethers.utils.parseUnits("50", 18);
+                let exoDaily = ethers.utils.parseUnits("0.001", 8);
+                let pendingBonus = 0;
+                
+                try {
+                    const rewards = await airdropContract.getAvailableRewards(account);
+                    vansDaily = rewards[0];
+                    exoDaily = rewards[1];
+                    pendingBonus = rewards[4];
+                } catch (error) {
+                    console.log('Using default reward values');
+                }
                 
                 // Update global stats
                 elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
@@ -1339,7 +1346,7 @@
                 
                 const bonusExo = ethers.utils.formatUnits(pendingBonus, 8);
                 elements.referralBonus.textContent = `${formatNumber(bonusExo, 2)} EXO`;
-                elements.referralCount.textContent = (20 - referralsLeft).toString();
+                elements.referralCount.textContent = referralCount.toString();
                 
                 // Update user stats
                 elements.myVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
@@ -1361,12 +1368,24 @@
                     updateClaimTimer(timeUntilNext);
                 }
                 
-                // Update buttons lainnya
-                elements.claimInitial.disabled = !canClaimInitial;
+                // Cek apakah initial sudah di-claim
+                try {
+                    const claimedInitial = await airdropContract.claimedInitial(account);
+                    if (claimedInitial) {
+                        elements.initialClaimed.style.display = 'inline';
+                        elements.claimInitial.disabled = true;
+                        elements.claimInitial.textContent = 'Already Claimed';
+                    }
+                } catch (error) {
+                    console.log('Cannot check initial claim status');
+                }
+                
+                // Update referral bonus button
                 elements.claimBonus.disabled = pendingBonus <= 0;
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
+                showNotification('Error loading user data', 'error');
             }
         }
 
@@ -1424,7 +1443,13 @@
         async function claimDailyReward() {
             try {
                 if (!isCorrectNetwork) {
+                    showNotification('Please switch to Vana Network first', 'error');
                     await switchToVanaNetwork();
+                    return;
+                }
+                
+                if (elements.claimDaily.disabled) {
+                    showNotification('Please wait for timer to finish', 'error');
                     return;
                 }
                 
@@ -1435,12 +1460,28 @@
                 await tx.wait();
                 
                 showNotification('📅 Daily reward claimed! Next claim in 24 hours', 'success');
+                
+                // Update data setelah claim
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim daily error:', error);
-                showNotification(error.message || 'Claim failed', 'error');
-                // Re-enable button jika error
+                
+                // Berikan pesan error yang lebih spesifik
+                let errorMessage = 'Claim failed';
+                if (error.message.includes('insufficient funds')) {
+                    errorMessage = 'Insufficient funds for gas';
+                } else if (error.message.includes('user rejected')) {
+                    errorMessage = 'Transaction rejected by user';
+                } else if (error.message.includes('24 hours')) {
+                    errorMessage = 'Please wait 24 hours between claims';
+                } else {
+                    errorMessage = error.message || 'Claim failed';
+                }
+                
+                showNotification(errorMessage, 'error');
+                
+                // Re-enable button dan reload data
                 await loadUserData();
             }
         }
@@ -1494,7 +1535,7 @@
         elements.copyReferralLink.addEventListener('click', copyReferralLink);
 
         elements.referralCodeInput.addEventListener('input', function() {
-            this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
         });
 
         // Double click to copy referral code
