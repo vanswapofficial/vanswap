@@ -471,6 +471,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            display: none;
         }
         
         /* Responsive */
@@ -516,12 +517,13 @@
             </header>
 
             <!-- Referral Auto-fill Notification -->
-            <div id="referralAutoFill" class="referral-auto-fill" style="display: none;">
+            <div id="referralAutoFill" class="referral-auto-fill">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: var(--success); font-size: 20px;">✓</span>
+                    <span style="color: var(--success); font-size: 20px;">🎯</span>
                     <div>
-                        <div style="font-weight: 600; color: var(--success);">Referral Code Auto-filled!</div>
-                        <div style="color: var(--muted); font-size: 12px;" id="autoFillCode">CODE</div>
+                        <div style="font-weight: 600; color: var(--success);">Referral Code Detected</div>
+                        <div style="color: var(--muted); font-size: 12px;">Will auto-fill after wallet connection</div>
+                        <div style="color: var(--accent); font-size: 14px; font-weight: 700; margin-top: 5px;" id="autoFillCode">CODE</div>
                     </div>
                 </div>
                 <button id="clearReferralCode" style="background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 12px;">
@@ -721,7 +723,7 @@
                         
                         <div class="referral-link-container">
                             <div style="color: var(--muted); margin-bottom: 10px; font-size: 13px;">Your Referral Link</div>
-                            <div class="referral-link" id="referralLinkDisplay">https://vanswap.xyz/airdrop/</div>
+                            <div class="referral-link" id="referralLinkDisplay">https://vanswap.xyz/airdrop.html?ref=</div>
                         </div>
                         
                         <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -797,9 +799,9 @@
         let account = null;
         let airdropContract = null;
         let updateInterval = null;
-        let claimTimerInterval = null;
         let isCorrectNetwork = false;
         let userReferralCode = "";
+        let pendingReferralCode = null; // Store referral code from URL
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
@@ -919,82 +921,6 @@
             });
         }
 
-        // ==================== REFERRAL URL HANDLING ====================
-        function getReferralCodeFromURL() {
-            // Method 1: Dari path /airdrop/CODE
-            const path = window.location.pathname;
-            
-            if (path.includes('/airdrop/')) {
-                const parts = path.split('/');
-                const airdropIndex = parts.indexOf('airdrop');
-                
-                if (airdropIndex !== -1 && airdropIndex + 1 < parts.length) {
-                    const code = parts[airdropIndex + 1];
-                    if (code && code.length >= 3 && /^[A-Z0-9]+$/.test(code)) {
-                        return code.toUpperCase();
-                    }
-                }
-            }
-            
-            // Method 2: Dari query parameter ?ref=CODE
-            const urlParams = new URLSearchParams(window.location.search);
-            const refCode = urlParams.get('ref') || urlParams.get('code') || urlParams.get('referral');
-            if (refCode && refCode.length >= 3) {
-                return refCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            }
-            
-            // Method 3: Dari hash #ref-CODE
-            const hash = window.location.hash;
-            if (hash.includes('ref-')) {
-                const codeMatch = hash.match(/ref-([A-Z0-9]+)/i);
-                if (codeMatch && codeMatch[1]) {
-                    return codeMatch[1].toUpperCase();
-                }
-            }
-            
-            return null;
-        }
-
-        function autoFillReferralCode() {
-            const referralCode = getReferralCodeFromURL();
-            
-            if (referralCode && elements.referralCodeInput) {
-                // Auto-fill input field
-                elements.referralCodeInput.value = referralCode;
-                
-                // Show auto-fill notification
-                elements.autoFillCode.textContent = referralCode;
-                elements.referralAutoFill.style.display = 'flex';
-                
-                // Show notification
-                showNotification(`Referral code "${referralCode}" auto-filled!`, 'success');
-                
-                // Clean URL (remove referral code from URL for privacy)
-                cleanURL();
-                
-                return true;
-            }
-            
-            return false;
-        }
-
-        function cleanURL() {
-            if (window.history.replaceState) {
-                // Remove referral code from URL
-                const cleanPath = window.location.pathname.replace(/\/airdrop\/[^/]+/, '');
-                const cleanSearch = new URLSearchParams(window.location.search);
-                cleanSearch.delete('ref');
-                cleanSearch.delete('code');
-                cleanSearch.delete('referral');
-                
-                const cleanSearchString = cleanSearch.toString() ? '?' + cleanSearch.toString() : '';
-                const cleanHash = window.location.hash.replace(/ref-[^&]+/, '');
-                
-                const cleanURL = cleanPath + cleanSearchString + cleanHash;
-                window.history.replaceState({}, document.title, cleanURL);
-            }
-        }
-
         // ==================== COUNTDOWN TIMER ====================
         class CountdownTimer {
             constructor(displayElement) {
@@ -1056,6 +982,73 @@
         }
 
         const claimTimer = new CountdownTimer(elements.claimTimer);
+
+        // ==================== REFERRAL CODE HANDLING ====================
+        function getReferralCodeFromURL() {
+            // Get referral code from query parameter ?ref=CODE
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref') || urlParams.get('code');
+            
+            if (refCode && refCode.length >= 3) {
+                // Clean and validate code
+                const cleanCode = refCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (cleanCode.length >= 3) {
+                    return cleanCode;
+                }
+            }
+            
+            return null;
+        }
+
+        function checkForReferralCode() {
+            // Check if there's a referral code in the URL
+            const referralCode = getReferralCodeFromURL();
+            
+            if (referralCode) {
+                // Store the referral code
+                pendingReferralCode = referralCode;
+                
+                // Show notification badge
+                elements.autoFillCode.textContent = referralCode;
+                elements.referralAutoFill.style.display = 'flex';
+                
+                // Clean URL (remove query parameter)
+                if (window.history.replaceState) {
+                    const cleanUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+                }
+                
+                return true;
+            }
+            
+            return false;
+        }
+
+        function applyPendingReferralCode() {
+            // Apply pending referral code to input field
+            if (pendingReferralCode && elements.referralCodeInput) {
+                elements.referralCodeInput.value = pendingReferralCode;
+                
+                // Update notification
+                showNotification(`Referral code "${pendingReferralCode}" auto-filled!`, 'success');
+                
+                // Clear pending code
+                pendingReferralCode = null;
+                
+                return true;
+            }
+            
+            return false;
+        }
+
+        function clearPendingReferralCode() {
+            pendingReferralCode = null;
+            elements.referralAutoFill.style.display = 'none';
+            if (elements.referralCodeInput) {
+                elements.referralCodeInput.value = '';
+            }
+            showNotification('Referral code cleared', 'info');
+        }
 
         // ==================== REFERRAL CODE GENERATION ====================
         async function generateReferralCode() {
@@ -1126,9 +1119,9 @@
             
             elements.referralCodeDisplay.textContent = code;
             
-            // Generate referral link dengan domain yang benar
+            // Generate referral link
             const baseUrl = window.location.origin;
-            const referralLink = `${baseUrl}/airdrop/${code}`;
+            const referralLink = `${baseUrl}/airdrop.html?ref=${code}`;
             elements.referralLinkDisplay.textContent = referralLink;
             
             userReferralCode = code;
@@ -1235,6 +1228,9 @@
                 
                 updateWalletUI();
                 showNotification('Wallet connected successfully!', 'success');
+                
+                // Apply pending referral code AFTER wallet connection
+                applyPendingReferralCode();
                 
                 await Promise.all([
                     loadGlobalStats(),
@@ -1436,7 +1432,7 @@
                 const newCode = await generateReferralCode();
                 updateReferralDisplay(newCode);
                 
-                // Hide auto-fill notification setelah register
+                // Hide auto-fill notification
                 elements.referralAutoFill.style.display = 'none';
                 
                 await checkUserRegistration();
@@ -1545,7 +1541,7 @@
 
         function copyReferralLink() {
             const link = elements.referralLinkDisplay.textContent;
-            if (!link || link.includes('/airdrop/')) return;
+            if (!link || link.includes('?ref=')) return;
             
             navigator.clipboard.writeText(link).then(() => {
                 const btn = elements.copyReferralLink;
@@ -1563,12 +1559,6 @@
                     btn.style.color = 'white';
                 }, 2000);
             });
-        }
-
-        function clearAutoFillReferral() {
-            elements.referralCodeInput.value = '';
-            elements.referralAutoFill.style.display = 'none';
-            showNotification('Referral code cleared', 'info');
         }
 
         // ==================== AUTO UPDATE ====================
@@ -1594,7 +1584,7 @@
         elements.claimBonus.addEventListener('click', claimReferralBonus);
         elements.copyReferralCode.addEventListener('click', copyReferralCode);
         elements.copyReferralLink.addEventListener('click', copyReferralLink);
-        elements.clearReferralCode.addEventListener('click', clearAutoFillReferral);
+        elements.clearReferralCode.addEventListener('click', clearPendingReferralCode);
 
         elements.referralCodeInput.addEventListener('input', function() {
             this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
@@ -1654,13 +1644,13 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            // STEP 1: Auto-fill referral code dari URL (jika ada)
-            const hasAutoFilled = autoFillReferralCode();
+            // STEP 1: Check for referral code in URL (show notification badge)
+            checkForReferralCode();
             
             // STEP 2: Check network
             await checkAndSwitchNetwork();
             
-            // STEP 3: Check jika wallet sudah connected
+            // STEP 3: Check if wallet is already connected
             if (window.ethereum && window.ethereum.selectedAddress && isCorrectNetwork) {
                 try {
                     showLoading(true, 'Loading airdrop...');
@@ -1670,6 +1660,9 @@
                     airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
                     
                     updateWalletUI();
+                    
+                    // Apply pending referral code
+                    applyPendingReferralCode();
                     
                     await Promise.all([
                         loadGlobalStats(),
