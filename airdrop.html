@@ -549,19 +549,19 @@
                 <h2 class="card-title">Global Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-value" id="totalUsers">-</div>
                         <div class="stat-label">Total Users</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="totalVansClaimed">0</div>
+                        <div class="stat-value" id="totalVansClaimed">-</div>
                         <div class="stat-label">VANS Claimed</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="totalExoClaimed">0</div>
+                        <div class="stat-value" id="totalExoClaimed">-</div>
                         <div class="stat-label">EXO Claimed</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="activeReferrals">0</div>
+                        <div class="stat-value" id="activeReferrals">-</div>
                         <div class="stat-label">Active Referrals</div>
                     </div>
                 </div>
@@ -638,15 +638,15 @@
                 <div class="reward-card">
                     <div class="reward-header">
                         <div class="reward-title">📅 Daily Reward</div>
-                        <div class="reward-amount" id="dailyVansAmount">50 VANS</div>
+                        <div class="reward-amount" id="dailyVansAmount">-</div>
                     </div>
                     <div class="reward-details">
                         <span>Claim every 24 hours</span>
-                        <span>+ <span id="dailyExoAmount">0.001</span> EXO</span>
+                        <span>+ <span id="dailyExoAmount">-</span> EXO</span>
                     </div>
                     <div class="timer">
                         <div class="timer-label">Next Claim Available In</div>
-                        <div class="timer-display" id="claimTimer">00:00:00</div>
+                        <div class="timer-display" id="claimTimer">--:--:--</div>
                     </div>
                     <button id="claimDaily" class="action-btn btn-success" disabled>
                         Claim Daily Reward
@@ -657,7 +657,7 @@
                 <div class="reward-card">
                     <div class="reward-header">
                         <div class="reward-title">👥 Referral Bonus</div>
-                        <div class="reward-amount" id="referralBonus">0 EXO</div>
+                        <div class="reward-amount" id="referralBonus">-</div>
                     </div>
                     <div class="reward-details">
                         <span>Earn 0.1 EXO per referral</span>
@@ -776,20 +776,24 @@
             blockExplorerUrls: ['https://vanascan.io/']
         };
         
-        // ABI for the airdrop contract - DIPERBAIKI
+        // ABI for the airdrop contract - SIMPLIFIED
         const AIRDROP_ABI = [
+            // Basic functions
             "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
             "function claimDaily() external",
             "function claimReferralBonus() external",
-            "function getAvailableRewards(address userAddress) view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256)",
-            "function getUserStats(address userAddress) view returns (uint256, uint256, uint256, uint256, uint256, address, uint256, string, uint256)",
-            "function getContractInfo() view returns (uint256, uint256, uint256, uint256, uint256, bool)",
-            "function users(address) view returns (bool, uint256, uint256, uint256, uint256, address, uint256, uint256, uint256, string, uint256, uint256)",
-            "function claimedInitial(address) view returns (bool)",
-            "function totalRegistered() view returns (uint256)",
-            "function MAX_USERS() view returns (uint256)",
-            "function referralCounts(address) view returns (uint256)"
+            
+            // View functions - hanya yang penting
+            "function getAvailableRewards(address userAddress) view returns (uint256 vansDaily, uint256 exoDaily, uint256 timeUntilNextClaim, bool canClaimInitial, uint256 pendingBonus, uint256 referralsLeft, uint256 contractVansBalance, uint256 contractExoBalance)",
+            "function getUserStats(address userAddress) view returns (uint256 totalVansClaimed, uint256 totalExoClaimed, uint256 referralCount, uint256 totalClaims, uint256 lastClaimTime, address referrer, uint256 referralRewardsEarned, string memory referralCode, uint256 referralsToday)",
+            
+            // Global stats
+            "function getContractInfo() view returns (uint256 totalVansClaimed, uint256 totalExoClaimed, uint256 activeReferrals, uint256 totalRegistered, uint256 maxUsers, bool isActive)",
+            
+            // User data
+            "function users(address) view returns (bool isRegistered, uint256 vansClaimed, uint256 exoClaimed, uint256 totalClaims, uint256 lastClaimTime, address referrer, uint256 referralCount, uint256 referralRewardsEarned, uint256 referralsToday, string memory referralCode, uint256 registrationTime, uint256 dailyClaims)",
+            "function claimedInitial(address) view returns (bool)"
         ];
 
         // ==================== GLOBAL VARIABLES ====================
@@ -799,9 +803,9 @@
         let airdropContract = null;
         let updateInterval = null;
         let isCorrectNetwork = false;
-        let userReferralCode = "";
         let pendingReferralCode = null;
-        let isClaiming = false; // Flag untuk mencegah double claim
+        let claimTimerInterval = null;
+        let currentTimerSeconds = 0;
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
@@ -868,23 +872,24 @@
 
         function showNotification(message, type = 'info', duration = 4000) {
             const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 left: 15px;
                 right: 15px;
-                padding: 20px;
-                border-radius: 15px;
-                background: var(--card-bg);
-                border: 1px solid var(--card-border);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                padding: 15px 20px;
+                border-radius: 12px;
+                background: ${type === 'success' ? 'rgba(76,175,80,0.95)' : 
+                           type === 'error' ? 'rgba(244,67,54,0.95)' : 
+                           'rgba(33,150,243,0.95)'};
+                color: white;
+                font-weight: 600;
+                text-align: center;
                 z-index: 1000;
                 transform: translateY(-100px);
                 transition: transform 0.3s;
                 max-width: 100%;
-                text-align: center;
-                border-left: 5px solid ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#31d0aa'};
+                box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             `;
             
             notification.textContent = message;
@@ -908,14 +913,9 @@
         }
 
         function formatNumber(number, decimals = 2) {
-            if (!number || number === '0') return '0';
+            if (!number || isNaN(number) || number === 0) return '0';
             const num = parseFloat(number);
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
-            }
+            if (num < 0.01 && num > 0) return '<0.01';
             return num.toLocaleString('en-US', {
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
@@ -923,76 +923,47 @@
         }
 
         // ==================== COUNTDOWN TIMER ====================
-        class CountdownTimer {
-            constructor(displayElement) {
-                this.displayElement = displayElement;
-                this.endTime = 0;
-                this.interval = null;
-                this.isRunning = false;
+        function updateClaimTimer(seconds) {
+            if (claimTimerInterval) {
+                clearInterval(claimTimerInterval);
             }
             
-            start(seconds) {
-                this.stop();
-                this.endTime = Date.now() + (seconds * 1000);
-                this.isRunning = true;
-                this.update();
-                this.interval = setInterval(() => this.update(), 1000);
-            }
+            currentTimerSeconds = seconds;
             
-            update() {
-                if (!this.isRunning) return;
-                
-                const now = Date.now();
-                const remaining = Math.max(0, Math.floor((this.endTime - now) / 1000));
-                
-                if (remaining <= 0) {
-                    this.stop();
-                    this.displayElement.textContent = 'READY';
-                    this.displayElement.style.color = '#4caf50';
-                    // Enable claim button jika timer selesai
-                    if (elements.claimDaily) {
-                        elements.claimDaily.disabled = false;
-                        elements.claimDaily.textContent = 'Claim Daily Reward';
-                    }
+            function updateDisplay() {
+                if (currentTimerSeconds <= 0) {
+                    elements.claimTimer.textContent = 'READY';
+                    elements.claimTimer.style.color = '#4caf50';
+                    elements.claimDaily.disabled = false;
+                    elements.claimDaily.textContent = 'Claim Daily Reward';
+                    clearInterval(claimTimerInterval);
                     return;
                 }
                 
-                const hours = Math.floor(remaining / 3600);
-                const minutes = Math.floor((remaining % 3600) / 60);
-                const seconds = remaining % 60;
+                const hours = Math.floor(currentTimerSeconds / 3600);
+                const minutes = Math.floor((currentTimerSeconds % 3600) / 60);
+                const secs = currentTimerSeconds % 60;
                 
                 if (hours > 0) {
-                    this.displayElement.textContent = 
-                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    elements.claimTimer.textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                 } else {
-                    this.displayElement.textContent = 
-                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    elements.claimTimer.textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                 }
                 
-                this.displayElement.style.color = '#ff9800';
+                elements.claimTimer.style.color = '#ff9800';
+                currentTimerSeconds--;
             }
             
-            stop() {
-                this.isRunning = false;
-                if (this.interval) {
-                    clearInterval(this.interval);
-                    this.interval = null;
-                }
-            }
-            
-            reset() {
-                this.stop();
-                this.displayElement.textContent = '00:00:00';
-                this.displayElement.style.color = '#ff9800';
-            }
+            updateDisplay();
+            claimTimerInterval = setInterval(updateDisplay, 1000);
         }
-
-        const claimTimer = new CountdownTimer(elements.claimTimer);
 
         // ==================== REFERRAL CODE HANDLING ====================
         function getReferralCodeFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
-            const refCode = urlParams.get('ref') || urlParams.get('code');
+            const refCode = urlParams.get('ref');
             
             if (refCode && refCode.length >= 3) {
                 const cleanCode = refCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1012,6 +983,7 @@
                 elements.autoFillCode.textContent = referralCode;
                 elements.referralAutoFill.style.display = 'flex';
                 
+                // Clean URL
                 if (window.history.replaceState) {
                     const cleanUrl = window.location.pathname;
                     window.history.replaceState({}, document.title, cleanUrl);
@@ -1042,43 +1014,20 @@
             showNotification('Referral code cleared', 'info');
         }
 
-        // ==================== REFERRAL CODE GENERATION ====================
-        async function generateReferralCode() {
-            try {
-                if (!account) {
-                    return generateDeterministicCode(account || "default");
-                }
-                
-                // Fallback: Generate deterministic code from wallet address
-                return generateDeterministicCode(account);
-                
-            } catch (error) {
-                console.error("Error generating referral code:", error);
-                return generateDeterministicCode(account || "default");
-            }
-        }
-
-        function generateDeterministicCode(walletAddress) {
-            if (!walletAddress || walletAddress === "default") {
+        function generateReferralCode() {
+            if (!account) {
                 return "VAN" + Math.random().toString(36).substring(2, 8).toUpperCase();
             }
             
+            // Simple hash dari address
             let hash = 0;
-            for (let i = 0; i < walletAddress.length; i++) {
-                hash = ((hash << 5) - hash) + walletAddress.charCodeAt(i);
+            for (let i = 0; i < account.length; i++) {
+                hash = ((hash << 5) - hash) + account.charCodeAt(i);
                 hash |= 0;
             }
             
             const base36 = Math.abs(hash).toString(36).toUpperCase();
-            let code = "VAN" + base36.substring(0, 6);
-            
-            if (code.length < 9) {
-                code += "0".repeat(9 - code.length);
-            } else if (code.length > 9) {
-                code = code.substring(0, 9);
-            }
-            
-            return code;
+            return "VAN" + base36.substring(0, 6);
         }
 
         function updateReferralDisplay(code) {
@@ -1088,7 +1037,6 @@
             const baseUrl = window.location.origin;
             const referralLink = `${baseUrl}/airdrop.html?ref=${code}`;
             elements.referralLinkDisplay.textContent = referralLink;
-            userReferralCode = code;
         }
 
         // ==================== NETWORK FUNCTIONS ====================
@@ -1202,7 +1150,7 @@
                 ]);
                 
                 if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(updateData, 15000); // Update every 15 seconds
+                updateInterval = setInterval(updateData, 10000); // Update every 10 seconds
                 
             } catch (error) {
                 console.error('Wallet connection error:', error);
@@ -1252,29 +1200,23 @@
             try {
                 if (!airdropContract) return;
                 
-                const [totalUsers, maxUsers] = await Promise.all([
-                    airdropContract.totalRegistered().catch(() => 0),
-                    airdropContract.MAX_USERS().catch(() => 10000)
-                ]);
+                const contractInfo = await airdropContract.getContractInfo();
                 
-                elements.totalUsers.textContent = formatNumber(totalUsers);
+                // Update stats dengan data REAL
+                elements.totalUsers.textContent = formatNumber(contractInfo[3]); // totalRegistered
+                elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(contractInfo[0], 18)); // totalVansClaimed
+                elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(contractInfo[1], 8), 2); // totalExoClaimed
+                elements.activeReferrals.textContent = formatNumber(contractInfo[2]); // activeReferrals
                 
-                const progress = (totalUsers / maxUsers) * 100;
+                // Update progress
+                const progress = (contractInfo[3] / contractInfo[4]) * 100;
                 elements.userProgress.style.width = `${Math.min(progress, 100)}%`;
                 elements.progressText.textContent = `${Math.round(progress)}%`;
                 
-                // Get other stats
-                try {
-                    const contractInfo = await airdropContract.getContractInfo();
-                    elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(contractInfo[0] || 0, 18));
-                    elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(contractInfo[1] || 0, 8), 1);
-                    elements.activeReferrals.textContent = formatNumber(contractInfo[2] || 0);
-                } catch (error) {
-                    console.log("Could not load detailed stats:", error);
-                }
-                
             } catch (error) {
                 console.error('Error loading global stats:', error);
+                // JANGAN set default data, biarkan kosong atau tampilkan error
+                showNotification('Failed to load global stats', 'error');
             }
         }
 
@@ -1285,19 +1227,21 @@
                 const userInfo = await airdropContract.users(account);
                 const isRegistered = userInfo[0];
                 const claimedInitial = await airdropContract.claimedInitial(account);
-                const userReferralCode = userInfo[9];
                 
                 if (isRegistered) {
                     showRegistrationUI(true);
                     await loadUserData();
                     
-                    if (userReferralCode && userReferralCode.length > 0) {
-                        updateReferralDisplay(userReferralCode.toUpperCase());
+                    // Generate referral code untuk user
+                    const userCode = userInfo[9];
+                    if (userCode && userCode.length > 0) {
+                        updateReferralDisplay(userCode.toUpperCase());
                     } else {
-                        const newCode = await generateReferralCode();
+                        const newCode = generateReferralCode();
                         updateReferralDisplay(newCode);
                     }
                     
+                    // Update initial claim status
                     if (claimedInitial) {
                         elements.initialClaimed.style.display = 'inline';
                         elements.claimInitial.disabled = true;
@@ -1329,58 +1273,59 @@
                 ]);
                 
                 // Parse rewards
-                const vansDaily = rewards[0] || 0;
-                const exoDaily = rewards[1] || 0;
-                const timeUntilNextClaim = rewards[2] || 0;
-                const canClaimInitial = rewards[3] || false;
-                const pendingBonus = rewards[4] || 0;
+                const vansDaily = rewards[0];
+                const exoDaily = rewards[1];
+                const timeUntilNextClaim = rewards[2];
+                const canClaimInitial = rewards[3];
+                const pendingBonus = rewards[4];
+                const referralsLeft = rewards[5];
                 
                 // Parse user stats
-                const totalVansClaimed = userStats[0] || 0;
-                const totalExoClaimed = userStats[1] || 0;
-                const referralCount = userStats[2] || 0;
-                const totalClaims = userStats[3] || 0;
-                const referralCode = userStats[7] || "";
+                const totalVansClaimed = userStats[0];
+                const totalExoClaimed = userStats[1];
+                const referralCount = userStats[2];
+                const totalClaims = userStats[3];
+                const referralCode = userStats[7];
                 
-                // Update user rewards
+                // Update UI dengan data REAL
                 elements.dailyVansAmount.textContent = `${formatNumber(ethers.utils.formatUnits(vansDaily, 18))} VANS`;
                 elements.dailyExoAmount.textContent = formatNumber(ethers.utils.formatUnits(exoDaily, 8), 3);
                 
                 elements.referralBonus.textContent = `${formatNumber(ethers.utils.formatUnits(pendingBonus, 8), 2)} EXO`;
-                elements.referralCount.textContent = referralCount.toString();
+                elements.referralCount.textContent = `${referralCount}/20`;
                 
                 // Update user stats
                 elements.myVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
                 elements.myExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 2);
-                elements.myTotalClaims.textContent = totalClaims.toString();
-                elements.myReferrals.textContent = referralCount.toString();
+                elements.myTotalClaims.textContent = formatNumber(totalClaims);
+                elements.myReferrals.textContent = formatNumber(referralCount);
                 
-                // Update referral code jika belum di-set
-                if (referralCode && referralCode.length > 0 && !userReferralCode) {
+                // Update referral code
+                if (referralCode && referralCode.length > 0) {
                     updateReferralDisplay(referralCode.toUpperCase());
                 }
                 
-                // Update buttons
-                elements.claimInitial.disabled = !canClaimInitial || isClaiming;
-                elements.claimBonus.disabled = pendingBonus <= 0 || isClaiming;
+                // Update buttons berdasarkan data REAL
+                elements.claimInitial.disabled = !canClaimInitial;
+                elements.claimBonus.disabled = pendingBonus <= 0;
                 
-                // Update countdown timer
+                // Update timer dengan data REAL
                 const timeUntilNextClaimNum = Number(timeUntilNextClaim);
                 if (timeUntilNextClaimNum > 0) {
-                    claimTimer.start(timeUntilNextClaimNum);
+                    updateClaimTimer(timeUntilNextClaimNum);
                     elements.claimDaily.disabled = true;
                     elements.claimDaily.textContent = 'Wait for Timer';
                 } else {
-                    claimTimer.reset();
-                    elements.claimDaily.disabled = false;
-                    elements.claimDaily.textContent = 'Claim Daily Reward';
+                    if (claimTimerInterval) clearInterval(claimTimerInterval);
                     elements.claimTimer.textContent = 'READY';
                     elements.claimTimer.style.color = '#4caf50';
+                    elements.claimDaily.disabled = false;
+                    elements.claimDaily.textContent = 'Claim Daily Reward';
                 }
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
-                claimTimer.reset();
+                showNotification('Failed to load user data', 'error');
             }
         }
 
@@ -1392,9 +1337,11 @@
                     return;
                 }
                 
-                if (isClaiming) return;
-                
                 const referralCode = elements.referralCodeInput.value.trim().toLowerCase();
+                
+                // Save original state
+                const originalText = elements.registerBtn.textContent;
+                const originalDisabled = elements.registerBtn.disabled;
                 
                 elements.registerBtn.disabled = true;
                 elements.registerBtn.innerHTML = '<span class="loading"></span> Registering...';
@@ -1405,16 +1352,19 @@
                 showNotification('Successfully registered! 🎉', 'success');
                 
                 // Generate referral code
-                const newCode = await generateReferralCode();
+                const newCode = generateReferralCode();
                 updateReferralDisplay(newCode);
                 
                 elements.referralAutoFill.style.display = 'none';
                 
+                // Load data setelah register
                 await checkUserRegistration();
                 
             } catch (error) {
                 console.error('Registration error:', error);
                 showNotification(error.message || 'Registration failed', 'error');
+                
+                // Reset button
                 elements.registerBtn.disabled = false;
                 elements.registerBtn.textContent = 'Register Now';
             }
@@ -1427,26 +1377,32 @@
                     return;
                 }
                 
-                if (isClaiming) return;
-                isClaiming = true;
+                // Save original state
+                const originalText = elements.claimInitial.textContent;
                 
                 elements.claimInitial.disabled = true;
-                const originalText = elements.claimInitial.textContent;
                 elements.claimInitial.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimInitial();
                 await tx.wait();
                 
                 showNotification('🎁 100 VANS + 0.01 EXO claimed!', 'success');
+                
+                // Update UI setelah claim
+                elements.initialClaimed.style.display = 'inline';
+                elements.claimInitial.disabled = true;
+                elements.claimInitial.textContent = 'Already Claimed';
+                
+                // Update data
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim initial error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
+                
+                // Reset button jika error
                 elements.claimInitial.disabled = false;
                 elements.claimInitial.textContent = 'Claim Initial Reward';
-            } finally {
-                isClaiming = false;
             }
         }
 
@@ -1457,26 +1413,34 @@
                     return;
                 }
                 
-                if (isClaiming) return;
-                isClaiming = true;
+                // Save original state
+                const originalText = elements.claimDaily.textContent;
                 
                 elements.claimDaily.disabled = true;
-                const originalText = elements.claimDaily.textContent;
                 elements.claimDaily.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimDaily();
                 await tx.wait();
                 
                 showNotification('📅 Daily reward claimed!', 'success');
+                
+                // Reset button state
+                elements.claimDaily.disabled = true;
+                elements.claimDaily.textContent = 'Wait for Timer';
+                
+                // Start timer 24 jam
+                updateClaimTimer(86400); // 24 jam dalam detik
+                
+                // Update data
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim daily error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
+                
+                // Reset button jika error
                 elements.claimDaily.disabled = false;
                 elements.claimDaily.textContent = 'Claim Daily Reward';
-            } finally {
-                isClaiming = false;
             }
         }
 
@@ -1487,26 +1451,31 @@
                     return;
                 }
                 
-                if (isClaiming) return;
-                isClaiming = true;
+                // Save original state
+                const originalText = elements.claimBonus.textContent;
                 
                 elements.claimBonus.disabled = true;
-                const originalText = elements.claimBonus.textContent;
                 elements.claimBonus.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimReferralBonus();
                 await tx.wait();
                 
                 showNotification('👥 Referral bonus claimed!', 'success');
+                
+                // Reset button state
+                elements.claimBonus.disabled = true;
+                elements.claimBonus.textContent = 'Claim Referral Bonus';
+                
+                // Update data
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim bonus error:', error);
                 showNotification(error.message || 'Claim failed', 'error');
+                
+                // Reset button jika error
                 elements.claimBonus.disabled = false;
                 elements.claimBonus.textContent = 'Claim Referral Bonus';
-            } finally {
-                isClaiming = false;
             }
         }
 
@@ -1518,21 +1487,7 @@
             }
             
             navigator.clipboard.writeText(code).then(() => {
-                const btn = elements.copyReferralCode;
-                const originalHTML = btn.innerHTML;
-                btn.innerHTML = '✓ Copied!';
-                btn.style.background = 'var(--success)';
-                btn.style.borderColor = 'var(--success)';
-                btn.style.color = 'white';
-                
-                showNotification('Referral code copied 📋', 'success');
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalHTML;
-                    btn.style.background = 'transparent';
-                    btn.style.borderColor = 'var(--accent)';
-                    btn.style.color = 'var(--accent)';
-                }, 2000);
+                showNotification('Referral code copied! 📋', 'success');
             }).catch(err => {
                 showNotification('Failed to copy code', 'error');
             });
@@ -1540,27 +1495,13 @@
 
         function copyReferralLink() {
             const link = elements.referralLinkDisplay.textContent;
-            if (!link || link === 'https://vanswap.xyz/airdrop.html?ref=') {
+            if (!link || link.includes('?ref=') && !link.includes('?ref=VAN')) {
                 showNotification('No referral link available', 'error');
                 return;
             }
             
             navigator.clipboard.writeText(link).then(() => {
-                const btn = elements.copyReferralLink;
-                const originalHTML = btn.innerHTML;
-                btn.innerHTML = '✓ Copied!';
-                btn.style.background = 'var(--success)';
-                btn.style.borderColor = 'var(--success)';
-                btn.style.color = 'white';
-                
-                showNotification('Referral link copied 🔗', 'success');
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalHTML;
-                    btn.style.background = 'var(--primary)';
-                    btn.style.borderColor = 'var(--primary)';
-                    btn.style.color = 'white';
-                }, 2000);
+                showNotification('Referral link copied! 🔗', 'success');
             }).catch(err => {
                 showNotification('Failed to copy link', 'error');
             });
@@ -1569,7 +1510,7 @@
         // ==================== AUTO UPDATE ====================
         async function updateData() {
             try {
-                if (isCorrectNetwork && account) {
+                if (isCorrectNetwork && account && airdropContract) {
                     await loadGlobalStats();
                     await loadUserData();
                 }
@@ -1593,10 +1534,6 @@
             this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
         });
 
-        // Double click to copy
-        elements.referralCodeDisplay.addEventListener('dblclick', copyReferralCode);
-        elements.referralLinkDisplay.addEventListener('dblclick', copyReferralLink);
-
         // ==================== WALLET EVENTS ====================
         if (window.ethereum) {
             window.ethereum.on('chainChanged', async (chainId) => {
@@ -1613,7 +1550,7 @@
                         checkUserRegistration()
                     ]);
                 } else {
-                    claimTimer.stop();
+                    if (claimTimerInterval) clearInterval(claimTimerInterval);
                 }
             });
 
@@ -1630,7 +1567,7 @@
                     elements.referralCard.style.display = 'none';
                     elements.referralAutoFill.style.display = 'none';
                     
-                    claimTimer.stop();
+                    if (claimTimerInterval) clearInterval(claimTimerInterval);
                     showNotification('Wallet disconnected', 'info');
                 } else {
                     account = accounts[0];
@@ -1670,7 +1607,7 @@
                         checkUserRegistration()
                     ]);
                     
-                    updateInterval = setInterval(updateData, 15000);
+                    updateInterval = setInterval(updateData, 10000);
                     
                 } catch (error) {
                     console.error('Initialization error:', error);
