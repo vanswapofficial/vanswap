@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VanSwap Airdrop | Claim VANS & EXO Tokens</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #1a7f5e;
@@ -32,6 +31,7 @@
             height: 100%;
             overflow-x: hidden;
             overscroll-behavior-y: none;
+            touch-action: pan-y;
         }
         
         body {
@@ -43,7 +43,19 @@
             padding: 0;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch;
-            background-attachment: fixed;
+            position: relative;
+        }
+        
+        /* Enable Scrolling - FIXED */
+        .scroll-container {
+            min-height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            will-change: transform;
+            contain: content;
         }
         
         .container {
@@ -51,6 +63,7 @@
             max-width: 500px;
             margin: 0 auto;
             padding: 15px;
+            position: relative;
         }
         
         /* Header */
@@ -61,6 +74,12 @@
             padding: 15px 0;
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            background: rgba(4,20,13,0.95);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            transform: translateZ(0);
         }
         
         .logo {
@@ -75,7 +94,6 @@
             width: 40px;
             height: 40px;
             border-radius: 10px;
-            object-fit: cover;
         }
         
         .logo-text {
@@ -86,6 +104,7 @@
             -webkit-text-fill-color: transparent;
         }
         
+        /* Wallet Button */
         .connect-btn {
             background: var(--accent);
             color: #052017;
@@ -96,11 +115,11 @@
             cursor: pointer;
             transition: all 0.3s;
             font-size: 14px;
+            white-space: nowrap;
         }
         
         .connect-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(49,208,170,0.3);
+            background: #3ad8b1;
         }
         
         .user-address {
@@ -113,7 +132,6 @@
             max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
         }
         
         /* Network Warning */
@@ -128,9 +146,9 @@
         }
         
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
         }
         
         .switch-network-btn {
@@ -142,37 +160,9 @@
             margin-top: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .switch-network-btn:hover {
-            background: #e68900;
-        }
-        
-        /* Cards */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 25px 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(49,208,170,0.4);
-        }
-        
-        .card-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--accent);
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         /* Stats Grid */
@@ -189,12 +179,7 @@
             border-radius: 15px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            background: rgba(49,208,170,0.1);
-            border-color: rgba(49,208,170,0.3);
+            transform: translateZ(0);
         }
         
         .stat-value {
@@ -207,75 +192,67 @@
         .stat-label {
             color: var(--muted);
             font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        /* Progress Bar */
-        .progress-container {
-            margin: 25px 0;
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 25px 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateZ(0);
+            contain: layout;
         }
         
-        .progress-bar {
-            height: 12px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 6px;
-            position: relative;
-            transition: width 1s ease-in-out;
-        }
-        
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255,255,255,0.4), 
-                transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        /* Registration */
-        .register-explanation {
-            background: rgba(49,208,170,0.1);
+        /* Reward Cards */
+        .reward-card {
+            background: linear-gradient(135deg, rgba(26,127,94,0.2), rgba(49,208,170,0.1));
             border: 1px solid rgba(49,208,170,0.2);
-            border-radius: 12px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: center;
-        }
-        
-        .form-input {
-            width: 100%;
-            padding: 16px;
             border-radius: 15px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.2);
-            color: var(--text);
-            font-size: 16px;
+            padding: 20px;
             margin-bottom: 15px;
-            font-family: 'Kanit', sans-serif;
-            transition: all 0.3s;
+            transform: translateZ(0);
         }
         
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(49,208,170,0.2);
+        .reward-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .reward-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        
+        .reward-amount {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        
+        .reward-details {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 15px;
         }
         
         /* Buttons */
@@ -293,27 +270,7 @@
             justify-content: center;
             align-items: center;
             gap: 10px;
-            font-family: 'Kanit', sans-serif;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .action-btn::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255,255,255,0.2), 
-                transparent);
-            transition: left 0.5s;
-        }
-        
-        .action-btn:hover::after {
-            left: 100%;
+            transform: translateZ(0);
         }
         
         .btn-primary {
@@ -321,9 +278,8 @@
             color: white;
         }
         
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(26,127,94,0.3);
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98) translateZ(0);
         }
         
         .btn-success {
@@ -331,40 +287,17 @@
             color: white;
         }
         
-        .btn-success:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(76,175,80,0.3);
-        }
-        
         .btn-warning {
             background: linear-gradient(135deg, #ff9800, #ffb74d);
             color: white;
         }
         
-        .btn-warning:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(255,152,0,0.3);
-        }
-        
-        .btn-gold {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #333;
-            font-weight: 800;
-        }
-        
-        .btn-gold:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(255,215,0,0.3);
-        }
-        
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
         }
         
-        /* Timer */
+        /* Timer - FIXED */
         .timer {
             text-align: center;
             margin: 20px 0;
@@ -372,15 +305,23 @@
             background: rgba(255,152,0,0.1);
             border-radius: 15px;
             border: 1px solid rgba(255,152,0,0.3);
+            contain: content;
+        }
+        
+        .timer-label {
+            color: var(--warning);
+            margin-bottom: 10px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .timer-display {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 800;
             color: var(--warning);
             font-family: 'Courier New', monospace;
-            margin: 10px 0;
-            text-shadow: 0 0 10px rgba(255,152,0,0.5);
+            transform: translateZ(0);
         }
         
         /* Loading */
@@ -398,116 +339,32 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(4,20,13,0.95);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            flex-direction: column;
-            gap: 20px;
-            backdrop-filter: blur(5px);
+        /* Progress Bar */
+        .progress-container {
+            margin: 25px 0;
         }
         
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            border-top-color: var(--accent);
-            animation: spin 1s linear infinite;
-        }
-        
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: var(--accent);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 10px;
-            z-index: 1001;
-            font-weight: 600;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            opacity: 0;
-            transition: all 0.3s;
-        }
-        
-        .notification.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-        
-        /* Referral */
-        .referral-code-box {
-            background: var(--glass);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            margin-top: 20px;
-            border: 2px dashed var(--primary);
-        }
-        
-        .referral-code-display {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--accent);
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            font-family: monospace;
-            word-break: break-all;
-            letter-spacing: 2px;
-        }
-        
-        .copy-btn {
-            background: var(--accent);
-            color: #052017;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-        }
-        
-        .copy-btn:hover {
-            background: #2ab894;
-            transform: translateY(-2px);
-        }
-        
-        /* Reward Cards */
-        .reward-card {
-            background: linear-gradient(135deg, rgba(26,127,94,0.2), rgba(49,208,170,0.1));
-            border: 1px solid rgba(49,208,170,0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .reward-header {
+        .progress-label {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 8px;
         }
         
-        .reward-amount {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--accent);
+        .progress-bar {
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 6px;
+            transition: width 0.5s;
+            transform: translateZ(0);
         }
         
         /* Footer */
@@ -527,11 +384,7 @@
             background: var(--glass);
             font-size: 13px;
             transition: all 0.3s;
-        }
-        
-        .nav-link:hover {
-            background: rgba(49,208,170,0.1);
-            transform: translateY(-2px);
+            transform: translateZ(0);
         }
         
         .footer {
@@ -542,14 +395,57 @@
             font-size: 12px;
         }
         
-        /* Mobile Responsive */
-        @media (max-width: 480px) {
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(4,20,13,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Referral Link */
+        .referral-link-container {
+            margin-top: 20px;
+            background: rgba(49,208,170,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .referral-link {
+            word-break: break-all;
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--accent);
+            border: 1px dashed var(--primary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
             .container {
                 padding: 10px;
-            }
-            
-            .card {
-                padding: 20px 15px;
             }
             
             .stat-value {
@@ -561,479 +457,320 @@
             }
             
             .timer-display {
-                font-size: 28px;
-            }
-            
-            .referral-code-display {
-                font-size: 22px;
+                font-size: 24px;
             }
         }
         
-        /* Tooltip */
-        .tooltip {
-            position: relative;
-            display: inline-block;
+        /* Performance Optimizations */
+        .optimized-scroll {
+            -webkit-overflow-scrolling: touch;
+            overflow-y: auto;
+            backface-visibility: hidden;
+            perspective: 1000;
+            transform-style: preserve-3d;
         }
         
-        .tooltip .tooltip-text {
-            visibility: hidden;
-            width: 200px;
-            background-color: var(--card-bg);
-            color: var(--text);
-            text-align: center;
-            border-radius: 6px;
-            padding: 10px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 12px;
-            border: 1px solid var(--card-border);
-        }
-        
-        .tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Badge */
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 700;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-        
-        .badge-new {
-            background: var(--accent);
-            color: #052017;
-        }
-        
-        .badge-hot {
-            background: #ff4757;
-            color: white;
+        .hardware-accelerated {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000;
         }
     </style>
 </head>
 <body>
-    <!-- Notification -->
-    <div class="notification" id="notification"></div>
-    
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <div id="loadingText" style="color: var(--accent); font-weight: 600;">Loading...</div>
+        <div id="loadingText" style="color: var(--accent); font-weight: 600;"></div>
     </div>
 
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <a href="https://vanswap.xyz" class="logo" target="_blank">
-                <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%231a7f5e\"/><text x=\"50\" y=\"60\" font-family=\"Arial\" font-size=\"40\" fill=\"white\" text-anchor=\"middle\">V</text></svg>';">
-                <div class="logo-text">VanSwap Airdrop</div>
-            </a>
-            
-            <div id="walletSection" style="display: flex; align-items: center; gap: 10px;">
-                <div id="userAddress" class="user-address" style="display: none;"></div>
-                <button id="connectWallet" class="connect-btn">
-                    <i class="fas fa-wallet"></i> Connect Wallet
+    <div class="scroll-container optimized-scroll">
+        <div class="container">
+            <!-- Header -->
+            <header class="header">
+                <a href="swap.html" class="logo">
+                    <img src="https://vanswap.xyz/assets/vans.png" alt="VanSwap">
+                    <div class="logo-text">VanSwap Airdrop</div>
+                </a>
+                
+                <div id="walletSection">
+                    <div id="userAddress" class="user-address" style="display: none;"></div>
+                    <button id="connectWallet" class="connect-btn">Connect Wallet</button>
+                </div>
+            </header>
+
+            <!-- Network Warning (Will show if not on Vana Network) -->
+            <div id="networkWarning" class="network-warning" style="display: none;">
+                <div style="color: var(--warning); font-weight: 600; margin-bottom: 10px;">
+                    ⚠️ Wrong Network Detected
+                </div>
+                <div style="color: var(--muted); font-size: 14px; margin-bottom: 10px;">
+                    Please switch to Vana Network to use Airdrop
+                </div>
+                <button id="switchNetworkBtn" class="switch-network-btn">
+                    🔄 Switch to Vana Network
                 </button>
             </div>
-        </header>
 
-        <!-- Network Warning -->
-        <div id="networkWarning" class="network-warning" style="display: none;">
-            <div style="color: var(--warning); font-weight: 600; margin-bottom: 10px;">
-                <i class="fas fa-exclamation-triangle"></i> Wrong Network
-            </div>
-            <div style="color: var(--muted); font-size: 14px; margin-bottom: 10px;">
-                Please switch to Vana Network to continue
-            </div>
-            <button id="switchNetworkBtn" class="switch-network-btn">
-                <i class="fas fa-sync-alt"></i> Switch to Vana Network
-            </button>
-        </div>
-
-        <!-- Global Stats -->
-        <div class="card">
-            <h2 class="card-title">
-                <i class="fas fa-globe"></i> Global Statistics
-                <span class="badge badge-new">LIVE</span>
-            </h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalUsers">0</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalVansClaimed">0</div>
-                    <div class="stat-label">VANS Claimed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalExoClaimed">0</div>
-                    <div class="stat-label">EXO Claimed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="activeReferrals">0</div>
-                    <div class="stat-label">Active Referrals</div>
-                </div>
-            </div>
-            
-            <div class="progress-container">
-                <div style="display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-bottom: 8px;">
-                    <span>Registration Progress</span>
-                    <span id="progressText">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="userProgress" style="width: 0%"></div>
-                </div>
-                <div style="text-align: center; color: var(--muted); font-size: 11px; margin-top: 8px;">
-                    <span id="usersLeft">0</span> spots left • <span id="maxUsers">8000</span> max
-                </div>
-            </div>
-        </div>
-
-        <!-- Registration Card -->
-        <div id="registrationCard" class="card">
-            <h2 class="card-title">
-                <i class="fas fa-rocket"></i> Start Earning
-                <span class="badge badge-hot">NEW</span>
-            </h2>
-            
-            <div class="register-explanation">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                    <div style="text-align: center;">
-                        <div style="font-size: 24px; color: #31d0aa;"><i class="fas fa-gift"></i></div>
-                        <div style="font-weight: 700;">100 VANS</div>
-                        <div style="color: var(--muted); font-size: 11px; margin-top: 5px;">Initial Reward</div>
+            <!-- Global Stats -->
+            <div class="card">
+                <h2 class="card-title">Global Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
                     </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 24px; color: #FFD700;"><i class="fas fa-star"></i></div>
-                        <div style="font-weight: 700;">0.01 EXO</div>
-                        <div style="color: var(--muted); font-size: 11px; margin-top: 5px;">Premium Token</div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalVansClaimed">0</div>
+                        <div class="stat-label">VANS Claimed</div>
                     </div>
-                </div>
-                <div style="color: var(--muted); font-size: 12px; line-height: 1.5;">
-                    Register once, claim daily rewards, and earn through referrals!
-                </div>
-            </div>
-            
-            <!-- Referral Code Input -->
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                    <i class="fas fa-user-friends" style="color: var(--accent);"></i>
-                    <label style="color: var(--muted); font-size: 14px;">Have a referral code?</label>
-                </div>
-                <input type="text" id="referralCodeInput" class="form-input" 
-                       placeholder="Enter referral code (optional)" 
-                       maxlength="10"
-                       style="text-transform: lowercase;">
-                <div style="color: var(--muted); font-size: 11px; text-align: center;">
-                    Get +10 VANS bonus for referrer when you use their code
-                </div>
-            </div>
-            
-            <!-- Register & Claim Button -->
-            <button id="registerAndClaimBtn" class="action-btn btn-gold" disabled>
-                <i class="fas fa-gift"></i> Register & Claim 100 VANS + 0.01 EXO
-            </button>
-            
-            <div style="text-align: center; color: var(--muted); font-size: 11px; margin-top: 15px;">
-                <i class="fas fa-shield-alt"></i> Secure • No Gas Fees Required
-            </div>
-        </div>
-
-        <!-- Rewards Section -->
-        <div id="rewardsSection" class="card" style="display: none;">
-            <h2 class="card-title">
-                <i class="fas fa-chart-bar"></i> Your Rewards
-                <span class="badge badge-new">ACTIVE</span>
-            </h2>
-            
-            <!-- Daily Reward -->
-            <div class="reward-card">
-                <div class="reward-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-calendar-day" style="font-size: 18px; color: var(--accent);"></i>
-                        <div style="font-weight: 700; font-size: 16px;">Daily Reward</div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalExoClaimed">0</div>
+                        <div class="stat-label">EXO Claimed</div>
                     </div>
-                    <div class="reward-amount" id="dailyVansAmount">50 VANS</div>
-                </div>
-                
-                <div style="color: var(--muted); font-size: 13px; margin-bottom: 10px;">
-                    + <span id="dailyExoAmount">0.001</span> EXO every 24 hours
-                    <div style="font-size: 11px; margin-top: 5px; color: var(--success);">
-                        <i class="fas fa-user-plus"></i> +10 VANS per referral
+                    <div class="stat-card">
+                        <div class="stat-value" id="activeReferrals">0</div>
+                        <div class="stat-label">Active Referrals</div>
                     </div>
                 </div>
                 
-                <!-- Timer -->
-                <div class="timer">
-                    <div style="color: var(--warning); font-size: 13px; margin-bottom: 5px;">
-                        <i class="fas fa-clock"></i> Next Claim Available In
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Registration Progress</span>
+                        <span id="progressText">0%</span>
                     </div>
-                    <div class="timer-display" id="claimTimer">00:00:00</div>
-                    <div id="nextClaimTime" style="color: var(--muted); font-size: 11px;"></div>
-                </div>
-                
-                <button id="claimDailyBtn" class="action-btn btn-success">
-                    <i class="fas fa-gift"></i> Claim Daily Reward
-                </button>
-                
-                <div id="lastClaimInfo" style="text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px;"></div>
-            </div>
-
-            <!-- Referral Bonus -->
-            <div class="reward-card">
-                <div class="reward-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-users" style="font-size: 18px; color: var(--accent);"></i>
-                        <div style="font-weight: 700; font-size: 16px;">Referral Bonus</div>
-                    </div>
-                    <div class="reward-amount" id="referralBonusAmount">0 EXO</div>
-                </div>
-                
-                <div style="color: var(--muted); font-size: 13px; margin-bottom: 10px;">
-                    <span id="referralCount">0</span>/20 referrals
-                    <div class="progress-bar" style="height: 6px; margin-top: 8px;">
-                        <div class="progress-fill" id="referralProgress" style="width: 0%"></div>
-                    </div>
-                </div>
-                
-                <div style="color: var(--muted); font-size: 12px; margin-bottom: 15px;">
-                    <i class="fas fa-coins"></i> Pending: <span id="pendingBonus">0</span> EXO
-                </div>
-                
-                <button id="claimReferralBonusBtn" class="action-btn btn-warning" disabled>
-                    <i class="fas fa-money-bill-wave"></i> Claim Referral Bonus
-                </button>
-                
-                <div style="text-align: center; color: var(--muted); font-size: 11px; margin-top: 10px;">
-                    <i class="fas fa-info-circle"></i> Earn 0.1 EXO per referral + 0.001 EXO daily
-                </div>
-            </div>
-        </div>
-
-        <!-- User Stats -->
-        <div id="userStatsCard" class="card" style="display: none;">
-            <h2 class="card-title">
-                <i class="fas fa-chart-line"></i> Your Statistics
-            </h2>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
-                <div class="stat-card">
-                    <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myVansClaimed">0</div>
-                    <div style="color: var(--muted); font-size: 12px;">VANS Claimed</div>
-                </div>
-                <div class="stat-card">
-                    <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myExoClaimed">0</div>
-                    <div style="color: var(--muted); font-size: 12px;">EXO Claimed</div>
-                </div>
-                <div class="stat-card">
-                    <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myTotalClaims">0</div>
-                    <div style="color: var(--muted); font-size: 12px;">Total Claims</div>
-                </div>
-                <div class="stat-card">
-                    <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myReferrals">0</div>
-                    <div style="color: var(--muted); font-size: 12px;">My Referrals</div>
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px; padding: 15px; background: rgba(49,208,170,0.05); border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="color: var(--accent); font-weight: 600; font-size: 14px;">
-                        <i class="fas fa-trophy"></i> Lifetime Earnings
-                    </div>
-                    <div style="font-weight: 800; color: var(--accent);" id="lifetimeEarnings">$0.00</div>
-                </div>
-                <div style="color: var(--muted); font-size: 11px;">
-                    Estimated value based on current prices
-                </div>
-            </div>
-        </div>
-
-        <!-- Referral Program -->
-        <div id="referralCard" class="card" style="display: none;">
-            <h2 class="card-title">
-                <i class="fas fa-handshake"></i> Referral Program
-            </h2>
-            
-            <div style="background: rgba(49,208,170,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <div style="color: var(--accent); font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-bullseye"></i> Benefits:
-                </div>
-                <div style="color: var(--muted); font-size: 13px; line-height: 1.6;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        <span><strong>+10 VANS</strong> per referral</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        <span><strong>+0.1 EXO</strong> bonus per referral</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        <span>Max <strong>20 referrals</strong></span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        <span>Code is <strong>permanent</strong></span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="userProgress" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Referral Code -->
-            <div class="referral-code-box">
-                <div style="color: var(--muted); margin-bottom: 10px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-qrcode"></i> Your Referral Code
+            <!-- Registration -->
+            <div id="registerSection" class="card">
+                <h2 class="card-title">Start Earning</h2>
+                <div id="notRegisteredMessage" class="status-message status-info" style="padding: 20px; border-radius: 15px; background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.3); color: #2196f3; text-align: center; margin: 20px 0;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🚀</div>
+                    <h3 style="margin-bottom: 10px;">Connect Wallet & Register</h3>
+                    <p style="color: var(--muted); font-size: 14px;">
+                        Get 100 VANS + 0.01 EXO instantly! Plus daily rewards.
+                    </p>
                 </div>
                 
-                <div class="referral-code-display" id="referralCodeDisplay">
-                    <div class="loading" style="margin: 0 auto;"></div>
-                </div>
-                
-                <div style="margin: 15px 0;">
-                    <div style="color: var(--muted); font-size: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-link"></i> Share this link:
-                    </div>
-                    <div style="position: relative;">
-                        <input type="text" readonly style="width: 100%; padding: 12px 40px 12px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: var(--text); font-size: 14px; margin-bottom: 10px; font-family: monospace;"
-                               id="referralLinkInput" value="">
-                        <button onclick="copyReferralLink()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--accent); cursor: pointer;">
-                            <i class="fas fa-copy"></i>
+                <div id="registerForm" style="display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <input type="text" id="referralCodeInput" placeholder="Enter referral code (optional)" maxlength="10" style="width: 100%; padding: 16px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text); font-size: 16px; margin-bottom: 15px;">
+                        <button id="registerBtn" class="action-btn btn-primary" disabled>
+                            Register Now
                         </button>
+                    </div>
+                    <div style="text-align: center; color: var(--muted); margin-top: 15px; font-size: 13px;">
+                        No code? Leave empty to start without referral
+                    </div>
+                </div>
+                
+                <div id="alreadyRegistered" style="display: none; text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🎉</div>
+                    <h3 style="margin-bottom: 10px; color: var(--accent);">You're Registered!</h3>
+                    <p style="color: var(--muted); font-size: 14px;">Start claiming your rewards below</p>
+                </div>
+            </div>
+
+            <!-- Rewards -->
+            <div id="rewardsSection" class="card" style="display: none;">
+                <h2 class="card-title">Your Rewards</h2>
+                
+                <!-- Initial Reward -->
+                <div class="reward-card">
+                    <div class="reward-header">
+                        <div class="reward-title">🎁 Initial Reward</div>
+                        <div class="reward-amount">100 VANS + 0.01 EXO</div>
+                    </div>
+                    <div class="reward-details">
+                        <span>One-time welcome gift</span>
+                        <span id="initialClaimed" style="color: var(--success); display: none;">✓ Claimed</span>
+                    </div>
+                    <button id="claimInitial" class="action-btn btn-primary" disabled>
+                        Claim Initial Reward
+                    </button>
+                </div>
+
+                <!-- Daily Reward -->
+                <div class="reward-card">
+                    <div class="reward-header">
+                        <div class="reward-title">📅 Daily Reward</div>
+                        <div class="reward-amount" id="dailyVansAmount">50 VANS</div>
+                    </div>
+                    <div class="reward-details">
+                        <span>Claim every 24 hours</span>
+                        <span>+ <span id="dailyExoAmount">0.001</span> EXO</span>
+                    </div>
+                    <div class="timer">
+                        <div class="timer-label">Next Claim Available In</div>
+                        <div class="timer-display" id="claimTimer">00:00:00</div>
+                    </div>
+                    <button id="claimDaily" class="action-btn btn-success" disabled>
+                        Claim Daily Reward
+                    </button>
+                </div>
+
+                <!-- Referral Bonus -->
+                <div class="reward-card">
+                    <div class="reward-header">
+                        <div class="reward-title">👥 Referral Bonus</div>
+                        <div class="reward-amount" id="referralBonus">0 EXO</div>
+                    </div>
+                    <div class="reward-details">
+                        <span>Earn 0.1 EXO per referral</span>
+                        <span><span id="referralCount">0</span>/20 referrals</span>
+                    </div>
+                    <button id="claimBonus" class="action-btn btn-warning" disabled>
+                        Claim Referral Bonus
+                    </button>
+                </div>
+            </div>
+
+            <!-- User Stats -->
+            <div id="userStatsCard" class="card" style="display: none;">
+                <h2 class="card-title">Your Statistics</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
+                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myVansClaimed">0</div>
+                        <div style="color: var(--muted); font-size: 12px;">VANS Claimed</div>
+                    </div>
+                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myExoClaimed">0</div>
+                        <div style="color: var(--muted); font-size: 12px;">EXO Claimed</div>
+                    </div>
+                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myTotalClaims">0</div>
+                        <div style="color: var(--muted); font-size: 12px;">Total Claims</div>
+                    </div>
+                    <div style="background: var(--glass); padding: 15px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 5px;" id="myReferrals">0</div>
+                        <div style="color: var(--muted); font-size: 12px;">My Referrals</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referral Program -->
+            <div id="referralCard" class="card" style="display: none;">
+                <h2 class="card-title">Referral Program</h2>
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div style="font-size: 24px;">💰</div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--accent);">Earn More Tokens</div>
+                            <div style="color: var(--muted); font-size: 13px;">Invite friends and earn extra rewards</div>
+                        </div>
                     </div>
                     
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button class="copy-btn" id="copyReferralLink">
-                            <i class="fas fa-copy"></i> Copy Link
-                        </button>
-                        <button class="copy-btn" id="copyReferralCodeBtn" style="background: var(--primary);">
-                            <i class="fas fa-code"></i> Copy Code
-                        </button>
+                    <div style="background: rgba(49,208,170,0.1); padding: 15px; border-radius: 12px; margin-top: 15px;">
+                        <div style="color: var(--accent); font-weight: 600; margin-bottom: 10px;">🎯 Benefits:</div>
+                        <div style="color: var(--muted); font-size: 13px; line-height: 1.6;">
+                            • +10 VANS per referral<br>
+                            • +0.1 EXO when friend claims<br>
+                            • Max 20 referrals per wallet<br>
+                            • Max 10 referrals per day
+                        </div>
                     </div>
                 </div>
-                
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div style="color: var(--muted); font-size: 12px; margin-bottom: 10px;">
-                        <i class="fas fa-share-alt"></i> Share on:
-                    </div>
-                    <div style="display: flex; justify-content: center; gap: 15px;">
-                        <button onclick="shareOnTwitter()" style="background: #1DA1F2; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                            <i class="fab fa-twitter"></i> Twitter
-                        </button>
-                        <button onclick="shareOnTelegram()" style="background: #0088cc; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                            <i class="fab fa-telegram"></i> Telegram
-                        </button>
+
+                <div id="userReferralCode">
+                    <div style="background: var(--glass); padding: 20px; border-radius: 15px; text-align: center; margin-top: 20px;">
+                        <div style="color: var(--muted); margin-bottom: 10px; font-size: 13px;">Your Referral Code</div>
+                        <div style="font-size: 28px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 2px dashed var(--primary); word-break: break-all; font-family: monospace;" id="referralCodeDisplay">-</div>
+                        
+                        <div class="referral-link-container">
+                            <div style="color: var(--muted); margin-bottom: 10px; font-size: 13px;">Your Referral Link</div>
+                            <div class="referral-link" id="referralLinkDisplay">https://vanswap.xyz/airdrop/</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button id="copyReferralCode" style="flex: 1; background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s; font-size: 14px;">
+                                📋 Copy Code
+                            </button>
+                            <button id="copyReferralLink" style="flex: 1; background: var(--primary); border: 1px solid var(--primary); color: white; padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s; font-size: 14px;">
+                                🔗 Copy Link
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top: 20px; color: var(--muted); font-size: 12px;">
+                            Share this code with friends to earn referral rewards
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Navigation -->
-        <div class="footer-nav">
-            <a href="https://vanswap.xyz/swap" class="nav-link" target="_blank">
-                <i class="fas fa-exchange-alt"></i> Swap
-            </a>
-            <a href="https://vanswap.xyz/liquidity" class="nav-link" target="_blank">
-                <i class="fas fa-water"></i> Liquidity
-            </a>
-            <a href="https://vanswap.xyz/stake" class="nav-link" target="_blank">
-                <i class="fas fa-coins"></i> Stake
-            </a>
-        </div>
+            <!-- Navigation -->
+            <div class="footer-nav">
+                <a href="swap.html" class="nav-link">Swap</a>
+                <a href="liquidity.html" class="nav-link">Liquidity</a>
+                <a href="stakelive.html" class="nav-link">Stake</a>
+            </div>
 
-        <footer class="footer">
-            <div>© 2024 VanSwap DEX • All rights reserved</div>
-            <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
-                <i class="fas fa-link"></i> Built on Vana Network • 
-                <a href="https://vanascan.io" style="color: var(--accent); text-decoration: none;" target="_blank">View on Vanascan</a>
-            </div>
-            <div style="font-size: 10px; margin-top: 10px; opacity: 0.5;">
-                Contract: 0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6
-            </div>
-        </footer>
+            <!-- Footer -->
+            <footer class="footer">
+                <div>© 2024 VanSwap DEX</div>
+                <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">Built on Vana Network</div>
+            </footer>
+        </div>
     </div>
 
-    <!-- Ethers.js -->
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
-    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
     <script>
-        // ==================== KONFIGURASI REAL ====================
+        // ==================== CONFIGURATION ====================
         const AIRDROP_CONTRACT_ADDRESS = "0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6";
-        const VANS_TOKEN_ADDRESS = "0x82741ff5937933244eb562A4b396f8079F1de914";
-        const EXO_TOKEN_ADDRESS = "0x56C44f52D7Dc7DD82b01f6694D9a91C8e3cDF9a6";
+        const REFERRAL_BASE_URL = "https://vanswap.xyz/airdrop/";
         
-        // ABI untuk contract airdrop (sesuai dengan contract Anda)
+        // Vana Network Configuration
+        const VANA_NETWORK = {
+            chainId: '0x5c8', // 1480 in hex
+            chainName: 'Vana Network',
+            nativeCurrency: {
+                name: 'VANA',
+                symbol: 'VANA',
+                decimals: 18
+            },
+            rpcUrls: ['https://rpc.vana.org'],
+            blockExplorerUrls: ['https://vanascan.io/']
+        };
+        
+        // ABI for the airdrop contract - UPDATED FOR REFERRAL CODE GENERATION
         const AIRDROP_ABI = [
-            "function registerWithCode(string memory referralCode) external",
+            "function registerWithCode(string referralCode) external",
             "function claimInitial() external",
             "function claimDaily() external",
             "function claimReferralBonus() external",
-            "function generateCustomReferralCode(string memory code) external",
-            "function getAvailableRewards(address userAddress) external view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256)",
-            "function getContractInfo() external view returns (uint256, uint256, uint256, uint256, uint256, bool)",
-            "function users(address) external view returns (bool, uint256, uint256, uint256, uint256, address, uint256, uint256, uint256, string memory, uint256, uint256)",
-            "function claimedInitial(address) external view returns (bool)",
-            "function totalRegistered() external view returns (uint256)",
-            "function MAX_USERS() external view returns (uint256)",
-            "function owner() external view returns (address)",
-            "function vansToken() external view returns (address)",
-            "function exoToken() external view returns (address)"
+            "function generateCustomReferralCode(string code) external",
+            "function getAvailableRewards(address userAddress) view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256)",
+            "function getUserStats(address userAddress) view returns (uint256, uint256, uint256, uint256, uint256, address, uint256, string, uint256)",
+            "function getContractInfo() view returns (uint256, uint256, uint256, uint256, uint256, bool)",
+            "function users(address) view returns (bool, uint256, uint256, uint256, uint256, address, uint256, uint256, uint256, string, uint256, uint256)",
+            "function claimedInitial(address) view returns (bool)",
+            "function totalRegistered() view returns (uint256)",
+            "function MAX_USERS() view returns (uint256)",
+            "function generateReferralCode() external returns (string memory)" // Added function
         ];
 
-        // ABI untuk token ERC20
-        const ERC20_ABI = [
-            "function balanceOf(address account) external view returns (uint256)",
-            "function decimals() external view returns (uint8)",
-            "function symbol() external view returns (string)",
-            "function name() external view returns (string)"
-        ];
-
-        // Vana Network Configuration
-        const VANA_NETWORK = {
-            chainId: "0x5c8", // 1480 decimal
-            chainName: "Vana Network",
-            nativeCurrency: {
-                name: "VANA",
-                symbol: "VANA",
-                decimals: 18
-            },
-            rpcUrls: ["https://rpc.vana.org"],
-            blockExplorerUrls: ["https://vanascan.io/"]
-        };
-
-        // ==================== VARIABEL GLOBAL ====================
+        // ==================== GLOBAL VARIABLES ====================
         let provider = null;
         let signer = null;
         let account = null;
         let airdropContract = null;
-        let vansTokenContract = null;
-        let exoTokenContract = null;
-        let isCorrectNetwork = false;
+        let updateInterval = null;
         let claimTimerInterval = null;
-        let lastClaimTimestamp = 0;
-        let currentReferralCode = "";
-        let userStats = {
-            vansClaimed: 0,
-            exoClaimed: 0,
-            totalClaims: 0,
-            referrals: 0,
-            pendingBonus: 0
-        };
+        let isCorrectNetwork = false;
+        let userReferralCode = "";
 
         // ==================== DOM ELEMENTS ====================
         const elements = {
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
-            notification: document.getElementById('notification'),
             connectWallet: document.getElementById('connectWallet'),
             userAddress: document.getElementById('userAddress'),
+            walletSection: document.getElementById('walletSection'),
             networkWarning: document.getElementById('networkWarning'),
             switchNetworkBtn: document.getElementById('switchNetworkBtn'),
             
@@ -1044,29 +781,26 @@
             activeReferrals: document.getElementById('activeReferrals'),
             progressText: document.getElementById('progressText'),
             userProgress: document.getElementById('userProgress'),
-            usersLeft: document.getElementById('usersLeft'),
-            maxUsers: document.getElementById('maxUsers'),
             
             // Registration
-            registrationCard: document.getElementById('registrationCard'),
+            registerSection: document.getElementById('registerSection'),
+            notRegisteredMessage: document.getElementById('notRegisteredMessage'),
+            registerForm: document.getElementById('registerForm'),
+            alreadyRegistered: document.getElementById('alreadyRegistered'),
             referralCodeInput: document.getElementById('referralCodeInput'),
-            registerAndClaimBtn: document.getElementById('registerAndClaimBtn'),
+            registerBtn: document.getElementById('registerBtn'),
             
             // Rewards
             rewardsSection: document.getElementById('rewardsSection'),
+            claimInitial: document.getElementById('claimInitial'),
+            claimDaily: document.getElementById('claimDaily'),
+            claimBonus: document.getElementById('claimBonus'),
+            initialClaimed: document.getElementById('initialClaimed'),
             dailyVansAmount: document.getElementById('dailyVansAmount'),
             dailyExoAmount: document.getElementById('dailyExoAmount'),
-            claimDailyBtn: document.getElementById('claimDailyBtn'),
-            claimTimer: document.getElementById('claimTimer'),
-            nextClaimTime: document.getElementById('nextClaimTime'),
-            lastClaimInfo: document.getElementById('lastClaimInfo'),
-            
-            // Referral Bonus
-            referralBonusAmount: document.getElementById('referralBonusAmount'),
+            referralBonus: document.getElementById('referralBonus'),
             referralCount: document.getElementById('referralCount'),
-            pendingBonus: document.getElementById('pendingBonus'),
-            claimReferralBonusBtn: document.getElementById('claimReferralBonusBtn'),
-            referralProgress: document.getElementById('referralProgress'),
+            claimTimer: document.getElementById('claimTimer'),
             
             // User Stats
             userStatsCard: document.getElementById('userStatsCard'),
@@ -1074,165 +808,140 @@
             myExoClaimed: document.getElementById('myExoClaimed'),
             myTotalClaims: document.getElementById('myTotalClaims'),
             myReferrals: document.getElementById('myReferrals'),
-            lifetimeEarnings: document.getElementById('lifetimeEarnings'),
             
-            // Referral Program
+            // Referral
             referralCard: document.getElementById('referralCard'),
+            userReferralCode: document.getElementById('userReferralCode'),
             referralCodeDisplay: document.getElementById('referralCodeDisplay'),
-            referralLinkInput: document.getElementById('referralLinkInput'),
-            copyReferralLink: document.getElementById('copyReferralLink'),
-            copyReferralCodeBtn: document.getElementById('copyReferralCodeBtn')
+            referralLinkDisplay: document.getElementById('referralLinkDisplay'),
+            copyReferralCode: document.getElementById('copyReferralCode'),
+            copyReferralLink: document.getElementById('copyReferralLink')
         };
 
-        // ==================== FUNGSI UTILITAS ====================
-        function showNotification(message, type = 'success') {
-            const notification = elements.notification;
-            const colors = {
-                success: '#31d0aa',
-                error: '#f44336',
-                warning: '#ff9800',
-                info: '#2196f3'
-            };
-            
-            notification.textContent = message;
-            notification.style.background = colors[type] || colors.success;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
+        // ==================== PERFORMANCE OPTIMIZATIONS ====================
+        let lastScrollTime = 0;
+        let scrollTimeout = null;
 
-        function showLoading(show, text = 'Loading...') {
-            elements.loadingOverlay.style.display = show ? 'flex' : 'none';
-            elements.loadingText.textContent = text;
-        }
-
-        function formatAddress(address) {
-            if (!address) return '';
-            return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-        }
-
-        function formatNumber(num, decimals = 2) {
-            if (num === 0 || !num) return '0';
-            
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(decimals) + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(decimals) + 'K';
-            }
-            
-            // Jika angka sangat kecil (untuk EXO)
-            if (num < 0.001) {
-                return num.toFixed(6);
-            }
-            if (num < 0.01) {
-                return num.toFixed(5);
-            }
-            if (num < 0.1) {
-                return num.toFixed(4);
-            }
-            if (num < 1) {
-                return num.toFixed(3);
-            }
-            
-            return num.toFixed(decimals);
-        }
-
-        function formatTime(seconds) {
-            if (seconds <= 0) return '00:00:00';
-            
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // ==================== TIMER SYSTEM ====================
-        function startTimer(lastClaimTime) {
-            if (claimTimerInterval) {
-                clearInterval(claimTimerInterval);
-            }
-            
-            const now = Math.floor(Date.now() / 1000);
-            const timeSinceClaim = now - lastClaimTime;
-            const twentyFourHours = 24 * 60 * 60;
-            const timeUntilNextClaim = Math.max(0, twentyFourHours - timeSinceClaim);
-            
-            updateTimerDisplay(timeUntilNextClaim);
-            
-            if (timeUntilNextClaim > 0) {
-                let remainingSeconds = timeUntilNextClaim;
-                claimTimerInterval = setInterval(() => {
-                    remainingSeconds--;
-                    if (remainingSeconds <= 0) {
-                        clearInterval(claimTimerInterval);
-                        updateTimerDisplay(0);
-                    } else {
-                        updateTimerDisplay(remainingSeconds);
-                    }
-                }, 1000);
+        function throttledUpdate() {
+            const now = Date.now();
+            if (now - lastScrollTime > 100) { // Update max 10 times per second
+                lastScrollTime = now;
+                updateScrollPerformance();
             }
         }
 
-        function updateTimerDisplay(seconds) {
-            elements.claimTimer.textContent = formatTime(seconds);
-            
-            if (seconds <= 0) {
-                elements.claimDailyBtn.disabled = false;
-                elements.claimDailyBtn.innerHTML = '<i class="fas fa-gift"></i> Claim Daily Reward';
-                elements.nextClaimTime.textContent = 'Ready to claim!';
-                elements.claimTimer.style.color = '#4caf50';
-            } else {
-                elements.claimDailyBtn.disabled = true;
-                elements.claimDailyBtn.innerHTML = '<i class="fas fa-clock"></i> Wait for Timer';
+        function updateScrollPerformance() {
+            // Add hardware acceleration to visible elements
+            const cards = document.querySelectorAll('.card, .reward-card, .stat-card');
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    card.classList.add('hardware-accelerated');
+                } else {
+                    card.classList.remove('hardware-accelerated');
+                }
+            });
+        }
+
+        // ==================== REFERRAL CODE GENERATION ====================
+        async function generateReferralCode() {
+            try {
+                if (!account || !airdropContract) return "";
                 
-                const nextClaimTime = new Date(Date.now() + seconds * 1000);
-                elements.nextClaimTime.textContent = `Next: ${nextClaimTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-                elements.claimTimer.style.color = '#ff9800';
+                showLoading(true, "Generating referral code...");
+                
+                // Try to generate code via contract
+                try {
+                    const tx = await airdropContract.generateReferralCode();
+                    await tx.wait();
+                    
+                    // Get updated user stats to get the new code
+                    const userStats = await airdropContract.getUserStats(account);
+                    const referralCode = userStats[7];
+                    
+                    if (referralCode && referralCode.length > 0) {
+                        userReferralCode = referralCode.toUpperCase();
+                        return userReferralCode;
+                    }
+                } catch (error) {
+                    console.log("Contract code generation failed, using fallback:", error);
+                }
+                
+                // Fallback: Generate deterministic code from wallet address
+                userReferralCode = generateDeterministicCode(account);
+                return userReferralCode;
+                
+            } catch (error) {
+                console.error("Error generating referral code:", error);
+                return generateDeterministicCode(account || "default");
+            } finally {
+                showLoading(false);
             }
         }
 
-        // ==================== NETWORK & WALLET ====================
-        async function checkNetwork() {
+        function generateDeterministicCode(walletAddress) {
+            if (!walletAddress || walletAddress === "default") {
+                return "VAN" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            }
+            
+            // Create a hash from wallet address
+            let hash = 0;
+            for (let i = 0; i < walletAddress.length; i++) {
+                hash = ((hash << 5) - hash) + walletAddress.charCodeAt(i);
+                hash |= 0; // Convert to 32bit integer
+            }
+            
+            // Use absolute value and convert to base36
+            const base36 = Math.abs(hash).toString(36).toUpperCase();
+            
+            // Take first 6 characters, pad if needed
+            let code = "VAN" + base36.substring(0, 6);
+            
+            // Ensure exactly 9 characters (VAN + 6 chars)
+            if (code.length < 9) {
+                code += "0".repeat(9 - code.length);
+            } else if (code.length > 9) {
+                code = code.substring(0, 9);
+            }
+            
+            return code;
+        }
+
+        function updateReferralDisplay(code) {
+            if (!code) return;
+            
+            elements.referralCodeDisplay.textContent = code;
+            elements.referralLinkDisplay.textContent = REFERRAL_BASE_URL + code;
+            userReferralCode = code;
+        }
+
+        // ==================== NETWORK FUNCTIONS ====================
+        async function checkAndSwitchNetwork() {
             try {
                 if (!window.ethereum) {
-                    showNotification('Please install MetaMask wallet', 'error');
+                    showNotification('Please install MetaMask or wallet app', 'error');
+                    return false;
+                }
+
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                
+                if (chainId === VANA_NETWORK.chainId) {
+                    isCorrectNetwork = true;
+                    elements.networkWarning.style.display = 'none';
+                    return true;
+                } else {
+                    isCorrectNetwork = false;
+                    elements.networkWarning.style.display = 'block';
                     return false;
                 }
                 
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                isCorrectNetwork = (chainId === VANA_NETWORK.chainId);
-                
-                if (!isCorrectNetwork) {
-                    elements.networkWarning.style.display = 'block';
-                    
-                    // Coba tambah network jika belum ada
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [VANA_NETWORK]
-                        });
-                        isCorrectNetwork = true;
-                        elements.networkWarning.style.display = 'none';
-                    } catch (addError) {
-                        console.log('Network not added or already exists');
-                    }
-                    
-                    return isCorrectNetwork;
-                } else {
-                    elements.networkWarning.style.display = 'none';
-                    return true;
-                }
             } catch (error) {
-                console.error('Network check error:', error);
+                console.error('Error checking network:', error);
                 return false;
             }
         }
 
-        async function switchNetwork() {
+        async function switchToVanaNetwork() {
             try {
                 showLoading(true, 'Switching to Vana Network...');
                 
@@ -1241,33 +950,32 @@
                     params: [{ chainId: VANA_NETWORK.chainId }]
                 });
                 
-                // Tunggu sebentar untuk perubahan network
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                isCorrectNetwork = true;
+                elements.networkWarning.style.display = 'none';
+                showNotification('Switched to Vana Network successfully!', 'success');
                 
-                const switched = await checkNetwork();
-                if (switched) {
-                    showNotification('Successfully switched to Vana Network!', 'success');
-                    
-                    // Re-initialize jika wallet sudah connected
-                    if (account) {
-                        await initializeContracts();
-                        await loadGlobalStats();
-                        await checkUserStatus();
-                    }
-                }
-            } catch (error) {
-                if (error.code === 4902) {
-                    // Network belum ada, coba tambah
+                await connectWallet();
+                
+            } catch (switchError) {
+                if (switchError.code === 4902) {
                     try {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [VANA_NETWORK]
                         });
+                        
+                        isCorrectNetwork = true;
+                        elements.networkWarning.style.display = 'none';
                         showNotification('Vana Network added successfully!', 'success');
+                        
+                        await connectWallet();
+                        
                     } catch (addError) {
+                        console.error('Error adding network:', addError);
                         showNotification('Failed to add Vana Network', 'error');
                     }
                 } else {
+                    console.error('Error switching network:', switchError);
                     showNotification('Failed to switch network', 'error');
                 }
             } finally {
@@ -1275,592 +983,598 @@
             }
         }
 
+        // ==================== UTILITY FUNCTIONS ====================
+        function showLoading(show, text = 'Loading...') {
+            elements.loadingOverlay.style.display = show ? 'flex' : 'none';
+            elements.loadingText.textContent = text;
+        }
+
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 15px;
+                right: 15px;
+                padding: 20px;
+                border-radius: 15px;
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                z-index: 1000;
+                transform: translateY(-100px);
+                transition: transform 0.3s;
+                max-width: 100%;
+                text-align: center;
+                border-left: 5px solid ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#31d0aa'};
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateY(-100px)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, duration);
+        }
+
+        function formatAddress(address) {
+            if (!address) return '';
+            return `${address.substring(0, 6)}...${address.substring(38)}`;
+        }
+
+        function formatNumber(number, decimals = 2) {
+            const num = parseFloat(number);
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        // ==================== COUNTDOWN TIMER - FIXED ====================
+        class CountdownTimer {
+            constructor(displayElement) {
+                this.displayElement = displayElement;
+                this.endTime = 0;
+                this.interval = null;
+                this.isRunning = false;
+            }
+            
+            start(seconds) {
+                this.stop();
+                this.endTime = Date.now() + (seconds * 1000);
+                this.isRunning = true;
+                this.update();
+                this.interval = setInterval(() => this.update(), 1000);
+            }
+            
+            update() {
+                if (!this.isRunning) return;
+                
+                const now = Date.now();
+                const remaining = Math.max(0, Math.floor((this.endTime - now) / 1000));
+                
+                if (remaining <= 0) {
+                    this.stop();
+                    this.displayElement.textContent = 'READY';
+                    this.displayElement.style.color = '#4caf50';
+                    return;
+                }
+                
+                const hours = Math.floor(remaining / 3600);
+                const minutes = Math.floor((remaining % 3600) / 60);
+                const seconds = remaining % 60;
+                
+                if (hours > 0) {
+                    this.displayElement.textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                    this.displayElement.textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                this.displayElement.style.color = remaining > 300 ? '#ff9800' : '#f44336';
+            }
+            
+            stop() {
+                this.isRunning = false;
+                if (this.interval) {
+                    clearInterval(this.interval);
+                    this.interval = null;
+                }
+            }
+            
+            reset() {
+                this.stop();
+                this.displayElement.textContent = '00:00:00';
+                this.displayElement.style.color = '#ff9800';
+            }
+        }
+
+        const claimTimer = new CountdownTimer(elements.claimTimer);
+
+        // ==================== WALLET FUNCTIONS ====================
         async function connectWallet() {
             try {
                 showLoading(true, 'Connecting wallet...');
                 
                 if (!window.ethereum) {
-                    showNotification('Please install MetaMask wallet first', 'error');
+                    showNotification('Please install MetaMask or wallet app', 'error');
                     return;
                 }
-                
-                // Check network first
-                const networkOk = await checkNetwork();
-                if (!networkOk) {
+
+                const isCorrectNetwork = await checkAndSwitchNetwork();
+                if (!isCorrectNetwork) {
                     showLoading(false);
                     return;
                 }
-                
-                // Request accounts
+
                 const accounts = await window.ethereum.request({
                     method: 'eth_requestAccounts'
                 });
                 
                 if (accounts.length === 0) {
-                    showNotification('No accounts found. Please unlock your wallet.', 'error');
+                    showNotification('Please connect your wallet', 'error');
                     return;
                 }
                 
                 account = accounts[0];
                 
-                // Initialize provider and contracts
-                await initializeContracts();
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
                 
-                // Update UI
-                elements.userAddress.textContent = formatAddress(account);
-                elements.userAddress.style.display = 'block';
-                elements.connectWallet.innerHTML = '<i class="fas fa-check"></i> Connected';
-                elements.connectWallet.disabled = true;
-                
+                updateWalletUI();
                 showNotification('Wallet connected successfully!', 'success');
                 
-                // Load data
-                await loadGlobalStats();
-                await checkUserStatus();
+                await Promise.all([
+                    loadGlobalStats(),
+                    checkUserRegistration()
+                ]);
+                
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateData, 30000); // Reduced frequency
                 
             } catch (error) {
                 console.error('Wallet connection error:', error);
-                
-                if (error.code === 4001) {
-                    showNotification('Wallet connection rejected by user', 'error');
-                } else if (error.code === -32002) {
-                    showNotification('Wallet connection already pending. Please check MetaMask.', 'warning');
-                } else {
-                    showNotification('Failed to connect wallet. Please try again.', 'error');
-                }
+                showNotification(error.message || 'Failed to connect wallet', 'error');
             } finally {
                 showLoading(false);
             }
         }
 
-        async function initializeContracts() {
-            try {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                
-                airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
-                vansTokenContract = new ethers.Contract(VANS_TOKEN_ADDRESS, ERC20_ABI, provider);
-                exoTokenContract = new ethers.Contract(EXO_TOKEN_ADDRESS, ERC20_ABI, provider);
-                
-                console.log('Contracts initialized successfully');
-                return true;
-            } catch (error) {
-                console.error('Error initializing contracts:', error);
-                showNotification('Error connecting to smart contracts', 'error');
-                return false;
+        function updateWalletUI() {
+            if (account) {
+                elements.userAddress.textContent = formatAddress(account);
+                elements.userAddress.style.display = 'block';
+                elements.connectWallet.textContent = 'Connected';
+                elements.connectWallet.disabled = true;
+                elements.walletSection.style.display = 'flex';
+                elements.walletSection.style.alignItems = 'center';
+                elements.walletSection.style.gap = '10px';
+            } else {
+                elements.userAddress.style.display = 'none';
+                elements.connectWallet.textContent = 'Connect Wallet';
+                elements.connectWallet.disabled = false;
             }
         }
 
-        // ==================== LOAD DATA ====================
+        // ==================== CONTRACT FUNCTIONS ====================
         async function loadGlobalStats() {
             try {
-                if (!airdropContract) return;
+                const [totalUsers, maxUsers] = await Promise.all([
+                    airdropContract.totalRegistered(),
+                    airdropContract.MAX_USERS()
+                ]);
                 
-                showLoading(true, 'Loading global statistics...');
+                elements.totalUsers.textContent = formatNumber(totalUsers);
                 
-                // Get contract info
-                const contractInfo = await airdropContract.getContractInfo();
-                const [totalUsers, maxUsers, vansBalance, exoBalance, daysUntilEmergency, registrationsActive] = contractInfo;
-                
-                // Format numbers
-                const formattedVans = ethers.utils.formatUnits(vansBalance, 0);
-                const formattedExo = ethers.utils.formatUnits(exoBalance, 0);
-                
-                // Update UI
-                elements.totalUsers.textContent = formatNumber(totalUsers.toNumber());
-                elements.totalVansClaimed.textContent = formatNumber(parseFloat(formattedVans));
-                elements.totalExoClaimed.textContent = formatNumber(parseFloat(formattedExo), 3);
-                elements.maxUsers.textContent = formatNumber(maxUsers.toNumber());
-                
-                // Calculate progress
-                const progress = (totalUsers.toNumber() / maxUsers.toNumber()) * 100;
-                elements.userProgress.style.width = `${progress}%`;
-                elements.progressText.textContent = `${progress.toFixed(1)}%`;
-                
-                // Calculate spots left
-                const spotsLeft = maxUsers.toNumber() - totalUsers.toNumber();
-                elements.usersLeft.textContent = formatNumber(spotsLeft);
-                
-                // Update active referrals (estimated based on total users)
-                const estimatedReferrals = Math.floor(totalUsers.toNumber() * 0.2); // 20% of users have referrals
-                elements.activeReferrals.textContent = formatNumber(estimatedReferrals);
-                
-                // Check if registrations are paused
-                if (!registrationsActive) {
-                    elements.registerAndClaimBtn.disabled = true;
-                    elements.registerAndClaimBtn.innerHTML = '<i class="fas fa-pause"></i> Registrations Paused';
-                    showNotification('Registrations are currently paused', 'warning');
-                }
+                const progress = (totalUsers / maxUsers) * 100;
+                elements.userProgress.style.width = `${Math.min(progress, 100)}%`;
+                elements.progressText.textContent = `${Math.round(progress)}%`;
                 
             } catch (error) {
                 console.error('Error loading global stats:', error);
-                showNotification('Failed to load global statistics', 'error');
-            } finally {
-                showLoading(false);
             }
         }
 
-        async function checkUserStatus() {
+        async function checkUserRegistration() {
             try {
-                if (!account || !airdropContract) return;
+                if (!account || !isCorrectNetwork) return;
                 
-                showLoading(true, 'Checking user status...');
-                
-                // Check if user is registered
                 const userInfo = await airdropContract.users(account);
                 const isRegistered = userInfo[0];
+                const claimedInitial = await airdropContract.claimedInitial(account);
+                const userReferralCode = userInfo[9];
                 
                 if (isRegistered) {
-                    // User sudah register, show dashboard
-                    showUserDashboard(true);
+                    showRegistrationUI(true);
                     await loadUserData();
-                } else {
-                    // User belum register, show registration
-                    showUserDashboard(false);
                     
-                    // Enable register button jika registrations active
-                    const contractInfo = await airdropContract.getContractInfo();
-                    const registrationsActive = contractInfo[5];
-                    
-                    if (registrationsActive) {
-                        elements.registerAndClaimBtn.disabled = false;
+                    // Generate or use existing referral code
+                    if (userReferralCode && userReferralCode.length > 0) {
+                        updateReferralDisplay(userReferralCode.toUpperCase());
+                    } else {
+                        const newCode = await generateReferralCode();
+                        updateReferralDisplay(newCode);
                     }
+                    
+                    if (claimedInitial) {
+                        elements.initialClaimed.style.display = 'inline';
+                        elements.claimInitial.disabled = true;
+                        elements.claimInitial.textContent = 'Already Claimed';
+                    } else {
+                        elements.claimInitial.disabled = false;
+                    }
+                    
+                } else {
+                    showRegistrationUI(false);
+                    elements.registerBtn.disabled = false;
                 }
                 
             } catch (error) {
-                console.error('Error checking user status:', error);
-                showUserDashboard(false);
-                
-                // Enable register button by default jika error
-                elements.registerAndClaimBtn.disabled = false;
-            } finally {
-                showLoading(false);
+                console.error('Error checking registration:', error);
             }
         }
 
-        function showUserDashboard(isRegistered) {
-            if (isRegistered) {
-                elements.registrationCard.style.display = 'none';
-                elements.rewardsSection.style.display = 'block';
-                elements.userStatsCard.style.display = 'block';
-                elements.referralCard.style.display = 'block';
-            } else {
-                elements.registrationCard.style.display = 'block';
-                elements.rewardsSection.style.display = 'none';
-                elements.userStatsCard.style.display = 'none';
-                elements.referralCard.style.display = 'none';
-            }
+        function showRegistrationUI(isRegistered) {
+            elements.notRegisteredMessage.style.display = isRegistered ? 'none' : 'block';
+            elements.registerForm.style.display = isRegistered ? 'none' : 'block';
+            elements.alreadyRegistered.style.display = isRegistered ? 'block' : 'none';
+            elements.rewardsSection.style.display = isRegistered ? 'block' : 'none';
+            elements.userStatsCard.style.display = isRegistered ? 'block' : 'none';
+            elements.referralCard.style.display = isRegistered ? 'block' : 'none';
         }
 
         async function loadUserData() {
             try {
-                if (!account || !airdropContract) return;
+                if (!account || !isCorrectNetwork) return;
                 
-                showLoading(true, 'Loading user data...');
+                const [rewards, userStats] = await Promise.all([
+                    airdropContract.getAvailableRewards(account),
+                    airdropContract.getUserStats(account)
+                ]);
                 
-                // Get user info
-                const userInfo = await airdropContract.users(account);
-                
-                // Get available rewards
-                const rewards = await airdropContract.getAvailableRewards(account);
                 const [
-                    vansDaily,
-                    exoDaily,
-                    timeUntilNextClaim,
-                    canClaimInitial,
-                    pendingBonus,
-                    referralsLeft,
-                    contractVansBalance,
-                    contractExoBalance
+                    vansDaily, exoDaily, timeUntilNextClaim, canClaimInitial, 
+                    pendingBonus, referralsLeft, contractVansBalance, contractExoBalance
                 ] = rewards;
                 
-                // Update user stats
-                userStats.vansClaimed = parseFloat(ethers.utils.formatUnits(userInfo[6], 18));
-                userStats.exoClaimed = parseFloat(ethers.utils.formatUnits(userInfo[7], 8));
-                userStats.totalClaims = userInfo[2].toNumber();
-                userStats.referrals = userInfo[3].toNumber();
-                userStats.pendingBonus = parseFloat(ethers.utils.formatUnits(pendingBonus, 8));
+                const [
+                    totalVansClaimed, totalExoClaimed, referralCount, totalClaims,
+                    lastClaimTime, referrer, referralRewardsEarned, referralCode, referralsToday
+                ] = userStats;
                 
-                // Update UI
-                elements.myVansClaimed.textContent = formatNumber(userStats.vansClaimed);
-                elements.myExoClaimed.textContent = formatNumber(userStats.exoClaimed, 3);
-                elements.myTotalClaims.textContent = userStats.totalClaims;
-                elements.myReferrals.textContent = userStats.referrals;
+                // Update global stats
+                elements.totalVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
+                elements.totalExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 1);
+                elements.activeReferrals.textContent = formatNumber(referralCount);
                 
-                // Calculate referral progress
-                const referralProgress = (userStats.referrals / 20) * 100;
-                elements.referralProgress.style.width = `${referralProgress}%`;
-                elements.referralCount.textContent = `${userStats.referrals}/20`;
-                
-                // Update rewards
-                const dailyVans = parseFloat(ethers.utils.formatUnits(vansDaily, 18));
-                const dailyExo = parseFloat(ethers.utils.formatUnits(exoDaily, 8));
+                // Update user rewards
+                const dailyVans = ethers.utils.formatUnits(vansDaily, 18);
+                const dailyExo = ethers.utils.formatUnits(exoDaily, 8);
                 
                 elements.dailyVansAmount.textContent = `${formatNumber(dailyVans)} VANS`;
-                elements.dailyExoAmount.textContent = formatNumber(dailyExo, 4);
-                elements.referralBonusAmount.textContent = `${formatNumber(userStats.pendingBonus, 3)} EXO`;
-                elements.pendingBonus.textContent = formatNumber(userStats.pendingBonus, 3);
+                elements.dailyExoAmount.textContent = formatNumber(dailyExo, 3);
                 
-                // Enable/disable referral bonus button
-                elements.claimReferralBonusBtn.disabled = userStats.pendingBonus <= 0;
+                const bonusExo = ethers.utils.formatUnits(pendingBonus, 8);
+                elements.referralBonus.textContent = `${formatNumber(bonusExo, 2)} EXO`;
+                elements.referralCount.textContent = (20 - referralsLeft).toString();
                 
-                // Update timer
-                lastClaimTimestamp = userInfo[1].toNumber();
-                if (lastClaimTimestamp > 0) {
-                    const lastClaimDate = new Date(lastClaimTimestamp * 1000);
-                    elements.lastClaimInfo.textContent = `Last claim: ${lastClaimDate.toLocaleDateString()} ${lastClaimDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-                    
-                    startTimer(lastClaimTimestamp);
-                } else {
-                    elements.lastClaimInfo.textContent = 'Never claimed before';
-                    updateTimerDisplay(0);
+                // Update user stats
+                elements.myVansClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalVansClaimed, 18));
+                elements.myExoClaimed.textContent = formatNumber(ethers.utils.formatUnits(totalExoClaimed, 8), 2);
+                elements.myTotalClaims.textContent = totalClaims.toString();
+                elements.myReferrals.textContent = referralCount.toString();
+                
+                // Update referral code if not already set
+                if (referralCode && referralCode.length > 0 && !userReferralCode) {
+                    updateReferralDisplay(referralCode.toUpperCase());
                 }
                 
-                // Load referral code
-                const referralCode = userInfo[9];
-                if (referralCode && referralCode.length > 0) {
-                    currentReferralCode = referralCode;
-                    elements.referralCodeDisplay.textContent = referralCode.toUpperCase();
-                    elements.referralLinkInput.value = `https://vanswap.xyz/airdrop/${referralCode.toLowerCase()}`;
-                } else {
-                    elements.referralCodeDisplay.textContent = 'No code generated';
-                }
+                // Update buttons
+                elements.claimInitial.disabled = !canClaimInitial;
+                elements.claimBonus.disabled = pendingBonus <= 0;
                 
-                // Calculate lifetime earnings (estimated)
-                const estimatedValue = (userStats.vansClaimed * 0.01) + (userStats.exoClaimed * 10); // Contoh rate
-                elements.lifetimeEarnings.textContent = `$${estimatedValue.toFixed(2)}`;
+                // Update countdown timer
+                if (timeUntilNextClaim > 0) {
+                    claimTimer.start(timeUntilNextClaim.toNumber());
+                    elements.claimDaily.disabled = true;
+                } else {
+                    claimTimer.reset();
+                    elements.claimDaily.disabled = false;
+                    elements.claimTimer.textContent = 'READY';
+                    elements.claimTimer.style.color = '#4caf50';
+                }
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
-                showNotification('Failed to load user data', 'error');
-            } finally {
-                showLoading(false);
+                claimTimer.reset();
             }
         }
 
         // ==================== USER ACTIONS ====================
-        async function registerAndClaim() {
+        async function registerUser() {
             try {
-                if (!account || !airdropContract) {
-                    showNotification('Please connect wallet first', 'error');
+                if (!isCorrectNetwork) {
+                    await switchToVanaNetwork();
                     return;
                 }
                 
-                showLoading(true, 'Processing registration...');
-                
-                // Get referral code
                 const referralCode = elements.referralCodeInput.value.trim().toLowerCase();
                 
-                // Register user
-                const registerTx = await airdropContract.registerWithCode(referralCode);
-                showLoading(true, 'Waiting for registration confirmation...');
-                await registerTx.wait();
+                elements.registerBtn.disabled = true;
+                elements.registerBtn.innerHTML = '<span class="loading"></span> Registering...';
                 
-                showNotification('Registration successful!', 'success');
+                const tx = await airdropContract.registerWithCode(referralCode);
+                await tx.wait();
                 
-                // Claim initial reward
-                showLoading(true, 'Claiming initial rewards...');
-                const claimTx = await airdropContract.claimInitial();
-                await claimTx.wait();
+                showNotification('Successfully registered! 🎉', 'success');
                 
-                showNotification('🎉 Successfully claimed 100 VANS + 0.01 EXO!', 'success');
+                // Generate referral code after registration
+                const newCode = await generateReferralCode();
+                updateReferralDisplay(newCode);
                 
-                // Generate referral code automatically
-                try {
-                    const code = account.slice(2, 10).toLowerCase();
-                    const codeTx = await airdropContract.generateCustomReferralCode(code);
-                    await codeTx.wait();
-                    showNotification('Referral code generated!', 'success');
-                } catch (codeError) {
-                    console.log('Code may already exist or auto-generated');
-                }
-                
-                // Reload data
-                await loadGlobalStats();
-                await checkUserStatus();
-                
-                showNotification('🎊 Welcome to VanSwap Airdrop! Start earning daily rewards.', 'success');
+                await checkUserRegistration();
                 
             } catch (error) {
-                console.error('Register error:', error);
-                
-                let message = 'Transaction failed';
-                if (error.message.includes('Already registered')) {
-                    message = 'You are already registered';
-                } else if (error.message.includes('Max users reached')) {
-                    message = 'Maximum users reached. Registration closed.';
-                } else if (error.message.includes('insufficient funds')) {
-                    message = 'Insufficient gas fee. Please add VANA to your wallet.';
-                } else if (error.message.includes('Registrations paused')) {
-                    message = 'Registrations are currently paused';
-                } else if (error.message.includes('rejected')) {
-                    message = 'Transaction rejected by user';
+                console.error('Registration error:', error);
+                showNotification(error.message || 'Registration failed', 'error');
+                elements.registerBtn.disabled = false;
+                elements.registerBtn.textContent = 'Register Now';
+            }
+        }
+
+        async function claimInitialReward() {
+            try {
+                if (!isCorrectNetwork) {
+                    await switchToVanaNetwork();
+                    return;
                 }
                 
-                showNotification(message, 'error');
-            } finally {
-                showLoading(false);
+                elements.claimInitial.disabled = true;
+                elements.claimInitial.innerHTML = '<span class="loading"></span> Claiming...';
+                
+                const tx = await airdropContract.claimInitial();
+                await tx.wait();
+                
+                showNotification('🎁 100 VANS + 0.01 EXO claimed!', 'success');
+                await loadUserData();
+                
+            } catch (error) {
+                console.error('Claim initial error:', error);
+                showNotification(error.message || 'Claim failed', 'error');
+                elements.claimInitial.disabled = false;
+                elements.claimInitial.textContent = 'Claim Initial Reward';
             }
         }
 
         async function claimDailyReward() {
             try {
-                if (!account || !airdropContract) {
-                    showNotification('Please connect wallet first', 'error');
+                if (!isCorrectNetwork) {
+                    await switchToVanaNetwork();
                     return;
                 }
                 
-                showLoading(true, 'Processing daily claim...');
+                elements.claimDaily.disabled = true;
+                elements.claimDaily.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimDaily();
                 await tx.wait();
                 
-                showNotification('📅 Daily reward claimed successfully!', 'success');
-                
-                // Update timer dengan waktu sekarang
-                lastClaimTimestamp = Math.floor(Date.now() / 1000);
-                startTimer(lastClaimTimestamp);
-                
-                // Reload user data
+                showNotification('📅 Daily reward claimed!', 'success');
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim daily error:', error);
-                
-                let message = 'Claim failed';
-                if (error.message.includes('Cooldown active')) {
-                    message = 'Please wait 24 hours between claims';
-                } else if (error.message.includes('insufficient funds')) {
-                    message = 'Insufficient gas fee. Please add VANA to your wallet.';
-                } else if (error.message.includes('Insufficient VANS') || error.message.includes('Insufficient EXO')) {
-                    message = 'Insufficient tokens in contract. Please try again later.';
-                } else if (error.message.includes('rejected')) {
-                    message = 'Transaction rejected by user';
-                }
-                
-                showNotification(message, 'error');
-            } finally {
-                showLoading(false);
+                showNotification(error.message || 'Claim failed', 'error');
+                elements.claimDaily.disabled = false;
+                elements.claimDaily.textContent = 'Claim Daily Reward';
             }
         }
 
         async function claimReferralBonus() {
             try {
-                if (!account || !airdropContract) {
-                    showNotification('Please connect wallet first', 'error');
+                if (!isCorrectNetwork) {
+                    await switchToVanaNetwork();
                     return;
                 }
                 
-                if (userStats.pendingBonus <= 0) {
-                    showNotification('No pending bonus to claim', 'warning');
-                    return;
-                }
-                
-                showLoading(true, 'Claiming referral bonus...');
+                elements.claimBonus.disabled = true;
+                elements.claimBonus.innerHTML = '<span class="loading"></span> Claiming...';
                 
                 const tx = await airdropContract.claimReferralBonus();
                 await tx.wait();
                 
-                showNotification('💰 Referral bonus claimed successfully!', 'success');
-                
-                // Reload user data
+                showNotification('👥 Referral bonus claimed!', 'success');
                 await loadUserData();
                 
             } catch (error) {
                 console.error('Claim bonus error:', error);
-                
-                let message = 'Claim failed';
-                if (error.message.includes('No pending bonus')) {
-                    message = 'No pending bonus to claim';
-                } else if (error.message.includes('insufficient funds')) {
-                    message = 'Insufficient gas fee. Please add VANA to your wallet.';
-                } else if (error.message.includes('Insufficient EXO')) {
-                    message = 'Insufficient EXO in contract';
-                } else if (error.message.includes('rejected')) {
-                    message = 'Transaction rejected by user';
-                }
-                
-                showNotification(message, 'error');
-            } finally {
-                showLoading(false);
+                showNotification(error.message || 'Claim failed', 'error');
+                elements.claimBonus.disabled = false;
+                elements.claimBonus.textContent = 'Claim Referral Bonus';
             }
         }
 
-        // ==================== REFERRAL FUNCTIONS ====================
-        async function copyReferralLink() {
+        function copyReferralCode() {
+            const code = elements.referralCodeDisplay.textContent;
+            if (!code || code === '-') return;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = elements.copyReferralCode;
+                btn.innerHTML = '✓ Copied!';
+                btn.style.background = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'white';
+                
+                showNotification('Referral code copied 📋', 'success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = '📋 Copy Code';
+                    btn.style.background = 'transparent';
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.color = 'var(--accent)';
+                }, 2000);
+            });
+        }
+
+        function copyReferralLink() {
+            const link = elements.referralLinkDisplay.textContent;
+            if (!link || link === REFERRAL_BASE_URL) return;
+            
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = elements.copyReferralLink;
+                btn.innerHTML = '✓ Copied!';
+                btn.style.background = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'white';
+                
+                showNotification('Referral link copied 🔗', 'success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = '🔗 Copy Link';
+                    btn.style.background = 'var(--primary)';
+                    btn.style.borderColor = 'var(--primary)';
+                    btn.style.color = 'white';
+                }, 2000);
+            });
+        }
+
+        // ==================== AUTO UPDATE ====================
+        async function updateData() {
             try {
-                const link = elements.referralLinkInput.value;
-                if (!link || link === '') {
-                    showNotification('No referral link available', 'warning');
-                    return;
+                if (isCorrectNetwork) {
+                    await loadGlobalStats();
+                    if (account) {
+                        await loadUserData();
+                    }
                 }
-                
-                await navigator.clipboard.writeText(link);
-                showNotification('Referral link copied to clipboard!', 'success');
             } catch (error) {
-                console.error('Copy error:', error);
-                showNotification('Failed to copy link', 'error');
+                console.error('Update error:', error);
             }
-        }
-
-        async function copyReferralCode() {
-            try {
-                const code = elements.referralCodeDisplay.textContent;
-                if (!code || code === 'Loading...' || code === 'No code generated') {
-                    showNotification('No referral code available', 'warning');
-                    return;
-                }
-                
-                await navigator.clipboard.writeText(code);
-                showNotification('Referral code copied to clipboard!', 'success');
-            } catch (error) {
-                console.error('Copy error:', error);
-                showNotification('Failed to copy code', 'error');
-            }
-        }
-
-        function shareOnTwitter() {
-            const link = elements.referralLinkInput.value;
-            const text = `Join VanSwap Airdrop and earn free VANS & EXO tokens! Use my referral code for bonus rewards: ${currentReferralCode || ''}`;
-            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
-            window.open(url, '_blank');
-        }
-
-        function shareOnTelegram() {
-            const link = elements.referralLinkInput.value;
-            const text = `Join VanSwap Airdrop and earn free VANS & EXO tokens! Use my referral code for bonus rewards.`;
-            const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
         }
 
         // ==================== EVENT LISTENERS ====================
         elements.connectWallet.addEventListener('click', connectWallet);
-        elements.switchNetworkBtn.addEventListener('click', switchNetwork);
-        elements.registerAndClaimBtn.addEventListener('click', registerAndClaim);
-        elements.claimDailyBtn.addEventListener('click', claimDailyReward);
-        elements.claimReferralBonusBtn.addEventListener('click', claimReferralBonus);
+        elements.switchNetworkBtn.addEventListener('click', switchToVanaNetwork);
+        elements.registerBtn.addEventListener('click', registerUser);
+        elements.claimInitial.addEventListener('click', claimInitialReward);
+        elements.claimDaily.addEventListener('click', claimDailyReward);
+        elements.claimBonus.addEventListener('click', claimReferralBonus);
+        elements.copyReferralCode.addEventListener('click', copyReferralCode);
         elements.copyReferralLink.addEventListener('click', copyReferralLink);
-        elements.copyReferralCodeBtn.addEventListener('click', copyReferralCode);
 
         elements.referralCodeInput.addEventListener('input', function() {
             this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
         });
 
-        // ==================== WALLET EVENT HANDLERS ====================
+        // Double click to copy referral code
+        elements.referralCodeDisplay.addEventListener('dblclick', copyReferralCode);
+        elements.referralLinkDisplay.addEventListener('dblclick', copyReferralLink);
+
+        // ==================== PERFORMANCE OPTIMIZATION EVENTS ====================
+        window.addEventListener('scroll', throttledUpdate, { passive: true });
+        window.addEventListener('touchmove', throttledUpdate, { passive: true });
+
+        // ==================== WALLET EVENTS ====================
         if (window.ethereum) {
             window.ethereum.on('chainChanged', async (chainId) => {
-                console.log('Chain changed to:', chainId);
-                await checkNetwork();
+                isCorrectNetwork = (chainId === VANA_NETWORK.chainId);
+                elements.networkWarning.style.display = isCorrectNetwork ? 'none' : 'block';
                 
                 if (isCorrectNetwork && account) {
-                    await initializeContracts();
-                    await loadGlobalStats();
-                    await checkUserStatus();
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
+                    
+                    await Promise.all([
+                        loadGlobalStats(),
+                        checkUserRegistration()
+                    ]);
                 } else {
-                    // Reset UI jika network salah
-                    showUserDashboard(false);
+                    claimTimer.stop();
                 }
             });
 
             window.ethereum.on('accountsChanged', async (accounts) => {
-                console.log('Accounts changed:', accounts);
-                
-                if (accounts.length > 0) {
+                if (accounts.length === 0) {
+                    account = null;
+                    updateWalletUI();
+                    showRegistrationUI(false);
+                    claimTimer.stop();
+                    showNotification('Wallet disconnected', 'info');
+                } else {
                     account = accounts[0];
-                    elements.userAddress.textContent = formatAddress(account);
+                    updateWalletUI();
                     
                     if (isCorrectNetwork) {
-                        await initializeContracts();
-                        await checkUserStatus();
+                        await checkUserRegistration();
                     }
-                } else {
-                    // User disconnected wallet
-                    account = null;
-                    elements.userAddress.style.display = 'none';
-                    elements.connectWallet.innerHTML = '<i class="fas fa-wallet"></i> Connect Wallet';
-                    elements.connectWallet.disabled = false;
-                    showUserDashboard(false);
+                    showNotification('Account switched', 'info');
                 }
-            });
-
-            window.ethereum.on('connect', async (connectInfo) => {
-                console.log('Wallet connected:', connectInfo);
-            });
-
-            window.ethereum.on('disconnect', (error) => {
-                console.log('Wallet disconnected:', error);
-                account = null;
-                elements.userAddress.style.display = 'none';
-                elements.connectWallet.innerHTML = '<i class="fas fa-wallet"></i> Connect Wallet';
-                elements.connectWallet.disabled = false;
-                showUserDashboard(false);
             });
         }
 
-        // ==================== INITIALIZE ====================
-        window.addEventListener('load', async () => {
-            console.log('VanSwap Airdrop initialized');
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Performance optimizations
+            updateScrollPerformance();
             
-            // Check for MetaMask
-            if (window.ethereum) {
+            // Check network first
+            await checkAndSwitchNetwork();
+            
+            // Check if wallet is already connected
+            if (window.ethereum && window.ethereum.selectedAddress && isCorrectNetwork) {
                 try {
-                    // Check network
-                    await checkNetwork();
+                    showLoading(true, 'Loading airdrop...');
+                    account = window.ethereum.selectedAddress;
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    airdropContract = new ethers.Contract(AIRDROP_CONTRACT_ADDRESS, AIRDROP_ABI, signer);
                     
-                    // Check if already connected
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    updateWalletUI();
                     
-                    if (accounts.length > 0) {
-                        account = accounts[0];
-                        
-                        if (isCorrectNetwork) {
-                            await initializeContracts();
-                            
-                            elements.userAddress.textContent = formatAddress(account);
-                            elements.userAddress.style.display = 'block';
-                            elements.connectWallet.innerHTML = '<i class="fas fa-check"></i> Connected';
-                            elements.connectWallet.disabled = true;
-                            
-                            await loadGlobalStats();
-                            await checkUserStatus();
-                        }
-                    }
+                    await Promise.all([
+                        loadGlobalStats(),
+                        checkUserRegistration()
+                    ]);
                     
-                    // Auto-refresh stats every 30 seconds
-                    setInterval(async () => {
-                        if (account && isCorrectNetwork) {
-                            await loadGlobalStats();
-                            if (elements.rewardsSection.style.display !== 'none') {
-                                await loadUserData();
-                            }
-                        }
-                    }, 30000);
+                    updateInterval = setInterval(updateData, 30000);
                     
                 } catch (error) {
                     console.error('Initialization error:', error);
+                } finally {
+                    showLoading(false);
                 }
-            } else {
-                // MetaMask not installed
-                elements.connectWallet.innerHTML = '<i class="fas fa-download"></i> Install MetaMask';
-                elements.connectWallet.onclick = () => {
-                    window.open('https://metamask.io/download/', '_blank');
-                };
-                showNotification('MetaMask is required to use this dApp', 'warning');
             }
             
-            // Add referral parameter from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const refCode = urlParams.get('ref');
-            if (refCode) {
-                elements.referralCodeInput.value = refCode.toLowerCase();
-                showNotification(`Referral code ${refCode} loaded from URL`, 'info');
-            }
+            // Update data every minute
+            setInterval(updateData, 60000);
         });
 
-        // Make functions globally available
-        window.copyReferralLink = copyReferralLink;
-        window.shareOnTwitter = shareOnTwitter;
-        window.shareOnTelegram = shareOnTelegram;
+        // Prevent pull-to-refresh on mobile
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length !== 1) return;
+            
+            const touch = e.touches[0];
+            if (touch.clientY > window.innerHeight - 100) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     </script>
 </body>
 </html>
