@@ -38,9 +38,6 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Ethers.js -->
-  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
-
   <style>
     :root {
       --primary: #1a7f5e;
@@ -595,6 +592,14 @@
       transform: translateY(-2px);
     }
 
+    .connect-btn.disconnected {
+      background: var(--accent);
+    }
+
+    .connect-btn.connected {
+      background: var(--error);
+    }
+
     /* Progress Bar */
     .progress-container {
       margin-top: 30px;
@@ -905,7 +910,7 @@
           <div class="wallet-address" id="walletAddress">Not Connected</div>
         </div>
       </div>
-      <button class="connect-btn" id="connectBtn">Connect Wallet</button>
+      <button class="connect-btn disconnected" id="connectBtn">Connect Wallet</button>
     </div>
 
     <!-- Batch Transfer Container -->
@@ -1069,6 +1074,9 @@
     </div>
   </main>
 
+  <!-- Load Ethers.js -->
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+
   <script>
     // ============================================
     // CONFIGURATION
@@ -1125,31 +1133,24 @@
     // ============================================
     // DOM ELEMENTS
     // ============================================
-    const connectBtn = document.getElementById('connectBtn');
-    const walletAddress = document.getElementById('walletAddress');
-    const recipientsTableBody = document.getElementById('recipientsTableBody');
-    const recipientsCount = document.getElementById('recipientsCount');
-    const summaryRecipients = document.getElementById('summaryRecipients');
-    const summaryTotalAmount = document.getElementById('summaryTotalAmount');
-    const summaryFee = document.getElementById('summaryFee');
-    const summaryTokenRequired = document.getElementById('summaryTokenRequired');
-    const tokenAddressInput = document.getElementById('tokenAddress');
-    const tokenName = document.getElementById('tokenName');
-    const tokenSymbol = document.getElementById('tokenSymbol');
-    const tokenDecimals = document.getElementById('tokenDecimals');
-    const tokenBalance = document.getElementById('tokenBalance');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
+    let connectBtn;
+    let walletAddress;
 
     // ============================================
     // INITIALIZATION
     // ============================================
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
       console.log('VanSwap Batch Transfer - Initializing...');
       
+      // Get DOM elements after page loads
+      connectBtn = document.getElementById('connectBtn');
+      walletAddress = document.getElementById('walletAddress');
+      
+      // Setup event listeners
+      setupEventListeners();
+      
+      // Initialize UI
       initializeNetworkSelector();
-      initializeEventListeners();
       loadExampleData();
       updateRecipientsTable();
       updateSummary();
@@ -1159,29 +1160,91 @@
     });
 
     // ============================================
+    // EVENT LISTENERS SETUP
+    // ============================================
+    function setupEventListeners() {
+      // Wallet connection button
+      connectBtn.addEventListener('click', handleWalletConnection);
+      
+      // Network selector buttons
+      document.querySelectorAll('.network-btn').forEach(btn => {
+        btn.addEventListener('click', handleNetworkSwitch);
+      });
+      
+      // CSV upload
+      setupCSVUpload();
+      
+      // CSV template download
+      document.getElementById('downloadTemplate').addEventListener('click', function(e) {
+        e.preventDefault();
+        downloadCSVTemplate();
+      });
+    }
+
+    function setupCSVUpload() {
+      const csvUploadArea = document.getElementById('csvUploadArea');
+      const csvFileInput = document.getElementById('csvFile');
+      
+      csvUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        csvUploadArea.classList.add('drag-over');
+      });
+      
+      csvUploadArea.addEventListener('dragleave', () => {
+        csvUploadArea.classList.remove('drag-over');
+      });
+      
+      csvUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        csvUploadArea.classList.remove('drag-over');
+        
+        const file = e.dataTransfer.files[0];
+        if (file && (file.type === 'text/csv' || file.name.endsWith('.csv'))) {
+          processCSVFile(file);
+        } else {
+          showStatus('Please upload a CSV file', 'error');
+        }
+      });
+      
+      csvFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          processCSVFile(file);
+        }
+      });
+    }
+
+    // ============================================
     // NETWORK FUNCTIONS
     // ============================================
     function initializeNetworkSelector() {
       const networkBtns = document.querySelectorAll('.network-btn');
       
       networkBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          // Update UI
-          networkBtns.forEach(b => b.classList.remove('active'));
+        if (btn.dataset.network === currentNetwork) {
           btn.classList.add('active');
-          
-          // Update network
-          currentNetwork = btn.dataset.network;
-          
-          // Update contract info display
-          updateContractInfoDisplay();
-          
-          // Reconnect wallet if connected
-          if (isWalletConnected) {
-            switchNetwork();
-          }
-        });
+        }
       });
+    }
+
+    function handleNetworkSwitch(e) {
+      const btn = e.target.closest('.network-btn');
+      if (!btn) return;
+      
+      // Update UI
+      document.querySelectorAll('.network-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Update network
+      currentNetwork = btn.dataset.network;
+      
+      // Update contract info display
+      updateContractInfoDisplay();
+      
+      // Reconnect wallet if connected
+      if (isWalletConnected) {
+        switchNetwork();
+      }
     }
 
     async function switchNetwork() {
@@ -1228,7 +1291,7 @@
     }
 
     // ============================================
-    // WALLET FUNCTIONS
+    // WALLET CONNECTION FUNCTIONS - FIXED
     // ============================================
     async function checkExistingWalletConnection() {
       if (typeof window.ethereum === 'undefined') {
@@ -1247,13 +1310,13 @@
       }
     }
 
-    connectBtn.addEventListener('click', async () => {
+    async function handleWalletConnection() {
       if (isWalletConnected) {
-        disconnectWallet();
+        await disconnectWallet();
       } else {
         await connectWallet();
       }
-    });
+    }
 
     async function connectWallet() {
       if (typeof window.ethereum === 'undefined') {
@@ -1287,64 +1350,99 @@
     }
 
     async function connectWalletWithAccount(account) {
-      userAddress = account;
-      isWalletConnected = true;
-      
-      // Setup provider
-      web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = web3Provider.getSigner();
-      
-      // Setup contract
-      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      
-      // Update UI
-      const shortAddress = `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
-      walletAddress.textContent = shortAddress;
-      connectBtn.textContent = 'Disconnect';
-      connectBtn.style.background = 'var(--error)';
-      
-      showStatus('Wallet connected successfully', 'success');
-      
-      // Load contract info
-      await updateContractInfo();
-      
-      // Setup event listeners for wallet changes
-      setupWalletEventListeners();
+      try {
+        userAddress = account;
+        isWalletConnected = true;
+        
+        // Setup provider
+        web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = web3Provider.getSigner();
+        
+        // Setup contract
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        
+        // Update UI
+        const shortAddress = `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
+        walletAddress.textContent = shortAddress;
+        connectBtn.textContent = 'Disconnect';
+        connectBtn.classList.remove('disconnected');
+        connectBtn.classList.add('connected');
+        
+        showStatus('Wallet connected successfully', 'success');
+        
+        // Load contract info
+        await updateContractInfo();
+        
+        // Setup event listeners for wallet changes
+        setupWalletEventListeners();
+        
+      } catch (error) {
+        console.error('Error in connectWalletWithAccount:', error);
+        showStatus(`Wallet connection error: ${error.message}`, 'error');
+        isWalletConnected = false;
+      }
     }
 
-    function disconnectWallet() {
-      userAddress = null;
-      isWalletConnected = false;
-      web3Provider = null;
-      contract = null;
-      
-      walletAddress.textContent = 'Not Connected';
-      connectBtn.textContent = 'Connect Wallet';
-      connectBtn.style.background = 'var(--accent)';
-      
-      showStatus('Wallet disconnected', 'warning');
-      
-      // Remove event listeners
-      if (window.ethereum) {
-        window.ethereum.removeAllListeners('accountsChanged');
-        window.ethereum.removeAllListeners('chainChanged');
+    async function disconnectWallet() {
+      try {
+        userAddress = null;
+        isWalletConnected = false;
+        web3Provider = null;
+        contract = null;
+        
+        walletAddress.textContent = 'Not Connected';
+        connectBtn.textContent = 'Connect Wallet';
+        connectBtn.classList.remove('connected');
+        connectBtn.classList.add('disconnected');
+        
+        showStatus('Wallet disconnected', 'warning');
+        
+        // Remove event listeners
+        if (window.ethereum) {
+          window.ethereum.removeAllListeners('accountsChanged');
+          window.ethereum.removeAllListeners('chainChanged');
+        }
+        
+        // Reset token info
+        resetTokenInfo();
+        
+      } catch (error) {
+        console.error('Error disconnecting wallet:', error);
       }
     }
 
     function setupWalletEventListeners() {
       if (!window.ethereum) return;
       
-      window.ethereum.on('accountsChanged', (accounts) => {
+      // Handle account changes
+      window.ethereum.on('accountsChanged', async (accounts) => {
         if (accounts.length === 0) {
-          disconnectWallet();
+          await disconnectWallet();
         } else if (accounts[0] !== userAddress) {
-          connectWalletWithAccount(accounts[0]);
+          await connectWalletWithAccount(accounts[0]);
         }
       });
       
+      // Handle chain changes
       window.ethereum.on('chainChanged', () => {
         window.location.reload();
       });
+    }
+
+    function resetTokenInfo() {
+      tokenInfo = {
+        address: '',
+        name: '',
+        symbol: '',
+        decimals: 18,
+        balance: '0'
+      };
+      
+      document.getElementById('tokenName').textContent = '-';
+      document.getElementById('tokenSymbol').textContent = '-';
+      document.getElementById('tokenDecimals').textContent = '-';
+      document.getElementById('tokenBalance').textContent = '-';
+      document.getElementById('tokenAddress').value = '';
     }
 
     // ============================================
@@ -1436,6 +1534,7 @@
     }
 
     function updateRecipientsTable() {
+      const recipientsTableBody = document.getElementById('recipientsTableBody');
       recipientsTableBody.innerHTML = '';
       
       recipients.forEach((recipient, index) => {
@@ -1476,8 +1575,8 @@
         recipientsTableBody.appendChild(row);
       });
       
-      recipientsCount.textContent = recipients.length;
-      summaryRecipients.textContent = recipients.length;
+      document.getElementById('recipientsCount').textContent = recipients.length;
+      document.getElementById('summaryRecipients').textContent = recipients.length;
     }
 
     function updateSummary() {
@@ -1490,14 +1589,14 @@
         }
       });
       
-      summaryTotalAmount.textContent = totalRaw.toFixed(4);
+      document.getElementById('summaryTotalAmount').textContent = totalRaw.toFixed(4);
       
       // Update token required
       if (tokenInfo.symbol && tokenInfo.decimals) {
         const totalAdjusted = totalRaw * (10 ** tokenInfo.decimals);
-        summaryTokenRequired.textContent = `${totalAdjusted.toLocaleString()} wei (${totalRaw} ${tokenInfo.symbol})`;
+        document.getElementById('summaryTokenRequired').textContent = `${totalAdjusted.toLocaleString()} wei (${totalRaw} ${tokenInfo.symbol})`;
       } else {
-        summaryTokenRequired.textContent = '-';
+        document.getElementById('summaryTokenRequired').textContent = '-';
       }
       
       // Update fee from contract if available
@@ -1505,7 +1604,7 @@
         updateEstimatedFee();
       } else {
         const network = NETWORKS[currentNetwork];
-        summaryFee.textContent = `0 ${network.nativeToken}`;
+        document.getElementById('summaryFee').textContent = `0 ${network.nativeToken}`;
       }
     }
 
@@ -1515,7 +1614,7 @@
       try {
         const fee = await contract.getEstimatedFee();
         const network = NETWORKS[currentNetwork];
-        summaryFee.textContent = `${ethers.utils.formatEther(fee)} ${network.nativeToken}`;
+        document.getElementById('summaryFee').textContent = `${ethers.utils.formatEther(fee)} ${network.nativeToken}`;
       } catch (error) {
         console.error('Error fetching fee:', error);
       }
@@ -1525,7 +1624,7 @@
     // TOKEN DETECTION
     // ============================================
     async function detectToken() {
-      const address = tokenAddressInput.value.trim();
+      const address = document.getElementById('tokenAddress').value.trim();
       
       if (!address) {
         showStatus('Please enter a token address', 'error');
@@ -1585,10 +1684,10 @@
         }
         
         // Update UI
-        tokenName.textContent = tokenInfo.name;
-        tokenSymbol.textContent = tokenInfo.symbol;
-        tokenDecimals.textContent = tokenInfo.decimals;
-        tokenBalance.textContent = `${tokenInfo.balance} ${tokenInfo.symbol}`;
+        document.getElementById('tokenName').textContent = tokenInfo.name;
+        document.getElementById('tokenSymbol').textContent = tokenInfo.symbol;
+        document.getElementById('tokenDecimals').textContent = tokenInfo.decimals;
+        document.getElementById('tokenBalance').textContent = `${tokenInfo.balance} ${tokenInfo.symbol}`;
         
         showStatus('Token detected successfully!', 'success');
         updateSummary();
@@ -1689,7 +1788,7 @@
       
       try {
         // Show progress
-        progressContainer.classList.add('active');
+        document.getElementById('progressContainer').classList.add('active');
         updateProgress(1, 4);
         
         // Prepare data
@@ -1755,7 +1854,7 @@
         const receipt = await tx.wait();
         
         // Update progress to complete
-        progressFill.style.width = '100%';
+        document.getElementById('progressFill').style.width = '100%';
         
         showStatus(`Batch transfer completed! Transaction: ${receipt.transactionHash}`, 'success');
         
@@ -1764,7 +1863,7 @@
         
         // Reset form after successful transfer
         setTimeout(() => {
-          progressContainer.classList.remove('active');
+          document.getElementById('progressContainer').classList.remove('active');
           document.getElementById('executeBtn').disabled = true;
         }, 5000);
         
@@ -1779,53 +1878,13 @@
           showStatus(`Transfer failed: ${error.message}`, 'error');
         }
         
-        progressContainer.classList.remove('active');
+        document.getElementById('progressContainer').classList.remove('active');
       }
     }
 
     // ============================================
     // CSV FUNCTIONS
     // ============================================
-    function initializeEventListeners() {
-      // CSV Upload
-      const csvUploadArea = document.getElementById('csvUploadArea');
-      const csvFileInput = document.getElementById('csvFile');
-      
-      csvUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        csvUploadArea.classList.add('drag-over');
-      });
-      
-      csvUploadArea.addEventListener('dragleave', () => {
-        csvUploadArea.classList.remove('drag-over');
-      });
-      
-      csvUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        csvUploadArea.classList.remove('drag-over');
-        
-        const file = e.dataTransfer.files[0];
-        if (file && (file.type === 'text/csv' || file.name.endsWith('.csv'))) {
-          processCSVFile(file);
-        } else {
-          showStatus('Please upload a CSV file', 'error');
-        }
-      });
-      
-      csvFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          processCSVFile(file);
-        }
-      });
-      
-      // CSV Template Download
-      document.getElementById('downloadTemplate').addEventListener('click', (e) => {
-        e.preventDefault();
-        downloadCSVTemplate();
-      });
-    }
-
     function processCSVFile(file) {
       const reader = new FileReader();
       
@@ -1906,8 +1965,8 @@
 
     function updateProgress(current, total) {
       const percentage = (current / total) * 100;
-      progressFill.style.width = `${percentage}%`;
-      progressText.textContent = `${current}/${total}`;
+      document.getElementById('progressFill').style.width = `${percentage}%`;
+      document.getElementById('progressText').textContent = `${current}/${total}`;
     }
 
     function formatNumber(num) {
