@@ -1080,27 +1080,40 @@
 
   <script>
     // ============================================
-    // CONFIGURATION
+    // KONFIGURASI UTAMA - DIPERBAIKI
     // ============================================
     const CONTRACT_ADDRESSES = {
       vana: "0x972C180541A901c8bd37dEB39579B5D1D42dA54D",
       zerog: "0x670Cb520Dc426E5A5E56c1E346f4Da3Fef9eB60a"
     };
     
+    // KONFIGURASI RPC UNTUK DETEKSI TOKEN - DIPERBAIKI
     const NETWORKS = {
       vana: {
         name: "VANA Network",
         rpc: "https://rpc.vana.org",
+        rpcFallback: "https://rpc.vana.org",
         chainId: 1480,
         nativeToken: "VANA",
-        explorer: "https://vanascan.io"
+        explorer: "https://vanascan.io",
+        // Token terkenal di VANA untuk testing
+        knownTokens: {
+          "0x972C180541A901c8bd37dEB39579B5D1D42dA54D": "VanSwap Batch Transfer",
+          "0x0000000000000000000000000000000000000000": "VANA Native Token"
+        }
       },
       zerog: {
         name: "0G Network",
         rpc: "https://evmrpc.0g.ai",
+        rpcFallback: "https://evmrpc.0g.ai",
         chainId: 16661,
         nativeToken: "0G",
-        explorer: "https://chainscan.0g.ai"
+        explorer: "https://chainscan.0g.ai",
+        // Token terkenal di 0G untuk testing
+        knownTokens: {
+          "0x670Cb520Dc426E5A5E56c1E346f4Da3Fef9eB60a": "0G Batch Transfer",
+          "0x0000000000000000000000000000000000000000": "0G Native Token"
+        }
       }
     };
 
@@ -1118,6 +1131,7 @@
     // ============================================
     let currentNetwork = 'vana';
     let web3Provider = null;
+    let readProvider = null; // Provider khusus untuk membaca data
     let contract = null;
     let userAddress = null;
     let isWalletConnected = false;
@@ -1136,10 +1150,50 @@
     };
 
     // ============================================
+    // FUNGSI UTILITAS BARU - DIPERBAIKI
+    // ============================================
+    
+    // Fungsi untuk membuat provider khusus untuk membaca data
+    function createReadProvider() {
+      const network = NETWORKS[currentNetwork];
+      return new ethers.providers.JsonRpcProvider(network.rpcFallback);
+    }
+    
+    // Fungsi untuk mendapatkan provider yang tepat berdasarkan konteks
+    function getProvider() {
+      if (web3Provider && isWalletConnected) {
+        return web3Provider;
+      }
+      return createReadProvider();
+    }
+    
+    // ERC20 ABI yang lebih lengkap untuk deteksi
+    const ERC20_ABI = [
+      "function name() view returns (string)",
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)",
+      "function totalSupply() view returns (uint256)",
+      "function balanceOf(address) view returns (uint256)",
+      "function transfer(address to, uint256 amount) returns (bool)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+      "event Transfer(address indexed from, address indexed to, uint256 value)",
+      "event Approval(address indexed owner, address indexed spender, uint256 value)"
+    ];
+
+    // ABI minimal untuk deteksi fallback
+    const MINIMAL_ERC20_ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function decimals() view returns (uint8)"
+    ];
+
+    // ============================================
     // INITIALIZATION
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
       console.log('VanSwap Batch Transfer - Initializing...');
+      console.log('Current Network:', currentNetwork);
       
       // Setup event listeners
       setupEventListeners();
@@ -1153,6 +1207,9 @@
       
       // Check if wallet is already connected
       checkExistingWalletConnection();
+      
+      // Initialize read provider
+      readProvider = createReadProvider();
     });
 
     // ============================================
@@ -1242,18 +1299,29 @@
       const btn = e.target.closest('.network-btn');
       if (!btn) return;
       
+      const newNetwork = btn.dataset.network;
+      if (newNetwork === currentNetwork) return;
+      
+      console.log('Switching network from', currentNetwork, 'to', newNetwork);
+      
       // Update UI
       document.querySelectorAll('.network-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       
       // Update network
-      currentNetwork = btn.dataset.network;
+      currentNetwork = newNetwork;
       
       // Update contract address display
       updateContractAddressDisplay();
       
       // Update contract info display
       updateContractInfoDisplay();
+      
+      // Update read provider
+      readProvider = createReadProvider();
+      
+      // Reset token info karena network berubah
+      resetTokenInfo();
       
       // Reconnect wallet if connected
       if (isWalletConnected) {
@@ -1393,7 +1461,7 @@
         userAddress = account;
         isWalletConnected = true;
         
-        // Setup provider
+        // Setup provider dengan network yang tepat
         web3Provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = web3Provider.getSigner();
         
@@ -1537,6 +1605,190 @@
     }
 
     // ============================================
+    // TOKEN DETECTION - DIPERBAIKI SECARA TOTAL
+    // ============================================
+    async function detectToken() {
+      const tokenAddressInput = document.getElementById('tokenAddress');
+      if (!tokenAddressInput) return;
+      
+      const address = tokenAddressInput.value.trim();
+      
+      if (!address) {
+        showStatus('Please enter a token address', 'error');
+        return;
+      }
+      
+      if (!isValidAddress(address)) {
+        showStatus('Invalid contract address format. Must start with 0x and have 40 hex characters.', 'error');
+        return;
+      }
+      
+      // Cek jika address adalah known token
+      const network = NETWORKS[currentNetwork];
+      if (network.knownTokens && network.knownTokens[address.toLowerCase()]) {
+        const knownTokenName = network.knownTokens[address.toLowerCase()];
+        showStatus(`Detected known token: ${knownTokenName}`, 'success');
+        tokenInfo = {
+          address: address,
+          name: knownTokenName,
+          symbol: knownTokenName.split(' ')[0].toUpperCase(),
+          decimals: 18,
+          balance: '0',
+          totalSupply: '0'
+        };
+        updateTokenUI();
+        return;
+      }
+      
+      showStatus(`Detecting token on ${network.name}...`, 'info');
+      
+      try {
+        // Gunakan read provider yang tepat untuk network ini
+        const provider = getProvider();
+        console.log('Using provider for network:', currentNetwork);
+        
+        // Coba beberapa metode deteksi
+        const tokenInfoResult = await detectTokenWithMultipleMethods(address, provider);
+        
+        if (tokenInfoResult.success) {
+          tokenInfo = tokenInfoResult.info;
+          showStatus(`✅ Token detected: ${tokenInfo.name} (${tokenInfo.symbol})`, 'success');
+          updateTokenUI();
+          
+          // Cek jika wallet terhubung untuk balance
+          if (isWalletConnected && userAddress) {
+            await updateTokenBalance(address, provider);
+          }
+        } else {
+          throw new Error(tokenInfoResult.error || 'Failed to detect token');
+        }
+        
+      } catch (error) {
+        console.error('Token detection error:', error);
+        showStatus(`❌ Failed to detect token: ${error.message}`, 'error');
+        resetTokenInfo();
+      }
+    }
+    
+    async function detectTokenWithMultipleMethods(tokenAddress, provider) {
+      console.log('Starting token detection for:', tokenAddress);
+      
+      // Method 1: Coba dengan ABI lengkap
+      try {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        
+        // Coba semua fungsi sekaligus dengan timeout
+        const [name, symbol, decimals, totalSupply] = await Promise.all([
+          tokenContract.name().catch(() => 'Unknown'),
+          tokenContract.symbol().catch(() => 'UNKNOWN'),
+          tokenContract.decimals().catch(() => 18),
+          tokenContract.totalSupply().catch(() => ethers.BigNumber.from(0))
+        ]);
+        
+        console.log('Method 1 success:', { name, symbol, decimals: decimals.toString() });
+        
+        return {
+          success: true,
+          info: {
+            address: tokenAddress,
+            name: name.toString(),
+            symbol: symbol.toString(),
+            decimals: parseInt(decimals.toString()),
+            balance: '0',
+            totalSupply: ethers.utils.formatUnits(totalSupply, decimals)
+          }
+        };
+      } catch (error) {
+        console.log('Method 1 failed:', error.message);
+      }
+      
+      // Method 2: Coba dengan ABI minimal
+      try {
+        const minimalContract = new ethers.Contract(tokenAddress, MINIMAL_ERC20_ABI, provider);
+        const [balance, decimals] = await Promise.all([
+          minimalContract.balanceOf(tokenAddress).catch(() => ethers.BigNumber.from(0)),
+          minimalContract.decimals().catch(() => 18)
+        ]);
+        
+        console.log('Method 2 success:', { decimals: decimals.toString() });
+        
+        return {
+          success: true,
+          info: {
+            address: tokenAddress,
+            name: 'Unknown Token',
+            symbol: 'TOKEN',
+            decimals: parseInt(decimals.toString()),
+            balance: '0',
+            totalSupply: '0'
+          }
+        };
+      } catch (error) {
+        console.log('Method 2 failed:', error.message);
+      }
+      
+      // Method 3: Coba hanya code hash
+      try {
+        const code = await provider.getCode(tokenAddress);
+        if (code === '0x' || code === '0x0') {
+          return {
+            success: false,
+            error: 'No contract code at this address'
+          };
+        }
+        
+        console.log('Method 3: Contract code found, length:', code.length);
+        
+        // Jika ada code, asumsi itu ERC20 dengan decimals 18
+        return {
+          success: true,
+          info: {
+            address: tokenAddress,
+            name: 'ERC20 Token',
+            symbol: 'TOKEN',
+            decimals: 18,
+            balance: '0',
+            totalSupply: '0'
+          }
+        };
+      } catch (error) {
+        console.log('Method 3 failed:', error.message);
+      }
+      
+      return {
+        success: false,
+        error: 'All detection methods failed'
+      };
+    }
+    
+    async function updateTokenBalance(tokenAddress, provider) {
+      try {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const balance = await tokenContract.balanceOf(userAddress);
+        const decimals = tokenInfo.decimals || 18;
+        
+        tokenInfo.balance = ethers.utils.formatUnits(balance, decimals);
+        updateTokenUI();
+      } catch (error) {
+        console.log('Could not fetch balance:', error.message);
+      }
+    }
+    
+    function updateTokenUI() {
+      const tokenName = document.getElementById('tokenName');
+      const tokenSymbol = document.getElementById('tokenSymbol');
+      const tokenDecimals = document.getElementById('tokenDecimals');
+      const tokenBalance = document.getElementById('tokenBalance');
+      
+      if (tokenName) tokenName.textContent = tokenInfo.name;
+      if (tokenSymbol) tokenSymbol.textContent = tokenInfo.symbol;
+      if (tokenDecimals) tokenDecimals.textContent = tokenInfo.decimals;
+      if (tokenBalance) tokenBalance.textContent = `${formatTokenAmount(parseFloat(tokenInfo.balance))} ${tokenInfo.symbol}`;
+      
+      updateSummary();
+    }
+
+    // ============================================
     // BATCH TRANSFER FUNCTIONS
     // ============================================
     function loadExampleData() {
@@ -1584,12 +1836,11 @@
         recipient.error = 'Invalid address';
       }
       
-      // Validate amount - DIPERBAIKI: batas 0.000001 - 1,000,000
+      // Validate amount
       if (!recipient.amount.trim()) {
         recipient.valid = false;
         recipient.error = recipient.error ? recipient.error + ', Amount required' : 'Amount required';
       } else {
-        // Replace comma with dot for decimal separator
         const normalizedAmount = recipient.amount.replace(',', '.');
         const amount = parseFloat(normalizedAmount);
         
@@ -1667,7 +1918,6 @@
     }
 
     function updateSummary() {
-      // Calculate total amount
       let totalRaw = 0;
       recipients.forEach(recipient => {
         const normalizedAmount = recipient.amount.replace(',', '.');
@@ -1682,7 +1932,6 @@
         summaryTotalAmount.textContent = formatTokenAmount(totalRaw, 6);
       }
       
-      // Update token required
       const summaryTokenRequired = document.getElementById('summaryTokenRequired');
       if (tokenInfo.symbol) {
         const formattedAmount = formatTokenAmount(totalRaw, 6);
@@ -1695,7 +1944,6 @@
         }
       }
       
-      // Update fee from contract if available
       if (contract && isWalletConnected) {
         updateEstimatedFee();
       } else {
@@ -1710,7 +1958,6 @@
     function formatTokenAmount(amount, decimals = 6) {
       if (amount === 0) return '0';
       
-      // Format besar angka
       if (amount >= 1000000) {
         return (amount / 1000000).toFixed(2) + 'M';
       } else if (amount >= 1000) {
@@ -1718,7 +1965,6 @@
       } else if (amount >= 1) {
         return amount.toFixed(Math.min(decimals, 6)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       } else {
-        // Untuk angka desimal kecil, tampilkan hingga 6 digit
         return amount.toFixed(Math.min(decimals, 6));
       }
     }
@@ -1739,160 +1985,7 @@
     }
 
     // ============================================
-    // TOKEN DETECTION - DIPERBAIKI SECARA SIGNIFIKAN
-    // ============================================
-    async function detectToken() {
-      const tokenAddressInput = document.getElementById('tokenAddress');
-      if (!tokenAddressInput) return;
-      
-      const address = tokenAddressInput.value.trim();
-      
-      if (!address) {
-        showStatus('Please enter a token address', 'error');
-        return;
-      }
-      
-      if (!isValidAddress(address)) {
-        showStatus('Invalid contract address format. Must start with 0x and have 40 hex characters.', 'error');
-        return;
-      }
-      
-      if (!web3Provider || !isWalletConnected) {
-        showStatus('Please connect wallet first', 'error');
-        return;
-      }
-      
-      try {
-        showStatus('Detecting token...', 'info');
-        
-        // ERC20 ABI untuk deteksi
-        const erc20Abi = [
-          "function name() view returns (string)",
-          "function symbol() view returns (string)",
-          "function decimals() view returns (uint8)",
-          "function totalSupply() view returns (uint256)",
-          "function balanceOf(address) view returns (uint256)"
-        ];
-        
-        const signer = web3Provider.getSigner();
-        const tokenContract = new ethers.Contract(address, erc20Abi, signer);
-        
-        // Fetch semua info token sekaligus dengan timeout
-        const fetchWithTimeout = async (promise, timeout = 10000) => {
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Request timeout')), timeout)
-          );
-          return Promise.race([promise, timeoutPromise]);
-        };
-        
-        try {
-          const [name, symbol, decimals, totalSupply, balance] = await Promise.all([
-            fetchWithTimeout(tokenContract.name()).catch(() => 'Unknown Token'),
-            fetchWithTimeout(tokenContract.symbol()).catch(() => 'UNKNOWN'),
-            fetchWithTimeout(tokenContract.decimals()).catch(() => 18),
-            fetchWithTimeout(tokenContract.totalSupply()).catch(() => ethers.BigNumber.from(0)),
-            fetchWithTimeout(tokenContract.balanceOf(userAddress)).catch(() => ethers.BigNumber.from(0))
-          ]);
-          
-          // Format nilai
-          const formattedBalance = ethers.utils.formatUnits(balance, decimals);
-          const formattedTotalSupply = ethers.utils.formatUnits(totalSupply, decimals);
-          
-          tokenInfo = {
-            address: address,
-            name: name,
-            symbol: symbol,
-            decimals: decimals,
-            balance: formattedBalance,
-            totalSupply: formattedTotalSupply
-          };
-          
-          // Update UI
-          const tokenName = document.getElementById('tokenName');
-          const tokenSymbol = document.getElementById('tokenSymbol');
-          const tokenDecimals = document.getElementById('tokenDecimals');
-          const tokenBalance = document.getElementById('tokenBalance');
-          
-          if (tokenName) tokenName.textContent = tokenInfo.name;
-          if (tokenSymbol) tokenSymbol.textContent = tokenInfo.symbol;
-          if (tokenDecimals) tokenDecimals.textContent = tokenInfo.decimals;
-          if (tokenBalance) tokenBalance.textContent = `${formatTokenAmount(parseFloat(tokenInfo.balance))} ${tokenInfo.symbol}`;
-          
-          showStatus(`Token detected: ${tokenInfo.name} (${tokenInfo.symbol})`, 'success');
-          updateSummary();
-          
-        } catch (fetchError) {
-          console.error('Token fetch error:', fetchError);
-          throw fetchError;
-        }
-        
-      } catch (error) {
-        console.error('Token detection error:', error);
-        
-        // Coba fallback detection dengan ABI lebih sederhana
-        try {
-          showStatus('Trying alternative detection method...', 'info');
-          
-          // Coba hanya fungsi paling dasar
-          const simpleAbi = [
-            "function balanceOf(address) view returns (uint256)"
-          ];
-          
-          const signer = web3Provider.getSigner();
-          const simpleTokenContract = new ethers.Contract(address, simpleAbi, signer);
-          
-          // Coba ambil balance
-          const balance = await simpleTokenContract.balanceOf(userAddress).catch(() => ethers.BigNumber.from(0));
-          
-          // Coba tebak decimals dengan mencoba parse
-          let decimals = 18;
-          try {
-            // Coba parse dengan berbagai decimal
-            for (let dec of [0, 6, 8, 9, 12, 18]) {
-              try {
-                const formatted = ethers.utils.formatUnits(balance, dec);
-                // Jika formatted adalah angka valid
-                if (!isNaN(parseFloat(formatted))) {
-                  decimals = dec;
-                  break;
-                }
-              } catch {}
-            }
-          } catch {}
-          
-          tokenInfo = {
-            address: address,
-            name: 'Unknown Token',
-            symbol: 'UNKNOWN',
-            decimals: decimals,
-            balance: ethers.utils.formatUnits(balance, decimals),
-            totalSupply: '0'
-          };
-          
-          // Update UI
-          const tokenName = document.getElementById('tokenName');
-          const tokenSymbol = document.getElementById('tokenSymbol');
-          const tokenDecimals = document.getElementById('tokenDecimals');
-          const tokenBalance = document.getElementById('tokenBalance');
-          
-          if (tokenName) tokenName.textContent = tokenInfo.name;
-          if (tokenSymbol) tokenSymbol.textContent = tokenInfo.symbol;
-          if (tokenDecimals) tokenDecimals.textContent = tokenInfo.decimals;
-          if (tokenBalance) tokenBalance.textContent = `${formatTokenAmount(parseFloat(tokenInfo.balance))} ${tokenInfo.symbol}`;
-          
-          showStatus('Token detected (limited info available)', 'warning');
-          updateSummary();
-          
-        } catch (fallbackError) {
-          console.error('Fallback detection error:', fallbackError);
-          showStatus('Failed to detect token. Make sure: 1) Contract address is valid ERC20, 2) You have balance, 3) Network is correct.', 'error');
-          resetTokenInfo();
-        }
-      }
-    }
-
-    // ============================================
-    // VALIDATION & EXECUTION - DIPERBAIKI DENGAN VALIDASI AMOUNT
+    // VALIDATION & EXECUTION
     // ============================================
     async function validateTransfers() {
       if (!isWalletConnected) {
@@ -1908,7 +2001,6 @@
       let allValid = true;
       let validationErrors = [];
       
-      // Validasi semua penerima
       recipients.forEach((recipient, index) => {
         const isValid = validateRecipient(index);
         if (!isValid) {
@@ -1919,7 +2011,6 @@
         }
       });
       
-      // Jika semua valid, hitung total
       if (allValid) {
         let totalAmount = ethers.BigNumber.from(0);
         
@@ -1927,7 +2018,6 @@
           const normalizedAmount = recipient.amount.replace(',', '.');
           const amount = parseFloat(normalizedAmount);
           
-          // Validasi tambahan untuk amount
           if (amount < 0.000001 || amount > 1000000) {
             allValid = false;
             validationErrors.push(`Row ${recipients.indexOf(recipient) + 1}: Amount must be between 0.000001 and 1,000,000`);
@@ -1944,7 +2034,6 @@
             }
           } else {
             try {
-              // Untuk mode exact, asumsi sudah dalam satuan terkecil
               const exactAmount = ethers.BigNumber.from(Math.floor(amount).toString());
               totalAmount = totalAmount.add(exactAmount);
             } catch (error) {
@@ -1954,7 +2043,6 @@
           }
         });
         
-        // Cek balance token jika semua amount valid
         if (allValid) {
           try {
             const erc20Abi = [
@@ -1988,7 +2076,6 @@
         }
       }
       
-      // Update UI berdasarkan hasil validasi
       updateRecipientsTable();
       
       if (allValid) {
@@ -2021,26 +2108,21 @@
       }
       
       try {
-        // Show progress
         const progressContainer = document.getElementById('progressContainer');
         if (progressContainer) {
           progressContainer.classList.add('active');
         }
         updateProgress(1, 5);
         
-        // Prepare data
         const recipientsArray = recipients.map(r => r.address);
         let amountsArray = [];
         let totalAmount = ethers.BigNumber.from(0);
         
         updateProgress(2, 5);
         
-        // Prepare amounts berdasarkan mode
         if (transferMode === 'raw') {
           for (const recipient of recipients) {
             const normalizedAmount = recipient.amount.replace(',', '.');
-            
-            // Validasi akhir amount
             const amountNum = parseFloat(normalizedAmount);
             if (amountNum < 0.000001 || amountNum > 1000000) {
               throw new Error(`Amount ${amountNum} is outside allowed range (0.000001 - 1,000,000)`);
@@ -2053,8 +2135,6 @@
         } else {
           for (const recipient of recipients) {
             const normalizedAmount = recipient.amount.replace(',', '.');
-            
-            // Validasi akhir amount
             const amountNum = parseFloat(normalizedAmount);
             if (amountNum < 0.000001 || amountNum > 1000000) {
               throw new Error(`Amount ${amountNum} is outside allowed range (0.000001 - 1,000,000)`);
@@ -2066,12 +2146,10 @@
           }
         }
         
-        // Get fee
         updateProgress(3, 5);
         const fee = await contract.getEstimatedFee();
         showStatus('Getting fee estimate...', 'info');
         
-        // Check and approve token allowance
         updateProgress(4, 5);
         const erc20Abi = [
           "function allowance(address, address) view returns (uint256)",
@@ -2095,13 +2173,11 @@
           }
         }
         
-        // Execute batch transfer
         updateProgress(5, 5);
         showStatus('Executing batch transfer...', 'info');
         
         let tx;
         if (transferMode === 'raw') {
-          // Untuk mode raw, kirim raw amounts
           const rawAmounts = recipients.map(r => r.amount.replace(',', '.'));
           tx = await contract.batchTransferAutoDecimals(
             tokenInfo.address,
@@ -2110,7 +2186,6 @@
             { value: fee }
           );
         } else {
-          // Untuk mode exact, kirim amounts dengan decimals
           tx = await contract.batchTransfer(
             tokenInfo.address,
             recipientsArray,
@@ -2122,22 +2197,18 @@
         showStatus('Transaction submitted. Waiting for confirmation...', 'info');
         const receipt = await tx.wait();
         
-        // Update progress to complete
         const progressFill = document.getElementById('progressFill');
         if (progressFill) {
           progressFill.style.width = '100%';
         }
         
-        // Tampilkan link explorer
         const network = NETWORKS[currentNetwork];
         const explorerUrl = `${network.explorer}/tx/${receipt.transactionHash}`;
         
         showStatus(`✅ Batch transfer completed successfully! <a href="${explorerUrl}" target="_blank" style="color: var(--accent); text-decoration: underline;">View on Explorer</a>`, 'success');
         
-        // Update contract info
         await updateContractInfo();
         
-        // Reset form setelah 10 detik
         setTimeout(() => {
           if (progressContainer) {
             progressContainer.classList.remove('active');
@@ -2147,7 +2218,6 @@
             executeBtn.disabled = true;
           }
           
-          // Reset progress bar
           if (progressFill) {
             progressFill.style.width = '0%';
           }
@@ -2203,7 +2273,7 @@
             
             if (parts.length >= 2) {
               const address = parts[0];
-              const amountStr = parts[1].replace(',', '.'); // Normalize decimal separator
+              const amountStr = parts[1].replace(',', '.');
               const amount = parseFloat(amountStr);
               
               if (address && !isNaN(amount) && isValidAddress(address) && 
@@ -2306,7 +2376,6 @@
       statusEl.innerHTML = message;
       statusEl.className = `status-message active status-${type}`;
       
-      // Auto-hide success messages setelah 10 detik
       if (type === 'success') {
         setTimeout(() => {
           statusEl.classList.remove('active');
