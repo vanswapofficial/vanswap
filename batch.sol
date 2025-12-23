@@ -55,31 +55,25 @@ contract MultiChainBatchTransfer {
         emit NetworkIdSet(_networkId);
     }
     
-    // Helper function untuk validasi array
-    function _validateArrays(
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) private view returns (uint256 totalAmount) {
-        require(recipients.length == amounts.length, "Arrays length mismatch");
-        require(recipients.length > 0, "No recipients");
-        require(recipients.length <= 100, "Too many recipients");
-        
-        for (uint256 i = 0; i < recipients.length; i++) {
-            require(recipients[i] != address(0), "Invalid recipient");
-            require(recipients[i] != address(this), "Cannot transfer to contract");
-            require(amounts[i] > 0, "Amount must be > 0");
-            totalAmount += amounts[i];
-        }
-    }
-    
-    // Main batch transfer function
+    // Main batch transfer function - semua validasi di dalam function utama
     function batchTransfer(
         address tokenAddress,
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external payable returns (bool) {
         uint256 feePaid = _collectFee();
-        uint256 totalAmount = _validateArrays(recipients, amounts);
+        
+        // Validate arrays
+        require(recipients.length == amounts.length, "Arrays length mismatch");
+        require(recipients.length > 0, "No recipients");
+        require(recipients.length <= 100, "Too many recipients");
+        
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < recipients.length; i++) {
+            require(recipients[i] != address(0), "Invalid recipient");
+            require(amounts[i] > 0, "Amount must be > 0");
+            totalAmount += amounts[i];
+        }
         
         IERC20 token = IERC20(tokenAddress);
         require(token.balanceOf(msg.sender) >= totalAmount, "Insufficient balance");
@@ -127,10 +121,9 @@ contract MultiChainBatchTransfer {
         // Get token decimals
         uint8 decimals = _getTokenDecimals(tokenAddress);
         
-        uint256 totalAmount;
+        uint256 totalAmount = 0;
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid recipient");
-            require(recipients[i] != address(this), "Cannot transfer to contract");
             require(rawAmounts[i] > 0, "Amount must be > 0");
             
             uint256 adjustedAmount = rawAmounts[i] * (10 ** decimals);
@@ -237,83 +230,70 @@ contract MultiChainBatchTransfer {
         emit FeesWithdrawn(balance);
     }
     
-    // Struct untuk return values
-    struct TokenInfo {
-        string name;
-        string symbol;
-        uint8 decimals;
-        uint256 totalSupply;
-        uint256 yourBalance;
-    }
-    
-    struct ContractInfo {
-        uint256 networkId;
-        address owner;
-        address feeReceiver;
-        uint256 feeAmount;
-        bool feeEnabled;
-        uint256 batchesProcessed;
-        uint256 tokensTransferred;
-        uint256 feesCollected;
-        uint256 contractBalance;
-    }
-    
-    function getTokenInfo(address tokenAddress) external view returns (TokenInfo memory) {
-        IERC20 token = IERC20(tokenAddress);
-        
-        return TokenInfo({
-            name: _tryGetName(tokenAddress),
-            symbol: _tryGetSymbol(tokenAddress),
-            decimals: _getTokenDecimals(tokenAddress),
-            totalSupply: _tryGetTotalSupply(tokenAddress),
-            yourBalance: token.balanceOf(msg.sender)
-        });
-    }
-    
-    function getContractInfo() external view returns (ContractInfo memory) {
-        return ContractInfo({
-            networkId: networkId,
-            owner: owner,
-            feeReceiver: feeReceiver,
-            feeAmount: feeAmount,
-            feeEnabled: feeEnabled,
-            batchesProcessed: totalBatchesProcessed,
-            tokensTransferred: totalTokensTransferred,
-            feesCollected: totalFeesCollected,
-            contractBalance: address(this).balance
-        });
-    }
-    
-    // Helper functions untuk get token info
-    function _tryGetName(address tokenAddress) private view returns (string memory) {
-        try IERC20(tokenAddress).name() returns (string memory name) {
-            return name;
-        } catch {
-            return "Unknown";
-        }
-    }
-    
-    function _tryGetSymbol(address tokenAddress) private view returns (string memory) {
-        try IERC20(tokenAddress).symbol() returns (string memory symbol) {
-            return symbol;
-        } catch {
-            return "UNKNOWN";
-        }
-    }
-    
-    function _tryGetTotalSupply(address tokenAddress) private view returns (uint256) {
-        try IERC20(tokenAddress).totalSupply() returns (uint256 supply) {
-            return supply;
-        } catch {
-            return 0;
-        }
-    }
-    
+    // View functions
     function getEstimatedFee() external view returns (uint256) {
         return feeEnabled ? feeAmount : 0;
     }
     
-    // Function untuk check token compatibility
+    function getTokenInfo(address tokenAddress) external view returns (
+        string memory name,
+        string memory symbol,
+        uint8 decimals,
+        uint256 totalSupply,
+        uint256 yourBalance
+    ) {
+        IERC20 token = IERC20(tokenAddress);
+        
+        try token.name() returns (string memory tokenName) {
+            name = tokenName;
+        } catch {
+            name = "Unknown";
+        }
+        
+        try token.symbol() returns (string memory tokenSymbol) {
+            symbol = tokenSymbol;
+        } catch {
+            symbol = "UNKNOWN";
+        }
+        
+        try token.decimals() returns (uint8 tokenDecimals) {
+            decimals = tokenDecimals;
+        } catch {
+            decimals = 18;
+        }
+        
+        try token.totalSupply() returns (uint256 supply) {
+            totalSupply = supply;
+        } catch {
+            totalSupply = 0;
+        }
+        
+        yourBalance = token.balanceOf(msg.sender);
+    }
+    
+    function getContractInfo() external view returns (
+        uint256 _networkId,
+        address _owner,
+        address _feeReceiver,
+        uint256 _feeAmount,
+        bool _feeEnabled,
+        uint256 _batchesProcessed,
+        uint256 _tokensTransferred,
+        uint256 _feesCollected
+    ) {
+        return (
+            networkId,
+            owner,
+            feeReceiver,
+            feeAmount,
+            feeEnabled,
+            totalBatchesProcessed,
+            totalTokensTransferred,
+            totalFeesCollected
+        );
+    }
+    
+    // Check if token is compatible
     function canHandleToken(address tokenAddress) external view returns (bool) {
         try IERC20(tokenAddress).decimals() returns (uint8) {
             return true;
@@ -322,32 +302,28 @@ contract MultiChainBatchTransfer {
         }
     }
     
-    // Function untuk calculate adjusted amount
+    // Calculate adjusted amount based on token decimals
     function calculateAdjustedAmount(uint256 rawAmount, address tokenAddress) external view returns (uint256) {
         uint8 decimals = _getTokenDecimals(tokenAddress);
         return rawAmount * (10 ** decimals);
     }
     
-    // Function untuk get batch transfer cost estimation
-    function estimateBatchTransferCost(
-        address tokenAddress,
-        uint256 recipientCount
-    ) external view returns (
-        uint256 totalFee,
-        uint256 estimatedGas,
-        bool canProcess
-    ) {
-        totalFee = feeEnabled ? feeAmount : 0;
-        estimatedGas = 21000 + (recipientCount * 40000);
-        canProcess = recipientCount <= 100;
-        
-        // Check if token is compatible
-        try IERC20(tokenAddress).decimals() returns (uint8) {
-            // Token is compatible
-        } catch {
-            canProcess = false;
-        }
+    // Get contract balance
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
     }
     
+    // Fallback untuk menerima native token (fee)
     receive() external payable {}
+    
+    // Tambahan: Prevent accidental token transfers ke contract
+    // Fungsi ini akan dipanggil jika ada yang kirim token langsung ke contract
+    function onERC20Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure returns (bytes4) {
+        revert("Direct token transfers not allowed. Use batchTransfer function.");
+    }
 }
