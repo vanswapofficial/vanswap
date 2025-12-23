@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airdrop Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 1000px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 20px; margin: 10px 0; border-radius: 10px; }
+        button { background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #4338ca; }
+        .connected { color: green; font-weight: bold; }
+        .disconnected { color: red; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; background: #f1f5f9; border: none; border-radius: 5px; cursor: pointer; }
+        .tab-btn.active { background: #4f46e5; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Airdrop Admin Panel</h1>
+    
+    <div class="card">
+        <h3>Wallet Status: <span id="status" class="disconnected">Not Connected</span></h3>
+        <button id="connectBtn">Connect Wallet</button>
+        <div id="walletInfo" style="display: none; margin-top: 10px;">
+            <p>Address: <span id="address"></span></p>
+            <p>Network: <span id="network"></span></p>
+        </div>
+    </div>
+    
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+        <button class="tab-btn" onclick="switchTab('admin')">Admin</button>
+        <button class="tab-btn" onclick="switchTab('tokens')">Tokens</button>
+        <button class="tab-btn" onclick="switchTab('users')">Users</button>
+    </div>
+    
+    <div id="dashboard" class="tab active">
+        <div class="card">
+            <h3>Contract Info</h3>
+            <button onclick="getOwner()">Get Owner</button>
+            <button onclick="getTotalUsers()">Get Total Users</button>
+            <button onclick="checkPaused()">Check Paused</button>
+            <button onclick="getAllInfo()">Get All Info</button>
+            <div id="contractInfo" style="margin-top: 10px;"></div>
+        </div>
+        
+        <div class="card">
+            <h3>Quick Actions</h3>
+            <button onclick="togglePause()">Toggle Pause</button>
+            <button onclick="checkEmergencyStatus()">Check Emergency</button>
+            <button onclick="calculateMaxUsers()">Calculate Capacity</button>
+            <div id="quickResult" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+    
+    <div id="admin" class="tab">
+        <div class="card">
+            <h3>Contract Management</h3>
+            <div style="margin: 10px 0;">
+                <label>Pause Status:</label>
+                <select id="pauseSelect">
+                    <option value="true">Pause</option>
+                    <option value="false">Unpause</option>
+                </select>
+                <button onclick="setPause()">Set Pause</button>
+            </div>
+            
+            <div style="margin: 10px 0;">
+                <label>New Emergency Time (timestamp):</label>
+                <input type="number" id="emergencyTime" placeholder="Unix timestamp">
+                <button onclick="updateEmergencyTime()">Update Time</button>
+            </div>
+            
+            <div style="margin: 10px 0;">
+                <label>Transfer Ownership To:</label>
+                <input type="text" id="newOwner" placeholder="0x...">
+                <button onclick="transferOwnership()">Transfer</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Emergency Functions</h3>
+            <button onclick="enableEmergency()">Enable Emergency</button>
+            <button onclick="emergencyWithdraw()">Emergency Withdraw (90%)</button>
+            <button onclick="withdrawExcess()">Withdraw Excess</button>
+            <div id="emergencyResult" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+    
+    <div id="tokens" class="tab">
+        <div class="card">
+            <h3>Token Management</h3>
+            <button onclick="checkBalances()">Check Balances</button>
+            <div id="balanceInfo" style="margin-top: 10px;"></div>
+            
+            <h4>Deposit Funds</h4>
+            <input type="number" id="depositVans" placeholder="VANS amount">
+            <input type="number" id="depositExo" placeholder="EXO amount">
+            <button onclick="depositFunds()">Deposit</button>
+            
+            <h4>Withdraw Excess</h4>
+            <input type="number" id="withdrawVans" placeholder="VANS amount">
+            <input type="number" id="withdrawExo" placeholder="EXO amount">
+            <button onclick="withdrawSpecific()">Withdraw</button>
+        </div>
+    </div>
+    
+    <div id="users" class="tab">
+        <div class="card">
+            <h3>User Management</h3>
+            <input type="text" id="userAddress" placeholder="User address 0x...">
+            <button onclick="getUserInfo()">Get User Info</button>
+            <div id="userInfo" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const CONTRACT_ADDRESS = '0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6';
+        const CONTRACT_ABI = [
+            'function owner() view returns (address)',
+            'function totalRegistered() view returns (uint256)',
+            'function registrationsPaused() view returns (bool)',
+            'function setPauseRegistrations(bool pause)',
+            'function emergencyWithdrawTime() view returns (uint256)',
+            'function emergencyWithdrawEnabled() view returns (bool)',
+            'function enableEmergencyWithdraw()',
+            'function emergencyWithdrawAll()',
+            'function updateEmergencyTime(uint256 newTime)',
+            'function transferOwnership(address newOwner)',
+            'function withdrawExcess(uint256 vansAmount, uint256 exoAmount)',
+            'function depositFunds(uint256 vansAmount, uint256 exoAmount)',
+            'function getContractInfo() view returns (uint256 totalUsers, uint256 maxUsers, uint256 vansBalance, uint256 exoBalance, uint256 daysUntilEmergency, bool registrationsActive)',
+            'function getAvailableRewards(address userAddress) view returns (uint256 vansDaily, uint256 exoDaily, uint256 timeUntilNextClaim, bool canClaimInitial, uint256 pendingBonus, uint256 referralsLeft, uint256 contractVansBalance, uint256 contractExoBalance)',
+            'function users(address) view returns (bool registered, uint256 lastClaimTime, uint256 totalClaims, uint256 referralCount, uint256 totalReferralRewards, address referrer, uint256 claimedVans, uint256 claimedExo, uint256 pendingReferralBonus, string referralCode, uint256 referralsToday, uint256 lastReferralReset)',
+            'function calculateMaxUsers() view returns (uint256 maxUsersByVans, uint256 maxUsersByExo, uint256 totalVansNeeded, uint256 totalExoNeeded)',
+            'function vansToken() view returns (address)',
+            'function exoToken() view returns (address)'
+        ];
+        
+        let provider, signer, contract, userAddr;
+        
+        async function connectWallet() {
+            try {
+                if (!window.ethereum) {
+                    alert('Please install MetaMask!');
+                    return;
+                }
+                
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                userAddr = accounts[0];
+                
+                const network = await provider.getNetwork();
+                
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').className = 'connected';
+                document.getElementById('address').textContent = userAddr;
+                document.getElementById('network').textContent = `Chain ${network.chainId}`;
+                document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').textContent = 'Connected ✓';
+                
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                console.log('Connected!');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        async function getOwner() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const owner = await contract.owner();
+                document.getElementById('contractInfo').innerHTML = 
+                    `<p><strong>Owner:</strong> ${owner}</p>`;
+            } catch (error) {
+                showError('contractInfo', error);
+            }
+        }
+        
+        async function getTotalUsers() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const total = await contract.totalRegistered();
+                document.getElementById('contractInfo').innerHTML = 
+                    `<p><strong>Total Users:</strong> ${total.toString()}</p>`;
+            } catch (error) {
+                showError('contractInfo', error);
+            }
+        }
+        
+        async function checkPaused() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const paused = await contract.registrationsPaused();
+                document.getElementById('contractInfo').innerHTML = 
+                    `<p><strong>Paused:</strong> ${paused ? 'Yes' : 'No'}</p>`;
+            } catch (error) {
+                showError('contractInfo', error);
+            }
+        }
+        
+        async function getAllInfo() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const info = await contract.getContractInfo();
+                const html = `
+                    <p><strong>Total Users:</strong> ${info[0].toString()}</p>
+                    <p><strong>Max Users:</strong> ${info[1].toString()}</p>
+                    <p><strong>VANS Balance:</strong> ${ethers.utils.formatUnits(info[2], 18)}</p>
+                    <p><strong>EXO Balance:</strong> ${ethers.utils.formatUnits(info[3], 8)}</p>
+                    <p><strong>Days Until Emergency:</strong> ${info[4].toString()}</p>
+                    <p><strong>Registrations Active:</strong> ${info[5] ? 'Yes' : 'No'}</p>
+                `;
+                document.getElementById('contractInfo').innerHTML = html;
+            } catch (error) {
+                showError('contractInfo', error);
+            }
+        }
+        
+        async function togglePause() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const current = await contract.registrationsPaused();
+                const tx = await contract.setPauseRegistrations(!current);
+                document.getElementById('quickResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('quickResult').innerHTML += 
+                    `<p>✅ Success! Now ${!current ? 'paused' : 'unpaused'}</p>`;
+            } catch (error) {
+                showError('quickResult', error);
+            }
+        }
+        
+        async function checkEmergencyStatus() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const time = await contract.emergencyWithdrawTime();
+                const enabled = await contract.emergencyWithdrawEnabled();
+                const now = Math.floor(Date.now() / 1000);
+                
+                let html = `<p><strong>Emergency Enabled:</strong> ${enabled ? 'Yes' : 'No'}</p>`;
+                
+                if (now >= time) {
+                    html += `<p>✅ Can enable emergency!</p>`;
+                } else {
+                    const days = Math.ceil((time - now) / 86400);
+                    html += `<p>Unlocks in ${days} days</p>`;
+                }
+                
+                document.getElementById('quickResult').innerHTML = html;
+            } catch (error) {
+                showError('quickResult', error);
+            }
+        }
+        
+        async function calculateMaxUsers() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const result = await contract.calculateMaxUsers();
+                const html = `
+                    <p><strong>Max by VANS:</strong> ${result[0].toString()}</p>
+                    <p><strong>Max by EXO:</strong> ${result[1].toString()}</p>
+                    <p><strong>VANS Needed:</strong> ${ethers.utils.formatUnits(result[2], 18)}</p>
+                    <p><strong>EXO Needed:</strong> ${ethers.utils.formatUnits(result[3], 8)}</p>
+                `;
+                document.getElementById('quickResult').innerHTML = html;
+            } catch (error) {
+                showError('quickResult', error);
+            }
+        }
+        
+        async function setPause() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const pause = document.getElementById('pauseSelect').value === 'true';
+                const tx = await contract.setPauseRegistrations(pause);
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Success! Registrations ${pause ? 'paused' : 'unpaused'}</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function updateEmergencyTime() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const newTime = document.getElementById('emergencyTime').value;
+                if (!newTime) { alert('Enter timestamp'); return; }
+                const tx = await contract.updateEmergencyTime(newTime);
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Emergency time updated!</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function transferOwnership() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const newOwner = document.getElementById('newOwner').value;
+                if (!newOwner) { alert('Enter address'); return; }
+                if (!confirm(`Transfer ownership to ${newOwner}?`)) return;
+                const tx = await contract.transferOwnership(newOwner);
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Ownership transferred!</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function enableEmergency() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                if (!confirm('Enable emergency withdraw?')) return;
+                const tx = await contract.enableEmergencyWithdraw();
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Emergency enabled!</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function emergencyWithdraw() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                if (!confirm('Withdraw 90% of funds?')) return;
+                const tx = await contract.emergencyWithdrawAll();
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Emergency withdraw complete!</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function withdrawExcess() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const tx = await contract.withdrawExcess(0, 0);
+                document.getElementById('emergencyResult').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('emergencyResult').innerHTML += 
+                    `<p>✅ Excess withdrawn!</p>`;
+            } catch (error) {
+                showError('emergencyResult', error);
+            }
+        }
+        
+        async function checkBalances() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const vansAddr = await contract.vansToken();
+                const exoAddr = await contract.exoToken();
+                
+                const vansAbi = ['function balanceOf(address) view returns (uint256)'];
+                const exoAbi = ['function balanceOf(address) view returns (uint256)'];
+                
+                const vansContract = new ethers.Contract(vansAddr, vansAbi, provider);
+                const exoContract = new ethers.Contract(exoAddr, exoAbi, provider);
+                
+                const vansBal = await vansContract.balanceOf(CONTRACT_ADDRESS);
+                const exoBal = await exoContract.balanceOf(CONTRACT_ADDRESS);
+                
+                const html = `
+                    <p><strong>VANS Balance:</strong> ${ethers.utils.formatUnits(vansBal, 18)}</p>
+                    <p><strong>EXO Balance:</strong> ${ethers.utils.formatUnits(exoBal, 8)}</p>
+                    <p><strong>VANS Address:</strong> ${vansAddr}</p>
+                    <p><strong>EXO Address:</strong> ${exoAddr}</p>
+                `;
+                
+                document.getElementById('balanceInfo').innerHTML = html;
+            } catch (error) {
+                showError('balanceInfo', error);
+            }
+        }
+        
+        async function depositFunds() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const vans = document.getElementById('depositVans').value;
+                const exo = document.getElementById('depositExo').value;
+                
+                if (!vans && !exo) { alert('Enter amounts'); return; }
+                
+                const vansWei = vans ? ethers.utils.parseUnits(vans, 18) : 0;
+                const exoWei = exo ? ethers.utils.parseUnits(exo, 8) : 0;
+                
+                const tx = await contract.depositFunds(vansWei, exoWei);
+                document.getElementById('balanceInfo').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('balanceInfo').innerHTML += 
+                    `<p>✅ Funds deposited!</p>`;
+            } catch (error) {
+                showError('balanceInfo', error);
+            }
+        }
+        
+        async function withdrawSpecific() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const vans = document.getElementById('withdrawVans').value;
+                const exo = document.getElementById('withdrawExo').value;
+                
+                if (!vans && !exo) { alert('Enter amounts'); return; }
+                
+                const vansWei = vans ? ethers.utils.parseUnits(vans, 18) : 0;
+                const exoWei = exo ? ethers.utils.parseUnits(exo, 8) : 0;
+                
+                const tx = await contract.withdrawExcess(vansWei, exoWei);
+                document.getElementById('balanceInfo').innerHTML = 
+                    `<p>Transaction sent: ${tx.hash}</p>`;
+                await tx.wait();
+                document.getElementById('balanceInfo').innerHTML += 
+                    `<p>✅ Funds withdrawn!</p>`;
+            } catch (error) {
+                showError('balanceInfo', error);
+            }
+        }
+        
+        async function getUserInfo() {
+            if (!contract) { alert('Connect wallet first'); return; }
+            try {
+                const userAddr = document.getElementById('userAddress').value;
+                if (!userAddr) { alert('Enter address'); return; }
+                
+                const user = await contract.users(userAddr);
+                const claimed = await contract.claimedInitial(userAddr);
+                
+                const html = `
+                    <p><strong>Registered:</strong> ${user.registered ? 'Yes' : 'No'}</p>
+                    <p><strong>Referrals:</strong> ${user.referralCount.toString()}</p>
+                    <p><strong>Total Claims:</strong> ${user.totalClaims.toString()}</p>
+                    <p><strong>Claimed Initial:</strong> ${claimed ? 'Yes' : 'No'}</p>
+                    <p><strong>VANS Claimed:</strong> ${ethers.utils.formatUnits(user.claimedVans, 18)}</p>
+                    <p><strong>EXO Claimed:</strong> ${ethers.utils.formatUnits(user.claimedExo, 8)}</p>
+                    <p><strong>Referral Code:</strong> ${user.referralCode}</p>
+                    <p><strong>Referrer:</strong> ${user.referrer || 'None'}</p>
+                `;
+                
+                document.getElementById('userInfo').innerHTML = html;
+            } catch (error) {
+                showError('userInfo', error);
+            }
+        }
+        
+        function showError(elementId, error) {
+            document.getElementById(elementId).innerHTML = 
+                `<p style="color: red;">Error: ${error.message}</p>`;
+        }
+        
+        document.getElementById('connectBtn').addEventListener('click', connectWallet);
+        
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const accounts = await provider.listAccounts();
+                if (accounts.length > 0) {
+                    connectWallet();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
