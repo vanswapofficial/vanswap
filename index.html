@@ -89,6 +89,148 @@
   </noscript>
 
   <style>
+    /* Airdrop Live Banner - NEW */
+    .airdrop-banner-live {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+      background-size: 200% 200%;
+      animation: gradientShift 2s ease infinite;
+      color: white;
+      padding: 18px 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 17px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 25px rgba(102, 126, 234, 0.5);
+      border-bottom: 2px solid #764ba2;
+      z-index: 1002;
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    .airdrop-banner-live a {
+      color: white;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 25px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+
+    .airdrop-banner-live a:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+    }
+
+    .airdrop-rewards {
+      display: inline-flex;
+      align-items: center;
+      gap: 15px;
+      margin: 0 20px;
+    }
+
+    .reward-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .reward-item img {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .reward-text {
+      font-size: 15px;
+      font-weight: 800;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .airdrop-flash {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 15px;
+    }
+
+    .flash-circle {
+      width: 10px;
+      height: 10px;
+      background: #00ff95;
+      border-radius: 50%;
+      animation: pulseFlash 1s ease-in-out infinite;
+      box-shadow: 0 0 15px #00ff95;
+    }
+
+    .flash-circle:nth-child(1) { animation-delay: 0s; }
+    .flash-circle:nth-child(2) { animation-delay: 0.2s; }
+    .flash-circle:nth-child(3) { animation-delay: 0.4s; }
+
+    .live-badge {
+      background: linear-gradient(135deg, #00ff95, #00cc76);
+      color: #003d24;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      animation: livePulse 1.5s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes pulseFlash {
+      0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+        box-shadow: 0 0 15px #00ff95, 0 0 25px #00ff95;
+      }
+      50% { 
+        opacity: 0.3; 
+        transform: scale(0.8);
+        box-shadow: 0 0 8px #00ff95, 0 0 15px #00ff95;
+      }
+    }
+
+    @keyframes livePulse {
+      0%, 100% { 
+        box-shadow: 0 0 10px #00ff95, 0 0 20px #00ff95;
+      }
+      50% { 
+        box-shadow: 0 0 20px #00ff95, 0 0 40px #00ff95;
+      }
+    }
+
+    .airdrop-banner-live::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      animation: shineFast 1.5s ease-in-out infinite;
+    }
+
+    @keyframes shineFast {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
     /* 0G Network Banner */
     .network-banner {
       background: rgba(49,208,170,0.1);
@@ -264,6 +406,51 @@
 
     /* Mobile responsive */
     @media (max-width: 768px) {
+      .airdrop-banner-live {
+        font-size: 14px;
+        padding: 14px 0;
+      }
+      
+      .airdrop-banner-live a {
+        padding: 10px 18px;
+        font-size: 14px;
+        gap: 8px;
+      }
+      
+      .airdrop-rewards {
+        flex-direction: column;
+        gap: 8px;
+        margin: 10px 0;
+      }
+      
+      .reward-item {
+        padding: 6px 12px;
+      }
+      
+      .reward-item img {
+        width: 18px;
+        height: 18px;
+      }
+      
+      .reward-text {
+        font-size: 13px;
+      }
+      
+      .airdrop-flash {
+        margin: 8px 0;
+      }
+      
+      .flash-circle {
+        width: 8px;
+        height: 8px;
+      }
+      
+      .live-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+        margin-left: 5px;
+      }
+
       .network-banner {
         padding: 14px;
         margin: 15px 0;
@@ -305,6 +492,26 @@
       .flash-dot-1, .flash-dot-2, .flash-dot-3 {
         width: 6px;
         height: 6px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .airdrop-banner-live {
+        font-size: 12px;
+        padding: 12px 0;
+      }
+      
+      .airdrop-banner-live a {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      
+      .reward-item {
+        padding: 4px 8px;
+      }
+      
+      .reward-text {
+        font-size: 11px;
       }
     }
 
@@ -953,6 +1160,36 @@
     </div>
 
     <div class="hero-content">
+      <!-- Airdrop Live Banner - NEW -->
+      <div class="airdrop-banner-live" onclick="window.open('https://vanswap.xyz/airdrop', '_blank')">
+        <div class="airdrop-flash">
+          <span class="flash-circle"></span>
+          <span class="flash-circle"></span>
+          <span class="flash-circle"></span>
+        </div>
+        <span class="live-badge">LIVE</span> AIRDROP
+        <div class="airdrop-rewards">
+          <div class="reward-item">
+            <img src="https://vanswap.xyz/assets/vans.png" alt="VANS Token">
+            <span class="reward-text">100 VANS</span>
+          </div>
+          <span style="opacity: 0.8;">+</span>
+          <div class="reward-item">
+            <img src="https://vanswap.xyz/assets/exo.png" alt="EXO Token">
+            <span class="reward-text">0.01 EXO</span>
+          </div>
+        </div>
+        <a href="https://vanswap.xyz/airdrop">
+          <span style="font-size: 18px;">🎁</span>
+          CLAIM NOW →
+        </a>
+        <div class="airdrop-flash">
+          <span class="flash-circle"></span>
+          <span class="flash-circle"></span>
+          <span class="flash-circle"></span>
+        </div>
+      </div>
+
       <!-- 0G Network Banner -->
       <div class="network-banner">
         <p>⚡ <strong>0G Network Live!</strong> Experience lightning-fast trades with high throughput</p>
@@ -1128,7 +1365,7 @@
       </a>
       <a href="https://t.me/vanswap_xyz" class="social-link" target="_blank" rel="noopener" title="Join our Telegram">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.181c-.209 2.155-1.114 7.396-1.114 7.396s-.068.447-.31.601c-.243.154-.541.102-.675.064-.173-.049-2.905-1.177-3.871-1.722-.214-.121-.462-.363.048-.719 1.215-.846 2.646-1.844 3.512-2.41.325-.213.651-.709.065-.709-.358 0-1.008.121-1.715.243-1.203.243-2.13.364-2.878.364-1.065 0-1.357-.243-1.357-.243s-2.028-.728-2.15-2.15c-.024-.266.048-.532.217-.754.169-.222.435-.363.728-.363.266 0 .532.097.754.266.222.169 1.114.728 1.114.728s.435.266.754.266.266-.024.435-.097c.169-.073 3.369-1.454 3.783-1.698.435-.266.728-.169.824-.097.266.169.363.532.363.532z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.181c-.209 2.155-1.114 7.396-1.114 7.396s-.068.447-.31.601c-.243.154-.541.102-.675.064-.173-.049-2.905-1.177-3.871-1.722-.214-.121-.462-.363.048-.719 1.215-.846 2.646-1.844 3.512-2.41.325-.213.651-.709.065-.709-.358 0-1.008.121-1.715.243-1.203.243-2.13.364-2.878.364-1.065 0-1.357-.243-1.357-.243s-2.028-.728-2.15-2.15c-.24-.266.048-.532.217-.754.169-.222.435-.363.728-.363.266 0 .532.097.754.266.222.169 1.114.728 1.114.728s.435.266.754.266.266-.024.435-.097c.169-.073 3.369-1.454 3.783-1.698.435-.266.728-.169.824-.097.266.169.363.532.363.532z"/>
         </svg>
       </a>
       <a href="https://github.com/vanswap" class="social-link" target="_blank" rel="noopener" title="Check our GitHub">
@@ -1217,6 +1454,13 @@
     document.querySelectorAll('.column-item').forEach(card => {
       card.style.animationPlayState = 'paused';
       featureObserver.observe(card);
+    });
+
+    // Airdrop banner click handler
+    document.querySelector('.airdrop-banner-live').addEventListener('click', function(e) {
+      if (!e.target.closest('a')) {
+        window.open('https://vanswap.xyz/airdrop', '_blank');
+      }
     });
   </script>
 </body>
