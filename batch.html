@@ -1075,13 +1075,16 @@
   </main>
 
   <!-- Load Ethers.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
 
   <script>
     // ============================================
     // CONFIGURATION
     // ============================================
-    const CONTRACT_ADDRESS = "0x972C180541A901c8bd37dEB39579B5D1D42dA54D";
+    const CONTRACT_ADDRESSES = {
+      vana: "0x972C180541A901c8bd37dEB39579B5D1D42dA54D",
+      zerog: "0x670Cb520Dc426E5A5E56c1E346f4Da3Fef9eB60a"
+    };
     
     const NETWORKS = {
       vana: {
@@ -1135,6 +1138,7 @@
     // ============================================
     let connectBtn;
     let walletAddress;
+    let contractAddressEl;
 
     // ============================================
     // INITIALIZATION
@@ -1145,12 +1149,14 @@
       // Get DOM elements after page loads
       connectBtn = document.getElementById('connectBtn');
       walletAddress = document.getElementById('walletAddress');
+      contractAddressEl = document.getElementById('contractAddress');
       
       // Setup event listeners
       setupEventListeners();
       
       // Initialize UI
       initializeNetworkSelector();
+      updateContractAddressDisplay();
       loadExampleData();
       updateRecipientsTable();
       updateSummary();
@@ -1164,7 +1170,9 @@
     // ============================================
     function setupEventListeners() {
       // Wallet connection button
-      connectBtn.addEventListener('click', handleWalletConnection);
+      if (connectBtn) {
+        connectBtn.addEventListener('click', handleWalletConnection);
+      }
       
       // Network selector buttons
       document.querySelectorAll('.network-btn').forEach(btn => {
@@ -1175,15 +1183,20 @@
       setupCSVUpload();
       
       // CSV template download
-      document.getElementById('downloadTemplate').addEventListener('click', function(e) {
-        e.preventDefault();
-        downloadCSVTemplate();
-      });
+      const downloadTemplateBtn = document.getElementById('downloadTemplate');
+      if (downloadTemplateBtn) {
+        downloadTemplateBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          downloadCSVTemplate();
+        });
+      }
     }
 
     function setupCSVUpload() {
       const csvUploadArea = document.getElementById('csvUploadArea');
       const csvFileInput = document.getElementById('csvFile');
+      
+      if (!csvUploadArea || !csvFileInput) return;
       
       csvUploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -1227,6 +1240,12 @@
       });
     }
 
+    function updateContractAddressDisplay() {
+      if (contractAddressEl) {
+        contractAddressEl.textContent = CONTRACT_ADDRESSES[currentNetwork];
+      }
+    }
+
     function handleNetworkSwitch(e) {
       const btn = e.target.closest('.network-btn');
       if (!btn) return;
@@ -1238,12 +1257,41 @@
       // Update network
       currentNetwork = btn.dataset.network;
       
+      // Update contract address display
+      updateContractAddressDisplay();
+      
       // Update contract info display
       updateContractInfoDisplay();
       
       // Reconnect wallet if connected
       if (isWalletConnected) {
-        switchNetwork();
+        reconnectWalletForNewNetwork();
+      }
+    }
+
+    function updateContractInfoDisplay() {
+      const network = NETWORKS[currentNetwork];
+      const currentFeeEl = document.getElementById('currentFee');
+      if (currentFeeEl) {
+        currentFeeEl.textContent = `0 ${network.nativeToken}`;
+      }
+    }
+
+    async function reconnectWalletForNewNetwork() {
+      if (!window.ethereum || !isWalletConnected) return;
+      
+      try {
+        // Switch network in wallet
+        await switchNetwork();
+        
+        // Reinitialize contract with new address
+        if (userAddress) {
+          await connectWalletWithAccount(userAddress);
+        }
+      } catch (error) {
+        console.error('Error reconnecting wallet for new network:', error);
+        showStatus('Failed to switch network. Please reconnect wallet.', 'error');
+        disconnectWallet();
       }
     }
 
@@ -1258,6 +1306,7 @@
           params: [{ chainId: `0x${network.chainId.toString(16)}` }],
         });
         showStatus(`Switched to ${network.name}`, 'success');
+        return true;
       } catch (switchError) {
         if (switchError.code === 4902) {
           try {
@@ -1276,22 +1325,20 @@
               }]
             });
             showStatus(`${network.name} added to wallet`, 'success');
+            return true;
           } catch (addError) {
             showStatus(`Failed to add network: ${addError.message}`, 'error');
+            return false;
           }
         } else {
           showStatus(`Failed to switch network: ${switchError.message}`, 'error');
+          return false;
         }
       }
     }
 
-    function updateContractInfoDisplay() {
-      const network = NETWORKS[currentNetwork];
-      document.getElementById('currentFee').textContent = `0 ${network.nativeToken}`;
-    }
-
     // ============================================
-    // WALLET CONNECTION FUNCTIONS - FIXED
+    // WALLET CONNECTION FUNCTIONS
     // ============================================
     async function checkExistingWalletConnection() {
       if (typeof window.ethereum === 'undefined') {
@@ -1358,15 +1405,22 @@
         web3Provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = web3Provider.getSigner();
         
+        // Get contract address for current network
+        const contractAddress = CONTRACT_ADDRESSES[currentNetwork];
+        
         // Setup contract
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        contract = new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
         
         // Update UI
         const shortAddress = `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
-        walletAddress.textContent = shortAddress;
-        connectBtn.textContent = 'Disconnect';
-        connectBtn.classList.remove('disconnected');
-        connectBtn.classList.add('connected');
+        if (walletAddress) {
+          walletAddress.textContent = shortAddress;
+        }
+        if (connectBtn) {
+          connectBtn.textContent = 'Disconnect';
+          connectBtn.classList.remove('disconnected');
+          connectBtn.classList.add('connected');
+        }
         
         showStatus('Wallet connected successfully', 'success');
         
@@ -1390,10 +1444,14 @@
         web3Provider = null;
         contract = null;
         
-        walletAddress.textContent = 'Not Connected';
-        connectBtn.textContent = 'Connect Wallet';
-        connectBtn.classList.remove('connected');
-        connectBtn.classList.add('disconnected');
+        if (walletAddress) {
+          walletAddress.textContent = 'Not Connected';
+        }
+        if (connectBtn) {
+          connectBtn.textContent = 'Connect Wallet';
+          connectBtn.classList.remove('connected');
+          connectBtn.classList.add('disconnected');
+        }
         
         showStatus('Wallet disconnected', 'warning');
         
@@ -1438,11 +1496,17 @@
         balance: '0'
       };
       
-      document.getElementById('tokenName').textContent = '-';
-      document.getElementById('tokenSymbol').textContent = '-';
-      document.getElementById('tokenDecimals').textContent = '-';
-      document.getElementById('tokenBalance').textContent = '-';
-      document.getElementById('tokenAddress').value = '';
+      const tokenName = document.getElementById('tokenName');
+      const tokenSymbol = document.getElementById('tokenSymbol');
+      const tokenDecimals = document.getElementById('tokenDecimals');
+      const tokenBalance = document.getElementById('tokenBalance');
+      const tokenAddressInput = document.getElementById('tokenAddress');
+      
+      if (tokenName) tokenName.textContent = '-';
+      if (tokenSymbol) tokenSymbol.textContent = '-';
+      if (tokenDecimals) tokenDecimals.textContent = '-';
+      if (tokenBalance) tokenBalance.textContent = '-';
+      if (tokenAddressInput) tokenAddressInput.value = '';
     }
 
     // ============================================
@@ -1455,10 +1519,15 @@
         const info = await contract.getContractInfo();
         const network = NETWORKS[currentNetwork];
         
-        document.getElementById('totalBatches').textContent = info.batchesProcessed.toString();
-        document.getElementById('totalTokens').textContent = formatNumber(ethers.utils.formatEther(info.tokensTransferred));
-        document.getElementById('totalFees').textContent = `${ethers.utils.formatEther(info.feesCollected)} ${network.nativeToken}`;
-        document.getElementById('currentFee').textContent = `${ethers.utils.formatEther(info.feeAmount)} ${network.nativeToken}`;
+        const totalBatchesEl = document.getElementById('totalBatches');
+        const totalTokensEl = document.getElementById('totalTokens');
+        const totalFeesEl = document.getElementById('totalFees');
+        const currentFeeEl = document.getElementById('currentFee');
+        
+        if (totalBatchesEl) totalBatchesEl.textContent = info.batchesProcessed.toString();
+        if (totalTokensEl) totalTokensEl.textContent = formatNumber(ethers.utils.formatEther(info.tokensTransferred));
+        if (totalFeesEl) totalFeesEl.textContent = `${ethers.utils.formatEther(info.feesCollected)} ${network.nativeToken}`;
+        if (currentFeeEl) currentFeeEl.textContent = `${ethers.utils.formatEther(info.feeAmount)} ${network.nativeToken}`;
         
       } catch (error) {
         console.error('Contract info fetch error:', error);
@@ -1535,6 +1604,8 @@
 
     function updateRecipientsTable() {
       const recipientsTableBody = document.getElementById('recipientsTableBody');
+      if (!recipientsTableBody) return;
+      
       recipientsTableBody.innerHTML = '';
       
       recipients.forEach((recipient, index) => {
@@ -1575,8 +1646,11 @@
         recipientsTableBody.appendChild(row);
       });
       
-      document.getElementById('recipientsCount').textContent = recipients.length;
-      document.getElementById('summaryRecipients').textContent = recipients.length;
+      const recipientsCount = document.getElementById('recipientsCount');
+      const summaryRecipients = document.getElementById('summaryRecipients');
+      
+      if (recipientsCount) recipientsCount.textContent = recipients.length;
+      if (summaryRecipients) summaryRecipients.textContent = recipients.length;
     }
 
     function updateSummary() {
@@ -1589,14 +1663,22 @@
         }
       });
       
-      document.getElementById('summaryTotalAmount').textContent = totalRaw.toFixed(4);
+      const summaryTotalAmount = document.getElementById('summaryTotalAmount');
+      if (summaryTotalAmount) {
+        summaryTotalAmount.textContent = totalRaw.toFixed(4);
+      }
       
       // Update token required
+      const summaryTokenRequired = document.getElementById('summaryTokenRequired');
       if (tokenInfo.symbol && tokenInfo.decimals) {
         const totalAdjusted = totalRaw * (10 ** tokenInfo.decimals);
-        document.getElementById('summaryTokenRequired').textContent = `${totalAdjusted.toLocaleString()} wei (${totalRaw} ${tokenInfo.symbol})`;
+        if (summaryTokenRequired) {
+          summaryTokenRequired.textContent = `${totalAdjusted.toLocaleString()} wei (${totalRaw} ${tokenInfo.symbol})`;
+        }
       } else {
-        document.getElementById('summaryTokenRequired').textContent = '-';
+        if (summaryTokenRequired) {
+          summaryTokenRequired.textContent = '-';
+        }
       }
       
       // Update fee from contract if available
@@ -1604,7 +1686,10 @@
         updateEstimatedFee();
       } else {
         const network = NETWORKS[currentNetwork];
-        document.getElementById('summaryFee').textContent = `0 ${network.nativeToken}`;
+        const summaryFee = document.getElementById('summaryFee');
+        if (summaryFee) {
+          summaryFee.textContent = `0 ${network.nativeToken}`;
+        }
       }
     }
 
@@ -1614,7 +1699,10 @@
       try {
         const fee = await contract.getEstimatedFee();
         const network = NETWORKS[currentNetwork];
-        document.getElementById('summaryFee').textContent = `${ethers.utils.formatEther(fee)} ${network.nativeToken}`;
+        const summaryFee = document.getElementById('summaryFee');
+        if (summaryFee) {
+          summaryFee.textContent = `${ethers.utils.formatEther(fee)} ${network.nativeToken}`;
+        }
       } catch (error) {
         console.error('Error fetching fee:', error);
       }
@@ -1624,7 +1712,10 @@
     // TOKEN DETECTION
     // ============================================
     async function detectToken() {
-      const address = document.getElementById('tokenAddress').value.trim();
+      const tokenAddressInput = document.getElementById('tokenAddress');
+      if (!tokenAddressInput) return;
+      
+      const address = tokenAddressInput.value.trim();
       
       if (!address) {
         showStatus('Please enter a token address', 'error');
@@ -1684,10 +1775,15 @@
         }
         
         // Update UI
-        document.getElementById('tokenName').textContent = tokenInfo.name;
-        document.getElementById('tokenSymbol').textContent = tokenInfo.symbol;
-        document.getElementById('tokenDecimals').textContent = tokenInfo.decimals;
-        document.getElementById('tokenBalance').textContent = `${tokenInfo.balance} ${tokenInfo.symbol}`;
+        const tokenName = document.getElementById('tokenName');
+        const tokenSymbol = document.getElementById('tokenSymbol');
+        const tokenDecimals = document.getElementById('tokenDecimals');
+        const tokenBalance = document.getElementById('tokenBalance');
+        
+        if (tokenName) tokenName.textContent = tokenInfo.name;
+        if (tokenSymbol) tokenSymbol.textContent = tokenInfo.symbol;
+        if (tokenDecimals) tokenDecimals.textContent = tokenInfo.decimals;
+        if (tokenBalance) tokenBalance.textContent = `${tokenInfo.balance} ${tokenInfo.symbol}`;
         
         showStatus('Token detected successfully!', 'success');
         updateSummary();
@@ -1751,7 +1847,7 @@
           
           const tokenContract = new ethers.Contract(tokenInfo.address, erc20Abi, web3Provider.getSigner());
           const balance = await tokenContract.balanceOf(userAddress);
-          const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+          const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESSES[currentNetwork]);
           
           if (balance.lt(totalAmount)) {
             showStatus(`Insufficient token balance. Required: ${ethers.utils.formatUnits(totalAmount, tokenInfo.decimals)}, Available: ${ethers.utils.formatUnits(balance, tokenInfo.decimals)}`, 'error');
@@ -1771,10 +1867,16 @@
       
       if (allValid) {
         showStatus('All transfers validated successfully!', 'success');
-        document.getElementById('executeBtn').disabled = false;
+        const executeBtn = document.getElementById('executeBtn');
+        if (executeBtn) {
+          executeBtn.disabled = false;
+        }
       } else {
         showStatus('Please fix validation errors', 'warning');
-        document.getElementById('executeBtn').disabled = true;
+        const executeBtn = document.getElementById('executeBtn');
+        if (executeBtn) {
+          executeBtn.disabled = true;
+        }
       }
       
       updateRecipientsTable();
@@ -1788,7 +1890,10 @@
       
       try {
         // Show progress
-        document.getElementById('progressContainer').classList.add('active');
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) {
+          progressContainer.classList.add('active');
+        }
         updateProgress(1, 4);
         
         // Prepare data
@@ -1819,11 +1924,12 @@
         
         const tokenContract = new ethers.Contract(tokenInfo.address, erc20Abi, web3Provider.getSigner());
         const totalAmount = amountsArray.reduce((sum, amount) => sum.add(amount), ethers.BigNumber.from(0));
-        const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+        const contractAddress = CONTRACT_ADDRESSES[currentNetwork];
+        const allowance = await tokenContract.allowance(userAddress, contractAddress);
         
         if (allowance.lt(totalAmount)) {
           showStatus('Approving tokens...', 'info');
-          const approveTx = await tokenContract.approve(CONTRACT_ADDRESS, totalAmount);
+          const approveTx = await tokenContract.approve(contractAddress, totalAmount);
           await approveTx.wait();
           showStatus('Tokens approved successfully', 'success');
         }
@@ -1854,17 +1960,25 @@
         const receipt = await tx.wait();
         
         // Update progress to complete
-        document.getElementById('progressFill').style.width = '100%';
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) {
+          progressFill.style.width = '100%';
+        }
         
-        showStatus(`Batch transfer completed! Transaction: ${receipt.transactionHash}`, 'success');
+        showStatus(`Batch transfer completed! Transaction: ${receipt.transactionHash.substring(0, 20)}...`, 'success');
         
         // Update contract info
         await updateContractInfo();
         
         // Reset form after successful transfer
         setTimeout(() => {
-          document.getElementById('progressContainer').classList.remove('active');
-          document.getElementById('executeBtn').disabled = true;
+          if (progressContainer) {
+            progressContainer.classList.remove('active');
+          }
+          const executeBtn = document.getElementById('executeBtn');
+          if (executeBtn) {
+            executeBtn.disabled = true;
+          }
         }, 5000);
         
       } catch (error) {
@@ -1878,7 +1992,10 @@
           showStatus(`Transfer failed: ${error.message}`, 'error');
         }
         
-        document.getElementById('progressContainer').classList.remove('active');
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) {
+          progressContainer.classList.remove('active');
+        }
       }
     }
 
@@ -1965,8 +2082,15 @@
 
     function updateProgress(current, total) {
       const percentage = (current / total) * 100;
-      document.getElementById('progressFill').style.width = `${percentage}%`;
-      document.getElementById('progressText').textContent = `${current}/${total}`;
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      
+      if (progressFill) {
+        progressFill.style.width = `${percentage}%`;
+      }
+      if (progressText) {
+        progressText.textContent = `${current}/${total}`;
+      }
     }
 
     function formatNumber(num) {
@@ -1981,6 +2105,8 @@
 
     function showStatus(message, type) {
       const statusEl = document.getElementById('statusMessage');
+      if (!statusEl) return;
+      
       statusEl.textContent = message;
       statusEl.className = `status-message active status-${type}`;
       
@@ -1993,7 +2119,8 @@
     }
 
     function copyContractAddress() {
-      navigator.clipboard.writeText(CONTRACT_ADDRESS)
+      const contractAddress = CONTRACT_ADDRESSES[currentNetwork];
+      navigator.clipboard.writeText(contractAddress)
         .then(() => showStatus('Contract address copied to clipboard', 'success'))
         .catch(() => showStatus('Failed to copy address', 'error'));
     }
