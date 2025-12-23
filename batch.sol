@@ -16,12 +16,11 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-contract MultiChainBatchTransfer {
+contract VanaBatchTransfer {
     address public owner;
     address public feeReceiver;
     uint256 public feeAmount = 0;
     bool public feeEnabled = false;
-    uint256 public networkId;
     
     uint256 public totalFeesCollected;
     uint256 public totalBatchesProcessed;
@@ -33,7 +32,6 @@ contract MultiChainBatchTransfer {
         uint256 recipientCount,
         uint256 totalAmount,
         uint256 feePaid,
-        uint256 networkId,
         uint256 timestamp
     );
     event FeeUpdated(uint256 newFeeAmount);
@@ -41,21 +39,18 @@ contract MultiChainBatchTransfer {
     event FeeToggled(bool enabled);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event FeesWithdrawn(uint256 amount);
-    event NetworkIdSet(uint256 networkId);
     
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call");
         _;
     }
     
-    constructor(uint256 _networkId) {
+    constructor() {
         owner = msg.sender;
         feeReceiver = msg.sender;
-        networkId = _networkId;
-        emit NetworkIdSet(_networkId);
     }
     
-    // Main batch transfer function - semua validasi di dalam function utama
+    // Main batch transfer function
     function batchTransfer(
         address tokenAddress,
         address[] calldata recipients,
@@ -98,7 +93,6 @@ contract MultiChainBatchTransfer {
             recipients.length,
             totalAmount,
             feePaid,
-            networkId,
             block.timestamp
         );
         
@@ -154,7 +148,6 @@ contract MultiChainBatchTransfer {
             recipients.length,
             totalAmount,
             feePaid,
-            networkId,
             block.timestamp
         );
         
@@ -272,24 +265,24 @@ contract MultiChainBatchTransfer {
     }
     
     function getContractInfo() external view returns (
-        uint256 _networkId,
         address _owner,
         address _feeReceiver,
         uint256 _feeAmount,
         bool _feeEnabled,
         uint256 _batchesProcessed,
         uint256 _tokensTransferred,
-        uint256 _feesCollected
+        uint256 _feesCollected,
+        uint256 _contractBalance
     ) {
         return (
-            networkId,
             owner,
             feeReceiver,
             feeAmount,
             feeEnabled,
             totalBatchesProcessed,
             totalTokensTransferred,
-            totalFeesCollected
+            totalFeesCollected,
+            address(this).balance
         );
     }
     
@@ -308,22 +301,16 @@ contract MultiChainBatchTransfer {
         return rawAmount * (10 ** decimals);
     }
     
-    // Get contract balance
-    function getContractBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-    
-    // Fallback untuk menerima native token (fee)
+    // Receive native tokens (for fees)
     receive() external payable {}
     
-    // Tambahan: Prevent accidental token transfers ke contract
-    // Fungsi ini akan dipanggil jika ada yang kirim token langsung ke contract
+    // Prevent accidental ERC20 transfers to contract
     function onERC20Received(
         address,
         address,
         uint256,
         bytes memory
-    ) public pure returns (bytes4) {
+    ) external pure returns (bytes4) {
         revert("Direct token transfers not allowed. Use batchTransfer function.");
     }
 }
