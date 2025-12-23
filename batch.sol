@@ -23,12 +23,10 @@ contract MultiChainBatchTransfer {
     bool public feeEnabled = false;
     uint256 public networkId;
     
-    // Statistics
     uint256 public totalFeesCollected;
     uint256 public totalBatchesProcessed;
     uint256 public totalTokensTransferred;
     
-    // Events
     event BatchTransferExecuted(
         address indexed sender,
         address indexed token,
@@ -60,12 +58,11 @@ contract MultiChainBatchTransfer {
     // Helper function untuk validasi array
     function _validateArrays(
         address[] calldata recipients,
-        uint256[] calldata amounts,
-        uint256 maxRecipients
-    ) private pure returns (uint256 totalAmount) {
+        uint256[] calldata amounts
+    ) private view returns (uint256 totalAmount) {
         require(recipients.length == amounts.length, "Arrays length mismatch");
         require(recipients.length > 0, "No recipients");
-        require(recipients.length <= maxRecipients, "Too many recipients");
+        require(recipients.length <= 100, "Too many recipients");
         
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid recipient");
@@ -75,14 +72,14 @@ contract MultiChainBatchTransfer {
         }
     }
     
-    // Main batch transfer function - simplified
+    // Main batch transfer function
     function batchTransfer(
         address tokenAddress,
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external payable returns (bool) {
         uint256 feePaid = _collectFee();
-        uint256 totalAmount = _validateArrays(recipients, amounts, 100);
+        uint256 totalAmount = _validateArrays(recipients, amounts);
         
         IERC20 token = IERC20(tokenAddress);
         require(token.balanceOf(msg.sender) >= totalAmount, "Insufficient balance");
@@ -122,16 +119,19 @@ contract MultiChainBatchTransfer {
     ) external payable returns (bool) {
         uint256 feePaid = _collectFee();
         
+        // Validate arrays
+        require(recipients.length == rawAmounts.length, "Arrays length mismatch");
+        require(recipients.length > 0, "No recipients");
+        require(recipients.length <= 100, "Too many recipients");
+        
         // Get token decimals
         uint8 decimals = _getTokenDecimals(tokenAddress);
         
-        // Validate and convert amounts
         uint256 totalAmount;
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid recipient");
             require(recipients[i] != address(this), "Cannot transfer to contract");
             require(rawAmounts[i] > 0, "Amount must be > 0");
-            require(recipients.length <= 100, "Too many recipients");
             
             uint256 adjustedAmount = rawAmounts[i] * (10 ** decimals);
             totalAmount += adjustedAmount;
@@ -237,7 +237,7 @@ contract MultiChainBatchTransfer {
         emit FeesWithdrawn(balance);
     }
     
-    // View functions dengan struct returns untuk reduce stack
+    // Struct untuk return values
     struct TokenInfo {
         string name;
         string symbol;
@@ -311,6 +311,42 @@ contract MultiChainBatchTransfer {
     
     function getEstimatedFee() external view returns (uint256) {
         return feeEnabled ? feeAmount : 0;
+    }
+    
+    // Function untuk check token compatibility
+    function canHandleToken(address tokenAddress) external view returns (bool) {
+        try IERC20(tokenAddress).decimals() returns (uint8) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+    
+    // Function untuk calculate adjusted amount
+    function calculateAdjustedAmount(uint256 rawAmount, address tokenAddress) external view returns (uint256) {
+        uint8 decimals = _getTokenDecimals(tokenAddress);
+        return rawAmount * (10 ** decimals);
+    }
+    
+    // Function untuk get batch transfer cost estimation
+    function estimateBatchTransferCost(
+        address tokenAddress,
+        uint256 recipientCount
+    ) external view returns (
+        uint256 totalFee,
+        uint256 estimatedGas,
+        bool canProcess
+    ) {
+        totalFee = feeEnabled ? feeAmount : 0;
+        estimatedGas = 21000 + (recipientCount * 40000);
+        canProcess = recipientCount <= 100;
+        
+        // Check if token is compatible
+        try IERC20(tokenAddress).decimals() returns (uint8) {
+            // Token is compatible
+        } catch {
+            canProcess = false;
+        }
     }
     
     receive() external payable {}
