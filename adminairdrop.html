@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VanAirdrop V3 - Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        h2 {
+            color: #4f46e5;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 i {
+            font-size: 1.3rem;
+        }
+
+        .wallet-info {
+            background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .address {
+            font-family: monospace;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(90deg, #d97706 0%, #b45309 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(90deg, #059669 0%, #047857 100%);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 12px 25px;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #64748b;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #fde68a;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4f46e5;
+        }
+
+        .icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 VanAirdrop V3 Admin Panel</h1>
+            <p>Manage your airdrop contract on Vana Chain (1480)</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="section">
+                    <h2>🔗 Wallet Connection</h2>
+                    <div class="wallet-info">
+                        <div id="connectionStatus" style="color: #ef4444; font-weight: bold;">
+                            ❌ Not Connected
+                        </div>
+                        <button id="connectBtn" class="btn">Connect Wallet</button>
+                        
+                        <div id="connectedWallet" style="display: none;">
+                            <p style="margin-top: 15px; color: #4b5563;">Connected Address:</p>
+                            <div class="address" id="walletAddress"></div>
+                            <p style="margin-top: 15px; color: #4b5563;">Network:</p>
+                            <div class="address">Vana Mainnet (1480)[citation:1][citation:5]</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Contract Info</h2>
+                    <div class="info-row">
+                        <span class="info-label">Contract Address:</span>
+                        <span class="info-value">0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Network:</span>
+                        <span class="info-value">Vana Mainnet[citation:1][citation:7]</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">RPC URL:</span>
+                        <span class="info-value">https://rpc.vana.org[citation:1]</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Chain ID:</span>
+                        <span class="info-value">1480[citation:1][citation:5]</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>⚡ Quick Actions</h2>
+                    <button id="refreshBtn" class="btn" onclick="loadContractInfo()">
+                        🔄 Refresh Data
+                    </button>
+                    <button id="pauseBtn" class="btn btn-warning" onclick="togglePauseRegistrations()">
+                        ⏸️ Pause Registrations
+                    </button>
+                    <button id="emergencyBtn" class="btn btn-danger" onclick="checkEmergencyStatus()">
+                        🚨 Emergency Check
+                    </button>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+                    <button class="tab-btn" onclick="switchTab('admin')">👑 Admin Functions</button>
+                    <button class="tab-btn" onclick="switchTab('tokens')">💰 Token Management</button>
+                    <button class="tab-btn" onclick="switchTab('users')">👥 User Management</button>
+                </div>
+
+                <div id="alerts"></div>
+
+                <div id="dashboard" class="tab-content active">
+                    <div class="section">
+                        <h2>📈 Airdrop Statistics</h2>
+                        <div class="stats-grid" id="statsGrid">
+                            <!-- Stats will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>📋 Current Status</h2>
+                        <div id="statusInfo">
+                            <!-- Status will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>🔧 Contract Functions</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <button class="btn" onclick="getContractInfo()">
+                                📋 Get Contract Info
+                            </button>
+                            <button class="btn" onclick="calculateMaxUsers()">
+                                🧮 Calculate Capacity
+                            </button>
+                            <button class="btn" onclick="checkTokenBalances()">
+                                💰 Check Balances
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin" class="tab-content">
+                    <div class="section">
+                        <h2>🛠️ Contract Management</h2>
+                        
+                        <div class="input-group">
+                            <label>Pause/Unpause Registrations</label>
+                            <select id="pauseStatus">
+                                <option value="true">Pause Registrations</option>
+                                <option value="false">Unpause Registrations</option>
+                            </select>
+                            <button class="btn" onclick="setPauseRegistrations()">Apply</button>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Update Emergency Time (UNIX timestamp)</label>
+                            <input type="number" id="newEmergencyTime" placeholder="New timestamp">
+                            <button class="btn btn-warning" onclick="updateEmergencyTime()">Update</button>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Transfer Ownership</label>
+                            <input type="text" id="newOwner" placeholder="0x...">
+                            <button class="btn btn-danger" onclick="transferOwnership()">Transfer</button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>🚨 Emergency Functions</h2>
+                        <div class="alert alert-warning" id="emergencyAlert">
+                            ⚠️ Emergency functions are time-locked. Check status first.
+                        </div>
+                        
+                        <button class="btn btn-warning" onclick="enableEmergencyWithdraw()">
+                            🔓 Enable Emergency Withdraw
+                        </button>
+                        
+                        <button class="btn btn-danger" onclick="emergencyWithdrawAll()">
+                            💸 Emergency Withdraw All (90%)
+                        </button>
+                        
+                        <button class="btn" onclick="withdrawExcess()">
+                            📤 Withdraw Excess Funds
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tokens" class="tab-content">
+                    <div class="section">
+                        <h2>💎 Token Balances</h2>
+                        <div id="tokenBalances">
+                            <!-- Token balances will be loaded here -->
+                        </div>
+                        
+                        <div style="margin-top: 30px;">
+                            <h2>📤 Deposit Funds</h2>
+                            <div class="input-group">
+                                <label>VANS Token Amount</label>
+                                <input type="number" id="vansAmount" placeholder="Amount in VANS">
+                            </div>
+                            <div class="input-group">
+                                <label>EXO Token Amount</label>
+                                <input type="number" id="exoAmount" placeholder="Amount in EXO">
+                            </div>
+                            <button class="btn btn-success" onclick="depositFunds()">Deposit Funds</button>
+                        </div>
+
+                        <div style="margin-top: 30px;">
+                            <h2>📥 Withdraw Specific Amounts</h2>
+                            <div class="input-group">
+                                <label>VANS to Withdraw</label>
+                                <input type="number" id="withdrawVans" placeholder="VANS amount">
+                            </div>
+                            <div class="input-group">
+                                <label>EXO to Withdraw</label>
+                                <input type="number" id="withdrawExo" placeholder="EXO amount">
+                            </div>
+                            <button class="btn" onclick="withdrawSpecific()">Withdraw</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="users" class="tab-content">
+                    <div class="section">
+                        <h2>👤 Check User Info</h2>
+                        <div class="input-group">
+                            <label>User Address</label>
+                            <input type="text" id="userAddress" placeholder="0x...">
+                            <button class="btn" onclick="getUserInfo()">Get User Info</button>
+                        </div>
+                        
+                        <div id="userInfoResult" style="margin-top: 20px;">
+                            <!-- User info will be displayed here -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>🔍 Contract Analytics</h2>
+                        <button class="btn" onclick="getAvailableRewards()">
+                            📊 Get All Available Rewards
+                        </button>
+                        
+                        <div id="analyticsResult" style="margin-top: 20px;">
+                            <!-- Analytics will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loading" class="loading">
+                    <div style="font-size: 2rem;">⏳</div>
+                    <p>Loading contract data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract configuration
+        const CONTRACT_ADDRESS = '0xC40BAa6e35EF64fEea71f86D255DD11877d7d7C6';
+        const VANA_RPC = 'https://rpc.vana.org';[citation:1]
+        const CHAIN_ID = 1480;[citation:1]
+        
+        // Contract ABI - Core functions from your contract
+        const CONTRACT_ABI = [
+            // Owner functions
+            'function owner() view returns (address)',
+            'function transferOwnership(address newOwner)',
+            'function setPauseRegistrations(bool pause)',
+            'function updateEmergencyTime(uint256 newTime)',
+            
+            // Emergency functions
+            'function emergencyWithdrawTime() view returns (uint256)',
+            'function emergencyWithdrawEnabled() view returns (bool)',
+            'function enableEmergencyWithdraw()',
+            'function emergencyWithdrawAll()',
+            
+            // Token management
+            'function vansToken() view returns (address)',
+            'function exoToken() view returns (address)',
+            'function depositFunds(uint256 vansAmount, uint256 exoAmount)',
+            'function withdrawExcess(uint256 vansAmount, uint256 exoAmount)',
+            
+            // Stats and info
+            'function totalRegistered() view returns (uint256)',
+            'function registrationsPaused() view returns (bool)',
+            'function getContractInfo() view returns (uint256 totalUsers, uint256 maxUsers, uint256 vansBalance, uint256 exoBalance, uint256 daysUntilEmergency, bool registrationsActive)',
+            'function getAvailableRewards(address userAddress) view returns (uint256 vansDaily, uint256 exoDaily, uint256 timeUntilNextClaim, bool canClaimInitial, uint256 pendingBonus, uint256 referralsLeft, uint256 contractVansBalance, uint256 contractExoBalance)',
+            'function users(address) view returns (bool registered, uint256 lastClaimTime, uint256 totalClaims, uint256 referralCount, uint256 totalReferralRewards, address referrer, uint256 claimedVans, uint256 claimedExo, uint256 pendingReferralBonus, string memory referralCode, uint256 referralsToday, uint256 lastReferralReset)',
+            'function claimedInitial(address) view returns (bool)',
+            'function calculateMaxUsers() view returns (uint256 maxUsersByVans, uint256 maxUsersByExo, uint256 totalVansNeeded, uint256 totalExoNeeded)',
+            
+            // ERC20 ABI for token interactions
+            'function balanceOf(address account) view returns (uint256)',
+            'function transfer(address to, uint256 amount) returns (bool)',
+            'function approve(address spender, uint256 amount) returns (bool)',
+            'function allowance(address owner, address spender) view returns (uint256)'
+        ];
+
+        let provider;
+        let signer;
+        let contract;
+        let userAddress;
+
+        // Initialize when page loads
+        window.addEventListener('load', async () => {
+            await initializeProvider();
+            setupEventListeners();
+        });
+
+        async function initializeProvider() {
+            try {
+                if (window.ethereum) {
+                    provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+                    
+                    // Listen for network changes
+                    window.ethereum.on('chainChanged', () => {
+                        window.location.reload();
+                    });
+                    
+                    window.ethereum.on('accountsChanged', (accounts) => {
+                        if (accounts.length > 0) {
+                            connectWallet();
+                        } else {
+                            disconnectWallet();
+                        }
+                    });
+                    
+                    // Check if already connected
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } else {
+                    showAlert('Please install MetaMask or another Web3 wallet', 'error');
+                }
+            } catch (error) {
+                console.error('Error initializing provider:', error);
+                showAlert('Error connecting to blockchain: ' + error.message, 'error');
+            }
+        }
+
+        async function connectWallet() {
+            try {
+                showLoading(true);
+                
+                // Request account access
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                // Check network
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (parseInt(chainId) !== CHAIN_ID) {
+                    await switchToVanaNetwork();
+                }
+                
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                // Update UI
+                document.getElementById('connectionStatus').innerHTML = '✅ Connected';
+                document.getElementById('connectionStatus').style.color = '#10b981';
+                document.getElementById('walletAddress').textContent = userAddress;
+                document.getElementById('connectedWallet').style.display = 'block';
+                document.getElementById('connectBtn').textContent = 'Connected ✓';
+                document.getElementById('connectBtn').disabled = true;
+                
+                // Load contract data
+                await loadContractInfo();
+                showAlert('Wallet connected successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                showAlert('Error connecting wallet: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function switchToVanaNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x5c8',
+                        chainName: 'Vana Mainnet',
+                        nativeCurrency: {
+                            name: 'VANA',
+                            symbol: 'VANA',
+                            decimals: 18
+                        },
+                        rpcUrls: [VANA_RPC],
+                        blockExplorerUrls: ['https://vanascan.io']
+                    }]
+                });
+            } catch (error) {
+                showAlert('Please switch to Vana Network manually. Chain ID: 1480', 'warning');
+            }
+        }
+
+        function disconnectWallet() {
+            document.getElementById('connectionStatus').innerHTML = '❌ Not Connected';
+            document.getElementById('connectionStatus').style.color = '#ef4444';
+            document.getElementById('connectedWallet').style.display = 'none';
+            document.getElementById('connectBtn').textContent = 'Connect Wallet';
+            document.getElementById('connectBtn').disabled = false;
+            
+            signer = null;
+            userAddress = null;
+            contract = null;
+        }
+
+        async function loadContractInfo() {
+            if (!contract) {
+                showAlert('Please connect wallet first', 'warning');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                // Get basic contract info
+                const owner = await contract.owner();
+                const totalUsers = await contract.totalRegistered();
+                const paused = await contract.registrationsPaused();
+                const emergencyTime = await contract.emergencyWithdrawTime();
+                const emergencyEnabled = await contract.emergencyWithdrawEnabled();
+                
+                // Get token addresses
+                const vansToken = await contract.vansToken();
+                const exoToken = await contract.exoToken();
+                
+                // Update stats grid
+                const statsGrid = document.getElementById('statsGrid');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value">${totalUsers.toString()}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Max Users</div>
+                        <div class="stat-value">8000</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Registrations</div>
+                        <div class="stat-value" style="color: ${paused ? '#ef4444' : '#10b981'}">
+                            ${paused ? 'PAUSED' : 'ACTIVE'}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Emergency Status</div>
+                        <div class="stat-value" style="color: ${emergencyEnabled ? '#ef4444' : '#10b981'}">
+                            ${emergencyEnabled ? 'ENABLED' : 'DISABLED'}
+                        </div>
+                    </div>
+                `;
+                
+                // Update status info
+                const statusInfo = document.getElementById('statusInfo');
+                const currentTime = Math.floor(Date.now() / 1000);
+                const daysLeft = emergencyTime > currentTime ? 
+                    Math.floor((emergencyTime - currentTime) / 86400) : 0;
+                
+                statusInfo.innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Contract Owner:</span>
+                        <span class="info-value">${owner}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">VANS Token:</span>
+                        <span class="info-value">${vansToken}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">EXO Token:</span>
+                        <span class="info-value">${exoToken}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Emergency Unlock:</span>
+                        <span class="info-value">${daysLeft} days left</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">You are Owner:</span>
+                        <span class="info-value" style="color: ${owner.toLowerCase() === userAddress.toLowerCase() ? '#10b981' : '#ef4444'}">
+                            ${owner.toLowerCase() === userAddress.toLowerCase() ? 'YES ✓' : 'NO ✗'}
+                        </span>
+                    </div>
+                `;
+                
+                // Update button states based on ownership
+                const isOwner = owner.toLowerCase() === userAddress.toLowerCase();
+                const adminButtons = document.querySelectorAll('#admin .btn, #tokens .btn');
+                adminButtons.forEach(btn => {
+                    btn.disabled = !isOwner;
+                });
+                
+                // Update pause button text
+                document.getElementById('pauseBtn').textContent = 
+                    paused ? '▶️ Unpause Registrations' : '⏸️ Pause Registrations';
+                
+            } catch (error) {
+                console.error('Error loading contract info:', error);
+                showAlert('Error loading contract data: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function togglePauseRegistrations() {
+            if (!contract) return;
+            
+            try {
+                const paused = await contract.registrationsPaused();
+                const tx = await contract.setPauseRegistrations(!paused);
+                showAlert('Transaction sent! Waiting for confirmation...', 'warning');
+                
+                await tx.wait();
+                showAlert(`Registrations ${!paused ? 'paused' : 'unpaused'} successfully!`, 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function checkEmergencyStatus() {
+            if (!contract) return;
+            
+            try {
+                const emergencyTime = await contract.emergencyWithdrawTime();
+                const currentTime = Math.floor(Date.now() / 1000);
+                const emergencyEnabled = await contract.emergencyWithdrawEnabled();
+                
+                if (emergencyEnabled) {
+                    showAlert('Emergency withdraw is already enabled!', 'success');
+                } else if (currentTime >= emergencyTime) {
+                    showAlert('Emergency withdraw can now be enabled!', 'success');
+                } else {
+                    const daysLeft = Math.floor((emergencyTime - currentTime) / 86400);
+                    showAlert(`Emergency withdraw unlocks in ${daysLeft} days`, 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error checking emergency status:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function enableEmergencyWithdraw() {
+            if (!contract) return;
+            
+            try {
+                const tx = await contract.enableEmergencyWithdraw();
+                showAlert('Enabling emergency withdraw...', 'warning');
+                
+                await tx.wait();
+                showAlert('Emergency withdraw enabled successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error enabling emergency:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function emergencyWithdrawAll() {
+            if (!contract) return;
+            
+            if (!confirm('⚠️ WARNING: This will withdraw 90% of all funds to owner!\n\nAre you sure?')) {
+                return;
+            }
+            
+            try {
+                const tx = await contract.emergencyWithdrawAll();
+                showAlert('Emergency withdraw in progress...', 'warning');
+                
+                await tx.wait();
+                showAlert('Emergency withdraw completed successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error in emergency withdraw:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function withdrawExcess() {
+            if (!contract) return;
+            
+            const vansAmount = document.getElementById('withdrawVans').value;
+            const exoAmount = document.getElementById('withdrawExo').value;
+            
+            if (!vansAmount && !exoAmount) {
+                showAlert('Please enter amounts to withdraw', 'warning');
+                return;
+            }
+            
+            try {
+                // Convert amounts to wei
+                const vansWei = vansAmount ? ethers.utils.parseUnits(vansAmount, 18) : 0;
+                const exoWei = exoAmount ? ethers.utils.parseUnits(exoAmount, 8) : 0;
+                
+                const tx = await contract.withdrawExcess(vansWei, exoWei);
+                showAlert('Withdrawing excess funds...', 'warning');
+                
+                await tx.wait();
+                showAlert('Excess funds withdrawn successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error withdrawing excess:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function depositFunds() {
+            if (!contract) return;
+            
+            const vansAmount = document.getElementById('vansAmount').value;
+            const exoAmount = document.getElementById('exoAmount').value;
+            
+            if (!vansAmount && !exoAmount) {
+                showAlert('Please enter amounts to deposit', 'warning');
+                return;
+            }
+            
+            try {
+                // Convert amounts to wei
+                const vansWei = vansAmount ? ethers.utils.parseUnits(vansAmount, 18) : 0;
+                const exoWei = exoAmount ? ethers.utils.parseUnits(exoAmount, 8) : 0;
+                
+                const tx = await contract.depositFunds(vansWei, exoWei);
+                showAlert('Depositing funds...', 'warning');
+                
+                await tx.wait();
+                showAlert('Funds deposited successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error depositing funds:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function getContractInfo() {
+            if (!contract) return;
+            
+            try {
+                const result = await contract.getContractInfo();
+                showAlert(`
+                    Contract Info:
+                    Total Users: ${result[0].toString()}
+                    Max Users: ${result[1].toString()}
+                    VANS Balance: ${ethers.utils.formatUnits(result[2], 18)}
+                    EXO Balance: ${ethers.utils.formatUnits(result[3], 8)}
+                    Days Until Emergency: ${result[4].toString()}
+                    Registrations Active: ${result[5] ? 'Yes' : 'No'}
+                `, 'success');
+                
+            } catch (error) {
+                console.error('Error getting contract info:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function calculateMaxUsers() {
+            if (!contract) return;
+            
+            try {
+                const result = await contract.calculateMaxUsers();
+                showAlert(`
+                    Capacity Analysis:
+                    Max Users by VANS: ${result[0].toString()}
+                    Max Users by EXO: ${result[1].toString()}
+                    Total VANS Needed: ${ethers.utils.formatUnits(result[2], 18)}
+                    Total EXO Needed: ${ethers.utils.formatUnits(result[3], 8)}
+                `, 'success');
+                
+            } catch (error) {
+                console.error('Error calculating capacity:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function checkTokenBalances() {
+            if (!contract) return;
+            
+            try {
+                const vansTokenAddr = await contract.vansToken();
+                const exoTokenAddr = await contract.exoToken();
+                
+                const vansContract = new ethers.Contract(vansTokenAddr, CONTRACT_ABI, provider);
+                const exoContract = new ethers.Contract(exoTokenAddr, CONTRACT_ABI, provider);
+                
+                const contractVans = await vansContract.balanceOf(CONTRACT_ADDRESS);
+                const contractExo = await exoContract.balanceOf(CONTRACT_ADDRESS);
+                
+                const tokenBalancesDiv = document.getElementById('tokenBalances');
+                tokenBalancesDiv.innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Contract VANS Balance:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(contractVans, 18)} VANS</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contract EXO Balance:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(contractExo, 8)} EXO</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">VANS Token Address:</span>
+                        <span class="info-value" style="font-size: 0.8rem;">${vansTokenAddr}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">EXO Token Address:</span>
+                        <span class="info-value" style="font-size: 0.8rem;">${exoTokenAddr}</span>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error checking balances:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function getUserInfo() {
+            if (!contract) return;
+            
+            const userAddr = document.getElementById('userAddress').value;
+            if (!userAddr || !ethers.utils.isAddress(userAddr)) {
+                showAlert('Please enter a valid Ethereum address', 'warning');
+                return;
+            }
+            
+            try {
+                const userInfo = await contract.users(userAddr);
+                const claimedInit = await contract.claimedInitial(userAddr);
+                
+                const userInfoResult = document.getElementById('userInfoResult');
+                userInfoResult.innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Registered:</span>
+                        <span class="info-value">${userInfo.registered ? 'Yes ✓' : 'No ✗'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Referral Count:</span>
+                        <span class="info-value">${userInfo.referralCount.toString()}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Claims:</span>
+                        <span class="info-value">${userInfo.totalClaims.toString()}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Claimed Initial:</span>
+                        <span class="info-value">${claimedInit ? 'Yes ✓' : 'No ✗'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total VANS Claimed:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(userInfo.claimedVans, 18)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total EXO Claimed:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(userInfo.claimedExo, 8)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Referral Code:</span>
+                        <span class="info-value">${userInfo.referralCode || 'None'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Referrer:</span>
+                        <span class="info-value">${userInfo.referrer || 'None'}</span>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error getting user info:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function getAvailableRewards() {
+            if (!contract) return;
+            
+            try {
+                const result = await contract.getAvailableRewards(userAddress);
+                
+                const analyticsResult = document.getElementById('analyticsResult');
+                analyticsResult.innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Your Daily VANS:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(result[0], 18)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Your Daily EXO:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(result[1], 8)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Time Until Next Claim:</span>
+                        <span class="info-value">${Math.floor(result[2] / 3600)} hours</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Can Claim Initial:</span>
+                        <span class="info-value">${result[3] ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Pending Bonus EXO:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(result[4], 8)}</span>
+                    </div>
+                    <div class="info-label">Referrals Left:</span>
+                        <span class="info-value">${result[5].toString()}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contract VANS Balance:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(result[6], 18)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contract EXO Balance:</span>
+                        <span class="info-value">${ethers.utils.formatUnits(result[7], 8)}</span>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error getting rewards:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function setPauseRegistrations() {
+            if (!contract) return;
+            
+            const pause = document.getElementById('pauseStatus').value === 'true';
+            
+            try {
+                const tx = await contract.setPauseRegistrations(pause);
+                showAlert(`Setting registrations to ${pause ? 'paused' : 'unpaused'}...`, 'warning');
+                
+                await tx.wait();
+                showAlert(`Registrations ${pause ? 'paused' : 'unpaused'} successfully!`, 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error setting pause:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function updateEmergencyTime() {
+            if (!contract) return;
+            
+            const newTime = document.getElementById('newEmergencyTime').value;
+            if (!newTime) {
+                showAlert('Please enter a timestamp', 'warning');
+                return;
+            }
+            
+            try {
+                const tx = await contract.updateEmergencyTime(newTime);
+                showAlert('Updating emergency time...', 'warning');
+                
+                await tx.wait();
+                showAlert('Emergency time updated successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error updating emergency time:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function transferOwnership() {
+            if (!contract) return;
+            
+            const newOwner = document.getElementById('newOwner').value;
+            if (!newOwner || !ethers.utils.isAddress(newOwner)) {
+                showAlert('Please enter a valid address', 'warning');
+                return;
+            }
+            
+            if (!confirm(`⚠️ WARNING: This will transfer contract ownership to ${newOwner}\n\nAre you sure?`)) {
+                return;
+            }
+            
+            try {
+                const tx = await contract.transferOwnership(newOwner);
+                showAlert('Transferring ownership...', 'warning');
+                
+                await tx.wait();
+                showAlert('Ownership transferred successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error transferring ownership:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function withdrawSpecific() {
+            if (!contract) return;
+            
+            const vansAmount = document.getElementById('withdrawVans').value;
+            const exoAmount = document.getElementById('withdrawExo').value;
+            
+            if (!vansAmount && !exoAmount) {
+                showAlert('Please enter amounts to withdraw', 'warning');
+                return;
+            }
+            
+            try {
+                // Convert amounts to wei
+                const vansWei = vansAmount ? ethers.utils.parseUnits(vansAmount, 18) : 0;
+                const exoWei = exoAmount ? ethers.utils.parseUnits(exoAmount, 8) : 0;
+                
+                const tx = await contract.withdrawExcess(vansWei, exoWei);
+                showAlert('Withdrawing funds...', 'warning');
+                
+                await tx.wait();
+                showAlert('Funds withdrawn successfully!', 'success');
+                await loadContractInfo();
+                
+            } catch (error) {
+                console.error('Error withdrawing:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertsDiv = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            alertsDiv.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = show ? 'block' : 'none';
+        }
+
+        function setupEventListeners() {
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('refreshBtn').addEventListener('click', loadContractInfo);
+        }
+    </script>
+</body>
+</html>
