@@ -18,9 +18,28 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
   <title>Provide Liquidity | VanSwap DEX - Earn Fees on Vana Chain</title>
+  <meta name="google-site-verification" content="jtn_hlAfPbAOul0xNc9EbHGeko6e5CwWGHV2GYQ0_dY" />
   <meta name="description" content="Earn rewards by providing liquidity on VanSwap DEX. Support Vana Chain & 0G Network ecosystem and grow your crypto holdings.">
   <meta name="robots" content="index, follow">
 
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vanswap.xyz/liquidity">
+  <meta property="og:title" content="Provide Liquidity | VanSwap DEX">
+  <meta property="og:description" content="Add liquidity to VanSwap pools on Vana & 0G to earn trading fees and rewards.">
+  <meta property="og:image" content="https://vanswap.xyz/assets/og-liquidity.png">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Provide Liquidity | VanSwap DEX">
+  <meta name="twitter:description" content="Earn fees by providing liquidity to VanSwap's decentralized pools on Vana Chain & 0G Network.">
+  <meta name="twitter:image" content="https://vanswap.xyz/assets/og-liquidity.png">
+
+  <link rel="canonical" href="https://vanswap.xyz/liquidity">
+  <noscript>
+    <div style="background:linear-gradient(135deg,#ff6b35,#ff8e53);color:white;padding:20px;text-align:center;position:fixed;top:0;width:100%;z-index:9999;">
+      <h3>🚫 JavaScript Required</h3>
+      <p>Liquidity management requires JavaScript for wallet connection and smart contract interaction. Please enable it to continue.</p>
+    </div>
+  </noscript>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -44,17 +63,15 @@
       -webkit-font-smoothing:antialiased;
       min-height:100vh;
     }
-    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
+    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:9999;border-bottom:1px solid rgba(0,0,0,0.25);}
     .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
     .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
     .logo span{font-weight:700;font-size:18px}
-    /* Z-Index Fixes for Buttons */
-    .connect-wallet{display:flex;align-items:center;justify-content:center;background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;position:relative;min-width:140px;transition:all 0.2s ease; z-index: 10001;}
+    .connect-wallet{display:flex;align-items:center;justify-content:center;background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative;min-width:140px;transition:all 0.2s ease}
     .connect-wallet:hover{background:#3ad8b1}
-    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:10001;}
-    
-    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.5);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:10002;}
+    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
+    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.8);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
     .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
     .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
     .menu-item:hover{background:rgba(255,255,255,0.02)}
@@ -82,16 +99,16 @@
     .usd{color:var(--muted);font-size:13px;white-space:nowrap}
     .max{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:10px;font-weight:700;color:var(--primary);cursor:pointer;font-size:13px}
     .max:disabled{opacity:0.5;cursor:not-allowed}
-    .token-list{position:absolute;top:calc(100% + 8px);left:0;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(10px);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);min-width:320px;max-height:320px;overflow:auto;z-index:10005;box-shadow:0 12px 32px rgba(0,0,0,0.8);pointer-events:auto}
+    .token-list{position:absolute;top:calc(100% + 8px);left:0;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(6px);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);min-width:320px;max-height:320px;overflow:auto;z-index:10005;box-shadow:0 12px 32px rgba(0,0,0,0.8);pointer-events:auto}
     .token-search input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);margin-bottom:8px}
     .token-option{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
-    .token-option:hover{background:rgba(255,255,255,0.05)}
+    .token-option:hover{background:rgba(255,255,255,0.02)}
     .token-addr{font-size:12px;color:var(--muted)}
     .controls{text-align:center;margin:8px 0}
     .flip{background:var(--primary-dark);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px}
     .price{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;margin-top:12px}
     .info{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;padding:6px 0}
-    .primary{width:100%;background:var(--primary);border:none;padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px; position: relative; z-index: 50;}
+    .primary{width:100%;background:var(--primary);border:none;padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px}
     .primary:disabled{opacity:0.5;cursor:not-allowed}
     .secondary{width:100%;background:transparent;border:1px solid var(--primary);padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px;color:var(--primary)}
     .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
@@ -142,7 +159,7 @@
     .slippage-info{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px}
     .slippage-info .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
 
-    /* Custom token feature */
+    /* Custom token feature - IMPROVED */
     .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
     .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
     .add-token-btn span{font-weight:600;font-size:14px}
@@ -181,9 +198,9 @@
     .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
     .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
 
-    /* Network Selector Styles */
+    /* Network Selector Styles - FIXED Z-INDEX */
     .wallet-network-container{position:relative;display:inline-block; z-index: 10002;}
-    .network-dropdown{position:absolute;top:100%;background:rgba(20, 60, 45, 0.98);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;padding:8px;display:none;z-index:20000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:180px}
+    .network-dropdown{position:absolute;top:100%;background:rgba(20, 60, 45, 0.98);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;padding:8px;display:none;z-index:20000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:180px}
     .network-option{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:14px}
     .network-option:hover{background:rgba(255,255,255,0.05)}
 
@@ -228,7 +245,7 @@
             <span id="walletArrow" style="margin-left:6px;font-size:12px">▼</span>
           </button>
           
-          <div id="walletNetworkDropdown" class="network-dropdown" style="right:0; left:auto;">
+          <div id="walletNetworkDropdown" class="network-dropdown" style="right:0; left:auto; min-width:180px;">
             <div class="network-option" data-network="vana">
               <img src="https://vanswap.xyz/assets/vana.png" style="width:20px;height:20px;border-radius:4px">
               <span>Vana Network</span>
@@ -239,7 +256,7 @@
             </div>
             <div class="network-option" data-network="berachain">
               <img src="https://vanswap.xyz/assets/bera.png" style="width:20px;height:20px;border-radius:4px">
-              <span>Berachain Artio</span>
+              <span>Berachain</span>
             </div>
             <div style="height:1px;background:rgba(255,255,255,0.1);margin:6px 0"></div>
             <div id="disconnectBtn" class="network-option" style="color:var(--danger)">
@@ -502,11 +519,11 @@
         }
       },
       berachain: {
-        chainId: 80085,
-        chainIdHex: '0x138d5',
+        chainId: 80094,
+        chainIdHex: '0x138de',
         name: "Berachain Artio",
-        rpcUrl: "https://artio.rpc.berachain.com/",
-        explorer: "https://artio.beratrail.io/",
+        rpcUrl: "https://rpc.berachain.com/",
+        explorer: "https://berascan.com/",
         logo: "https://vanswap.xyz/assets/bera.png",
         contracts: {
           // >>> GANTI DENGAN CONTRACT ASLI NANTI <<<
@@ -580,14 +597,13 @@
       }
       
       reloadDataForNetwork() {
-        // Reset form
         const fromAmount = document.getElementById('fromAmount');
         const toAmount = document.getElementById('toAmount');
         if (fromAmount) fromAmount.value = '';
         if (toAmount) toAmount.value = '';
         
         // Reset reserves cache
-        globalPoolReserves = { A: ethers.BigNumber.from(0), B: ethers.BigNumber.from(0) };
+        currentReserves = { a: ethers.BigNumber.from(0), b: ethers.BigNumber.from(0) };
         
         initNetworkConfig();
         updateTokenDisplay();
@@ -601,7 +617,7 @@
 
     const networkManager = new NetworkManager();
 
-    // Custom Token Manager (Standard)
+    // Custom Token Manager
     class CustomTokenManager {
       constructor() { this.customTokens = this.loadCustomTokens(); }
       loadCustomTokens() { const tokens = localStorage.getItem('vanswap-custom-tokens'); return tokens ? JSON.parse(tokens) : []; }
@@ -619,7 +635,7 @@
     // UTILS
     // ==============================
     const $ = id => document.getElementById(id);
-    function showToast(msg) {
+    function showToast(msg, t = 2400) {
       const el = document.createElement('div');
       el.className = 'toast';
       el.textContent = msg;
@@ -631,7 +647,7 @@
     function setStatus(s) { const el = $('status'); if(el) el.textContent = s; }
 
     function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => showToast('Failed to copy'));
+      navigator.clipboard.writeText(text).then(() => showToast('Address copied!')).catch(() => showToast('Failed to copy'));
     }
     function createCopyButton(address) {
       const btn = document.createElement('button');
@@ -657,12 +673,16 @@
     let factory = null;
     let currentPair = null;
     let userPools = [];
+    let currentRemovePool = null;
+    let currentRemovePercentage = 0;
     let tokens = [];
     let selectedFrom = null;
     let selectedTo = null;
+    let isCalculatingA = false;
+    let isCalculatingB = false;
     
-    // CACHED RESERVES FOR INSTANT CALCULATION
-    let globalPoolReserves = { A: ethers.BigNumber.from(0), B: ethers.BigNumber.from(0) };
+    // CACHED RESERVES FOR FAST CALCULATION (Perbaikan Utama)
+    let currentReserves = { a: ethers.BigNumber.from(0), b: ethers.BigNumber.from(0) };
 
     function updateWalletDisplay() {
       const walletText = $('walletText');
@@ -697,21 +717,24 @@
           { symbol: 'VANA', address: 'VANA_NATIVE', logo: 'https://vanswap.xyz/assets/vana.png', decimals: 18, verified: true },
           { symbol: 'WVANA', address: config.contracts.wvana, logo: 'https://vanswap.xyz/assets/wvana.png', decimals: 18, verified: true },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
+          { symbol: 'VANS', address: config.contracts.vans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
+          { symbol: 'BERY', address: config.contracts.bery, logo: 'https://vanswap.xyz/assets/bery.png', decimals: 18, verified: true },
+          { symbol: 'EXO', address: config.contracts.exo, logo: 'https://vanswap.xyz/assets/exo.png', decimals: 8, verified: true }
         ];
       } else if (network === 'zerog') {
         return [
           { symbol: '0G', address: '0G_NATIVE', logo: 'https://vanswap.xyz/assets/0g.png', decimals: 18, verified: true },
           { symbol: 'W0G', address: config.contracts.w0g, logo: 'https://vanswap.xyz/assets/w0g.png', decimals: 18, verified: true },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true }
+          { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true },
+          { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true }
         ];
       } else {
         return [
           { symbol: 'BERA', address: 'BERA_NATIVE', logo: 'https://vanswap.xyz/assets/bera.png', decimals: 18, verified: true },
           { symbol: 'WBERA', address: config.contracts.wbera, logo: 'https://vanswap.xyz/assets/wbera.png', decimals: 18, verified: true },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true },
-          { symbol: 'USDT', address: config.contracts.usdt, logo: 'https://vanswap.xyz/assets/token.png', decimals: 6, verified: true }
+          { symbol: 'USDT', address: config.contracts.usdt, logo: 'https://vanswap.xyz/assets/usdt.png', decimals: 6, verified: true }
         ];
       }
     }
@@ -759,8 +782,10 @@
         
         updateWalletDisplay();
         await updateBalances();
+        await updateDropdownBalances();
         await updateLiquidityInfo();
         loadUserPools();
+        updateTVLStats();
       } catch(e) { console.error(e); }
     }
 
@@ -782,8 +807,10 @@
 
         updateWalletDisplay();
         await updateBalances();
+        await updateDropdownBalances();
         await updateLiquidityInfo();
         loadUserPools();
+        updateTVLStats();
       } catch(e) { console.error(e); }
     }
 
@@ -830,18 +857,18 @@
       else { selectedTo = token; $('toList').style.display='none'; }
       updateTokenDisplay();
       
-      // Reset inputs
+      // Reset input
       $('fromAmount').value = '';
       $('toAmount').value = '';
       
-      await updateBalances();
-      await updateLiquidityInfo(); // This fetches reserves for caching
+      await updateBalances(); 
+      await updateLiquidityInfo();
+      updateActionBtn();
     }
 
     async function updateBalances() {
       if(!provider || !account) return;
       try {
-        // Handle 0x0/Berachain placeholder check
         if (selectedFrom.address === '0x0000000000000000000000000000000000000000') return;
 
         if(selectedFrom.address.endsWith('NATIVE')) {
@@ -867,49 +894,60 @@
     }
 
     // ==============================
-    // CORE LOGIC: LIQUIDITY INFO & CACHING
+    // CORE LOGIC: LIQUIDITY INFO & OPTIMIZED CALCULATION
     // ==============================
     async function updateLiquidityInfo() {
       if (!provider) return;
       
       // Safety for Berachain
       if (FACTORY === '0x0000000000000000000000000000000000000000') {
-         globalPoolReserves = { A: ethers.BigNumber.from(0), B: ethers.BigNumber.from(0) };
-         $('liquidityDescription').textContent = "Contracts not deployed on this network yet.";
+         currentReserves = { a: ethers.BigNumber.from(0), b: ethers.BigNumber.from(0) };
+         $('pooledTokenA').textContent = '0';
+         $('pooledTokenB').textContent = '0';
+         $('priceA').textContent = '0';
+         $('priceB').textContent = '0';
          return;
       }
 
       try {
-        const tA = selectedFrom.address.endsWith('NATIVE') ? WVANA : selectedFrom.address;
-        const tB = selectedTo.address.endsWith('NATIVE') ? WVANA : selectedTo.address;
-        
-        currentPair = await factory.getPair(tA, tB);
-        
+        const tokenA = selectedFrom.address === 'VANA_NATIVE' || selectedFrom.address === '0G_NATIVE' ? WVANA : selectedFrom.address;
+        const tokenB = selectedTo.address === 'VANA_NATIVE' || selectedTo.address === '0G_NATIVE' ? WVANA : selectedTo.address;
+
+        currentPair = await factory.getPair(tokenA, tokenB);
+
         if (currentPair && currentPair !== '0x0000000000000000000000000000000000000000') {
-          const pair = new ethers.Contract(currentPair, PAIR_ABI, provider);
-          const [r0, r1] = await pair.getReserves();
-          const t0 = await pair.token0();
+          const pairContract = new ethers.Contract(currentPair, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
           
-          // STORE RESERVES GLOBALLY FOR INSTANT CALC
-          if (t0.toLowerCase() === tA.toLowerCase()) {
-            globalPoolReserves = { A: r0, B: r1 };
+          // STORE RESERVES FOR FAST CALC
+          if (token0.toLowerCase() === tokenA.toLowerCase()) {
+            currentReserves = { a: reserve0, b: reserve1 };
           } else {
-            globalPoolReserves = { A: r1, B: r0 };
+            currentReserves = { a: reserve1, b: reserve0 };
           }
-          
-          // UI Updates
-          const rA = parseFloat(ethers.utils.formatUnits(globalPoolReserves.A, selectedFrom.decimals));
-          const rB = parseFloat(ethers.utils.formatUnits(globalPoolReserves.B, selectedTo.decimals));
-          
+
+          const rA = parseFloat(ethers.utils.formatUnits(currentReserves.a, selectedFrom.decimals));
+          const rB = parseFloat(ethers.utils.formatUnits(currentReserves.b, selectedTo.decimals));
+
           $('pooledTokenA').textContent = rA.toFixed(4);
           $('pooledTokenB').textContent = rB.toFixed(4);
           $('priceA').textContent = rA > 0 ? (rB / rA).toFixed(6) : '0';
           $('priceB').textContent = rB > 0 ? (rA / rB).toFixed(6) : '0';
-          $('liquidityDescription').textContent = "Add liquidity to earn 0.25% trading fees.";
           
+          if (account) {
+             const userBalance = await pairContract.balanceOf(account);
+             const totalSupply = await pairContract.totalSupply();
+             const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
+             $('poolSharePercent').textContent = userShare.toFixed(6) + '%';
+             $('poolShareValue').textContent = userShare.toFixed(6) + '%';
+             $('poolTokens').textContent = parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6);
+          }
+          
+          $('liquidityDescription').textContent = "Add liquidity to earn 0.25% trading fees.";
+
         } else {
-          // No pool exists
-          globalPoolReserves = { A: ethers.BigNumber.from(0), B: ethers.BigNumber.from(0) };
+          currentReserves = { a: ethers.BigNumber.from(0), b: ethers.BigNumber.from(0) };
           $('pooledTokenA').textContent = '0';
           $('pooledTokenB').textContent = '0';
           $('liquidityDescription').textContent = "You are the first provider. Your ratio sets the price.";
@@ -920,48 +958,37 @@
     }
 
     // ==============================
-    // INSTANT CALCULATIONS (NO LAG)
+    // AUTO-CALCULATION (INSTANT) - MENGGANTIKAN FUNGSI ASLI AGAR TIDAK LAG
     // ==============================
-    function calculateAmountB() {
+    function calculateOptimalAmountB() {
       const val = $('fromAmount').value;
-      if (!val || globalPoolReserves.A.isZero()) return;
-      
+      if (!val || currentReserves.a.isZero()) return;
       try {
         const amountA = ethers.utils.parseUnits(val, selectedFrom.decimals);
-        // Formula: amountB = amountA * reserveB / reserveA
-        const amountB = amountA.mul(globalPoolReserves.B).div(globalPoolReserves.A);
+        const amountB = amountA.mul(currentReserves.b).div(currentReserves.a);
         $('toAmount').value = ethers.utils.formatUnits(amountB, selectedTo.decimals);
+        updateActionBtn();
       } catch(e) {}
     }
 
-    function calculateAmountA() {
+    function calculateOptimalAmountA() {
       const val = $('toAmount').value;
-      if (!val || globalPoolReserves.B.isZero()) return;
-      
+      if (!val || currentReserves.b.isZero()) return;
       try {
         const amountB = ethers.utils.parseUnits(val, selectedTo.decimals);
-        // Formula: amountA = amountB * reserveA / reserveB
-        const amountA = amountB.mul(globalPoolReserves.A).div(globalPoolReserves.B);
+        const amountA = amountB.mul(currentReserves.a).div(currentReserves.b);
         $('fromAmount').value = ethers.utils.formatUnits(amountA, selectedFrom.decimals);
+        updateActionBtn();
       } catch(e) {}
-    }
-
-    async function setMax() {
-      if(!account) return connectWallet();
-      // Logic for max balance...
-      await updateBalances();
-      // Then trigger calc
-      calculateAmountB(); 
     }
 
     // ==============================
-    // INIT
+    // INIT & LISTENERS
     // ==============================
     document.addEventListener('DOMContentLoaded', async () => {
       initNetworkConfig();
       initNetworkSelector();
       
-      // Setup menu
       const menuBtn = document.getElementById('menuBtn');
       const menuDropdown = document.getElementById('menuDropdown');
       if (menuBtn && menuDropdown) {
@@ -972,20 +999,31 @@
         document.addEventListener('click', () => menuDropdown.classList.remove('show'));
       }
 
-      // Token Selectors
       $('fromSelect').onclick = (e) => { e.stopPropagation(); buildTokenListHtml('from'); };
       $('toSelect').onclick = (e) => { e.stopPropagation(); buildTokenListHtml('to'); };
       document.onclick = (e) => { if(!e.target.closest('.select-wrap')) { $('fromList').style.display='none'; $('toList').style.display='none'; }};
 
-      // FAST INPUT CALCULATION LISTENERS
-      $('fromAmount').addEventListener('input', calculateAmountB);
-      $('toAmount').addEventListener('input', calculateAmountA);
+      // FAST INPUT LISTENER
+      $('fromAmount').addEventListener('input', calculateOptimalAmountB);
+      $('toAmount').addEventListener('input', calculateOptimalAmountA);
       
       $('btnMax').onclick = setMax;
+      $('actionBtn').onclick = addLiquidity;
       
-      // Wallet Provider Init
+      document.getElementById('myPoolsTab').addEventListener('click', switchToMyPoolsView);
+      document.getElementById('addTab').addEventListener('click', switchToAddView);
+      document.getElementById('importTab').addEventListener('click', switchToImportView);
+
       try {
         provider = new ethers.providers.JsonRpcProvider(NETWORK_CONFIG[networkManager.getCurrentNetwork()].rpcUrl);
+        
+        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+           router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
+        }
+        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
+           factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        }
+        
         if (window.ethereum && window.ethereum.selectedAddress) {
           account = window.ethereum.selectedAddress;
           updateWalletDisplay();
@@ -995,62 +1033,331 @@
           if (ROUTER !== '0x0000000000000000000000000000000000000000') {
              router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
           }
-          if (FACTORY !== '0x0000000000000000000000000000000000000000') {
-             factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-          }
           
           await updateBalances();
           await updateLiquidityInfo();
           loadUserPools();
         } else {
-          // Read-only init
-          if (ROUTER !== '0x0000000000000000000000000000000000000000') {
-             router = new ethers.Contract(ROUTER, ROUTER_ABI, provider);
-          }
-          if (FACTORY !== '0x0000000000000000000000000000000000000000') {
-             factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-          }
           await updateLiquidityInfo();
         }
         updateTokenDisplay();
       } catch(e) { console.error('Init error', e); }
       
-      // Tabs
-      $('myPoolsTab').onclick = switchToMyPoolsView;
-      $('addTab').onclick = switchToAddView;
-      $('importTab').onclick = switchToImportView;
+      switchToMyPoolsView();
     });
 
-    // View switchers
+    // ==============================
+    // SEMUA FUNGSI ASLI ANDA ADA DI BAWAH INI (TIDAK ADA YANG DIHAPUS)
+    // ==============================
+
+    async function addLiquidity() {
+      if (!account || !signer) { await connectWallet(); if (!account) return; }
+      const fromAmt = $('fromAmount').value;
+      const toAmt = $('toAmount').value;
+      if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) { showToast('Please enter amounts for both tokens'); return; }
+      
+      const btn = $('actionBtn');
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Processing...';
+        setStatus('Preparing add liquidity...');
+
+        if (ROUTER === '0x0000000000000000000000000000000000000000') {
+            throw new Error("Contracts not deployed on this network");
+        }
+
+        const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
+        const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
+        const amountAMin = amountADesired.mul(95).div(100);
+        const amountBMin = amountBDesired.mul(95).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+        await ensureApproved(selectedFrom.address, amountADesired);
+        await ensureApproved(selectedTo.address, amountBDesired);
+
+        const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        
+        let tx;
+        if (selectedFrom.address.endsWith('NATIVE')) {
+             tx = await routerWithSigner.addLiquidityETH(selectedTo.address, amountBDesired, amountBMin, amountAMin, account, deadline, { value: amountADesired, gasLimit: 3000000 });
+        } else if (selectedTo.address.endsWith('NATIVE')) {
+             tx = await routerWithSigner.addLiquidityETH(selectedFrom.address, amountADesired, amountAMin, amountBMin, account, deadline, { value: amountBDesired, gasLimit: 3000000 });
+        } else {
+             tx = await routerWithSigner.addLiquidity(selectedFrom.address, selectedTo.address, amountADesired, amountBDesired, amountAMin, amountBMin, account, deadline, { gasLimit: 3000000 });
+        }
+        
+        setStatus('Transaction submitted...');
+        await tx.wait();
+        showToast('Liquidity added!');
+        await updateLiquidityInfo();
+        await loadUserPools();
+        
+      } catch(e) { console.error(e); showToast('Failed: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = 'Add Liquidity'; setStatus('Ready'); }
+    }
+
+    async function ensureApproved(tokenAddress, neededAmount) {
+      if (!tokenAddress || tokenAddress.endsWith('NATIVE')) return;
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+      const allowance = await tokenContract.allowance(account, ROUTER);
+      if (allowance.lt(neededAmount)) {
+        setStatus('Approving ' + tokenAddress + '...');
+        const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+        await tx.wait();
+      }
+    }
+
+    // --- FUNGSI ASLI LAINNYA ---
+    async function updateTVLStats() {
+      if (!provider) return;
+      try {
+        let totalTVL = 0;
+        const totalPairs = await factory.allPairsLength();
+        $('totalTVL').textContent = formatUSD(totalTVL);
+        $('totalPairs').textContent = totalPairs.toString();
+      } catch (error) { console.error('Error updating TVL stats:', error); $('totalTVL').textContent = '$---'; }
+    }
+
+    async function updateDropdownBalances() {
+      if (!provider || !account) return;
+      for (const token of tokens) {
+        try {
+          let balance = '0';
+          if (token.address.endsWith('NATIVE')) {
+            const bal = await provider.getBalance(account);
+            balance = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
+          } else {
+            const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+            const [bal, decimals] = await Promise.all([ contract.balanceOf(account), contract.decimals() ]);
+            balance = parseFloat(ethers.utils.formatUnits(bal, decimals)).toFixed(4);
+          }
+          const balanceEl = document.querySelector(`#bal-${token.symbol}`);
+          if (balanceEl) balanceEl.textContent = balance;
+        } catch (error) {}
+      }
+    }
+
     function switchToMyPoolsView() {
       $('myPoolsTab').classList.add('active'); $('addTab').classList.remove('active'); $('importTab').classList.remove('active');
-      $('myPoolsView').style.display='block'; $('addLiquidityView').style.display='none'; $('importPoolView').style.display='none';
-      if(account) loadUserPools();
+      $('myPoolsView').style.display = 'block'; $('addLiquidityView').style.display = 'none'; $('importPoolView').style.display = 'none';
+      $('mainTitle').textContent = 'My Liquidity Pools'; loadUserPools();
     }
     function switchToAddView() {
       $('addTab').classList.add('active'); $('myPoolsTab').classList.remove('active'); $('importTab').classList.remove('active');
-      $('myPoolsView').style.display='none'; $('addLiquidityView').style.display='block'; $('importPoolView').style.display='none';
-      updateLiquidityInfo();
+      $('myPoolsView').style.display = 'none'; $('addLiquidityView').style.display = 'block'; $('importPoolView').style.display = 'none';
+      $('mainTitle').textContent = 'Add Liquidity'; $('fromAmount').value = ''; $('toAmount').value = ''; updateLiquidityInfo();
     }
     function switchToImportView() {
       $('importTab').classList.add('active'); $('myPoolsTab').classList.remove('active'); $('addTab').classList.remove('active');
-      $('myPoolsView').style.display='none'; $('addLiquidityView').style.display='none'; $('importPoolView').style.display='block';
+      $('myPoolsView').style.display = 'none'; $('addLiquidityView').style.display = 'none'; $('importPoolView').style.display = 'block';
+      $('mainTitle').textContent = 'Import Pool';
     }
-    
-    // Add Liquidity Logic (Simplified for brevity, use full implementation logic)
-    async function addLiquidity() {
-       if(!account) return connectWallet();
-       // Full addLiquidity logic goes here (refer to original file, ensure contracts are checked)
-       if (ROUTER === '0x0000000000000000000000000000000000000000') return showToast('Contracts not deployed');
-       // ... existing logic ...
-    }
-    $('actionBtn').onclick = addLiquidity;
 
-    // Load User Pools (Stub)
-    async function loadUserPools() {
-       // Logic to iterate factories and find pairs
-       // Refer to original logic
+    async function setMax() {
+      if (!account || !provider) { await connectWallet(); return; }
+      try {
+        if (selectedFrom.address.endsWith('NATIVE')) {
+          const balance = await provider.getBalance(account);
+          const usable = balance.mul(95).div(100);
+          $('fromAmount').value = ethers.utils.formatEther(usable);
+        } else {
+          const contract = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+          const [balance, decimals] = await Promise.all([ contract.balanceOf(account), contract.decimals() ]);
+          $('fromAmount').value = parseFloat(ethers.utils.formatUnits(balance, decimals)).toFixed(6);
+        }
+        updateLiquidityInfo(); calculateOptimalAmountB();
+      } catch (error) { console.error('Set max error:', error); }
     }
+
+    function formatPrice(price) {
+      if (price === 0) return '0';
+      if (price < 0.000001) return price.toExponential(6);
+      if (price < 0.001) return price.toFixed(8);
+      if (price < 1) return price.toFixed(6);
+      return price.toFixed(4);
+    }
+    function formatUSD(amount) {
+      if (amount === 0) return '$0';
+      if (amount < 0.01) return '< $0.01';
+      return `$${amount.toFixed(2)}`;
+    }
+
+    async function loadUserPools() {
+      if (!account || !provider) { $('noPoolsMessage').style.display = 'block'; $('poolsList').innerHTML = ''; return; }
+      try {
+        setStatus('Loading your pools...');
+        userPools = [];
+        const totalPairs = await factory.allPairsLength();
+        $('totalPairs').textContent = totalPairs.toString();
+        for (let i = 0; i < Math.min(totalPairs, 100); i++) {
+          try {
+            const pairAddress = await factory.allPairs(i);
+            const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+            const userBalance = await pairContract.balanceOf(account);
+            if (userBalance.gt(0)) {
+              const totalSupply = await pairContract.totalSupply();
+              const [reserve0, reserve1] = await pairContract.getReserves();
+              const token0 = await pairContract.token0();
+              const token1 = await pairContract.token1();
+              const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
+              const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+              const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
+                token0Contract.symbol(), token1Contract.symbol(), token0Contract.decimals(), token1Contract.decimals()
+              ]);
+              const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
+              userPools.push({
+                address: pairAddress, tokenA: symbol0, tokenB: symbol1, balance: parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6),
+                share: userShare, value: 0, reserves: [reserve0, reserve1], token0: token0, decimals0: decimals0, decimals1: decimals1
+              });
+            }
+          } catch (error) { continue; }
+        }
+        renderUserPools(); setStatus('Ready');
+      } catch (error) { console.error(error); setStatus('Error loading pools'); $('noPoolsMessage').style.display = 'block'; }
+    }
+
+    function renderUserPools() {
+      const poolsList = $('poolsList');
+      if (userPools.length === 0) { $('noPoolsMessage').style.display = 'block'; poolsList.innerHTML = ''; return; }
+      $('noPoolsMessage').style.display = 'none'; poolsList.innerHTML = '';
+      userPools.forEach(pool => {
+        const poolCard = document.createElement('div');
+        poolCard.className = 'pool-card';
+        poolCard.innerHTML = `
+          <div class="pool-header"><div class="pool-tokens"><div class="pool-token"><img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" onerror="this.src='https://vanswap.xyz/assets/unknown.png'"><span>${pool.tokenA}</span></div><span>+</span><div class="pool-token"><img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" onerror="this.src='https://vanswap.xyz/assets/unknown.png'"><span>${pool.tokenB}</span></div></div></div>
+          <div class="pool-metrics"><div class="metric"><div class="metric-value">${pool.balance}</div><div class="metric-label">Pool Tokens</div></div><div class="metric"><div class="metric-value">${pool.share.toFixed(2)}%</div><div class="metric-label">Share</div></div></div>
+          <div class="pool-actions"><div class="pool-action pool-add" onclick="addMoreLiquidity('${pool.tokenA}', '${pool.tokenB}')">Add</div><div class="pool-action pool-remove" onclick="showRemoveModal('${pool.address}')">Remove</div></div>
+        `;
+        poolsList.appendChild(poolCard);
+      });
+    }
+
+    function updateActionBtn() {
+      const btn = $('actionBtn');
+      if (!account) { btn.textContent = 'Connect Wallet'; btn.disabled = false; return; }
+      const fromAmt = parseFloat($('fromAmount').value);
+      const toAmt = parseFloat($('toAmount').value);
+      if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) { btn.textContent = 'Enter Amounts'; btn.disabled = true; return; }
+      btn.textContent = 'Add Liquidity'; btn.disabled = false;
+    }
+
+    function addMoreLiquidity(tokenA, tokenB) {
+      const tokenAObj = tokens.find(t => t.symbol === tokenA);
+      const tokenBObj = tokens.find(t => t.symbol === tokenB);
+      if (tokenAObj && tokenBObj) {
+        selectedFrom = tokenAObj; selectedTo = tokenBObj;
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
+        $('fromSymbol').textContent = selectedFrom.symbol;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
+        $('toSymbol').textContent = selectedTo.symbol;
+        switchToAddView(); updateLiquidityInfo();
+      }
+    }
+
+    function quickAddLiquidity(tokenASymbol, tokenBSymbol) {
+      addMoreLiquidity(tokenASymbol, tokenBSymbol);
+    }
+
+    async function showRemoveModal(poolAddress) {
+      currentRemovePool = poolAddress; currentRemovePercentage = 0;
+      try {
+        const pairContract = new ethers.Contract(poolAddress, PAIR_ABI, provider);
+        const [reserve0, reserve1] = await pairContract.getReserves();
+        const token0 = await pairContract.token0();
+        const token1 = await pairContract.token1();
+        const userBalance = await pairContract.balanceOf(account);
+        const totalSupply = await pairContract.totalSupply();
+        const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
+        const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+        const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([token0Contract.symbol(), token1Contract.symbol(), token0Contract.decimals(), token1Contract.decimals()]);
+        const hasAllowance = await checkLPAllowance(poolAddress);
+        $('removePoolInfo').innerHTML = `<div style="text-align:center;margin-bottom:16px"><div style="font-weight:600">${symbol0} + ${symbol1}</div><div style="color:var(--muted)">Your LP: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6)}</div></div>`;
+        $('removeTokenASymbol').textContent = symbol0; $('removeTokenBSymbol').textContent = symbol1;
+        currentRemovePool = { address: poolAddress, token0, token1, symbol0, symbol1, decimals0, decimals1, userBalance, totalSupply, reserves: [reserve0, reserve1], hasAllowance };
+        document.querySelectorAll('.percentage-btn').forEach(btn => btn.classList.remove('active'));
+        $('removeTokenAAmount').textContent = '0'; $('removeTokenBAmount').textContent = '0';
+        $('removeLiquidityModal').style.display = 'flex';
+      } catch (error) { console.error(error); showToast('Failed to load pool info'); }
+    }
+
+    function setRemovePercentage(percent) {
+      currentRemovePercentage = percent;
+      document.querySelectorAll('.percentage-btn').forEach(btn => {
+        if (parseInt(btn.getAttribute('data-percent')) === percent) btn.classList.add('active'); else btn.classList.remove('active');
+      });
+      if (currentRemovePool) {
+        const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
+        const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+        const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+        $('removeTokenAAmount').textContent = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
+        $('removeTokenBAmount').textContent = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
+      }
+    }
+
+    function closeRemoveModal() { $('removeLiquidityModal').style.display = 'none'; currentRemovePool = null; }
+
+    async function confirmRemoveLiquidity() {
+      if (!currentRemovePool || currentRemovePercentage === 0) return;
+      try {
+        const btn = $('confirmRemoveBtn'); btn.disabled = true; btn.innerHTML = 'Removing...';
+        const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+        if (!currentRemovePool.hasAllowance) { await approveLPTokens(currentRemovePool.address); currentRemovePool.hasAllowance = true; }
+        const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(90).div(100);
+        const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(90).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+        const tx = await router.removeLiquidity(currentRemovePool.token0, currentRemovePool.token1, liquidityAmount, amount0Min, amount1Min, account, deadline, { gasLimit: 500000 });
+        await tx.wait(); showToast('Liquidity removed!'); closeRemoveModal(); await updateBalances(); loadUserPools();
+      } catch (error) { console.error(error); showToast('Remove failed'); } finally { $('confirmRemoveBtn').disabled = false; $('confirmRemoveBtn').textContent = 'Remove Liquidity'; }
+    }
+
+    async function checkLPAllowance(pairAddress) {
+      if (!account || !signer) return false;
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
+      const allowance = await pairContract.allowance(account, ROUTER);
+      const bal = await pairContract.balanceOf(account);
+      return allowance.gte(bal);
+    }
+
+    async function approveLPTokens(pairAddress) {
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
+      const tx = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+      await tx.wait();
+    }
+
+    async function importPool() {
+      const tA = $('tokenAInput').value.trim(); const tB = $('tokenBInput').value.trim();
+      if(!tA || !tB) return showToast('Enter addresses');
+      try {
+        const pair = await factory.getPair(tA, tB);
+        if(!pair || pair === ethers.constants.AddressZero) return showToast('Pool not found');
+        const cA = new ethers.Contract(tA, ERC20_ABI, provider); const cB = new ethers.Contract(tB, ERC20_ABI, provider);
+        const [sA, sB, dA, dB] = await Promise.all([cA.symbol(), cB.symbol(), cA.decimals(), cB.decimals()]);
+        customTokenManager.addToken({ symbol: sA, address: tA, decimals: dA, logo: '', custom: true, network: networkManager.getCurrentNetwork() });
+        customTokenManager.addToken({ symbol: sB, address: tB, decimals: dB, logo: '', custom: true, network: networkManager.getCurrentNetwork() });
+        initNetworkConfig(); showToast('Pool Imported'); switchToAddView();
+      } catch(e) { console.error(e); showToast('Import failed'); }
+    }
+
+    // Make global
+    window.filterTokens = filterTokens;
+    window.switchToMyPoolsView = switchToMyPoolsView;
+    window.switchToAddView = switchToAddView;
+    window.switchToImportView = switchToImportView;
+    window.setMax = setMax;
+    window.addLiquidity = addLiquidity;
+    window.addMoreLiquidity = addMoreLiquidity;
+    window.quickAddLiquidity = quickAddLiquidity;
+    window.showRemoveModal = showRemoveModal;
+    window.closeRemoveModal = closeRemoveModal;
+    window.setRemovePercentage = setRemovePercentage;
+    window.confirmRemoveLiquidity = confirmRemoveLiquidity;
+    window.importPool = importPool;
+    window.connectWallet = connectWallet;
+    window.disconnectWallet = disconnectWallet;
+    window.pasteFromClipboard = pasteFromClipboard;
+    window.clearTokenForm = clearTokenForm;
+    window.cancelAddToken = cancelAddToken;
+    window.addCustomToken = addCustomToken;
   </script>
 </body>
 </html>
