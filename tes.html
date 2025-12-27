@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  
+  <!-- Security Headers -->
   <meta http-equiv="Content-Security-Policy" 
       content="default-src 'self' https://vanswap.xyz; 
                script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com https://walletconnect.com https://cdn.walletconnect.com;
@@ -17,32 +19,36 @@
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
-  <title>Provide Liquidity | VanSwap DEX - Earn Fees on Vana Chain</title>
-  <meta name="google-site-verification" content="jtn_hlAfPbAOul0xNc9EbHGeko6e5CwWGHV2GYQ0_dY" />
-  <meta name="description" content="Earn rewards by providing liquidity on VanSwap DEX. Support Vana Chain & 0G Network ecosystem and grow your crypto holdings.">
+  <title>Provide Liquidity | VanSwap DEX - Earn Fees on Vana Chain, 0G Network & Bera Chain</title>
+  <meta name="description" content="Earn rewards by providing liquidity on VanSwap DEX. Support Vana Chain, 0G Network & Bera Chain ecosystem and grow your crypto holdings.">
   <meta name="robots" content="index, follow">
 
+  <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://vanswap.xyz/liquidity">
   <meta property="og:title" content="Provide Liquidity | VanSwap DEX">
-  <meta property="og:description" content="Add liquidity to VanSwap pools on Vana & 0G to earn trading fees and rewards.">
+  <meta property="og:description" content="Add liquidity to VanSwap pools on Vana, 0G & Bera Chain to earn trading fees and rewards.">
   <meta property="og:image" content="https://vanswap.xyz/assets/og-liquidity.png">
 
+  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Provide Liquidity | VanSwap DEX">
-  <meta name="twitter:description" content="Earn fees by providing liquidity to VanSwap's decentralized pools on Vana Chain & 0G Network.">
+  <meta name="twitter:description" content="Earn fees by providing liquidity to VanSwap's decentralized pools on Vana Chain, 0G Network & Bera Chain.">
   <meta name="twitter:image" content="https://vanswap.xyz/assets/og-liquidity.png">
 
   <link rel="canonical" href="https://vanswap.xyz/liquidity">
+  
   <noscript>
     <div style="background:linear-gradient(135deg,#ff6b35,#ff8e53);color:white;padding:20px;text-align:center;position:fixed;top:0;width:100%;z-index:9999;">
       <h3>🚫 JavaScript Required</h3>
       <p>Liquidity management requires JavaScript for wallet connection and smart contract interaction. Please enable it to continue.</p>
     </div>
   </noscript>
+  
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <style>
-    :root{
+    :root {
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
       --accent: #31d0aa;
@@ -55,172 +61,1092 @@
       --danger: #f44336;
       --success: #4caf50;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:'Kanit',sans-serif;
-      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
-      min-height:100vh;
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
-    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
-    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
-    .logo span{font-weight:700;font-size:18px}
-    /* Z-Index Fix */
-    .connect-wallet{display:flex;align-items:center;justify-content:center;background:var(--accent);color:#052017;border:none;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer;z-index:1400;position:relative;min-width:140px;transition:all 0.2s ease}
-    .connect-wallet:hover{background:#3ad8b1}
-    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
-    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.8);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
-    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
-    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
-    .menu-item:hover{background:rgba(255,255,255,0.02)}
-    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
-    .main{max-width:1200px;margin:32px auto;padding:0 20px}
-    .swap-row{display:flex;gap:24px;align-items:flex-start}
-    @media (max-width:980px){.swap-row{flex-direction:column;padding-bottom:40px}}
-    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px;flex:1;max-width:540px;box-shadow:0 10px 30px rgba(0,0,0,0.55)}
-    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .title{font-size:20px;font-weight:700}
-    .token-block{background:rgba(255,255,255,0.02);border-radius:12px;padding:10px;margin-bottom:12px;border:1px solid transparent}
-    .token-block:focus-within{border-color:var(--primary)}
-    .input-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .label{color:#cfece0;font-size:13px}
-    .balance{color:var(--muted);font-size:13px;cursor:pointer}
-    .row{display:flex;gap:12px;align-items:center}
-    .select-wrap{position:relative;min-width:140px}
-    .select{display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;background:rgba(0,0,0,0.12);cursor:pointer;border:1px solid rgba(255,255,255,0.02);min-width:120px;z-index:1500}
-    .select img{width:34px;height:34px;border-radius:8px;object-fit:cover}
-    .symbol{font-weight:700}
-    .amount-wrap{flex:1;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
-    .amount{width:100%;background:transparent;border:none;color:var(--text);font-size:22px;font-weight:700;text-align:right;padding:6px 0;outline:none}
-    .amount::placeholder{color:var(--muted)}
-    .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;margin-top:8px}
-    .usd{color:var(--muted);font-size:13px;white-space:nowrap}
-    .max{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:10px;font-weight:700;color:var(--primary);cursor:pointer;font-size:13px}
-    .max:disabled{opacity:0.5;cursor:not-allowed}
-    /* Token List Z-Index Fix */
-    .token-list{position:absolute;top:calc(100% + 8px);left:0;background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);min-width:320px;max-height:320px;overflow:auto;z-index:2200;box-shadow:0 12px 32px rgba(0,0,0,0.8);pointer-events:auto}
-    .token-search input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);margin-bottom:8px}
-    .token-option{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
-    .token-option:hover{background:rgba(255,255,255,0.02)}
-    .token-addr{font-size:12px;color:var(--muted)}
-    .controls{text-align:center;margin:8px 0}
-    .flip{background:var(--primary-dark);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px}
-    .price{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;margin-top:12px}
-    .info{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;padding:6px 0}
-    .primary{width:100%;background:var(--primary);border:none;padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px}
-    .primary:disabled{opacity:0.5;cursor:not-allowed}
-    .secondary{width:100%;background:transparent;border:1px solid var(--primary);padding:12px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:12px;color:var(--primary)}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .panel{flex:1;min-width:260px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px}
-    .panel h4{font-weight:700;margin-bottom:10px}
-    .panel-row{display:flex;justify-content:space-between;color:var(--muted);padding:8px 0}
-    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
-
-    .liquidity-info{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:16px}
-    .liquidity-info h4{font-weight:600;margin-bottom:8px;font-size:15px}
-    .liquidity-info p{color:var(--muted);font-size:13px;line-height:1.4;margin-bottom:8px}
-    .pool-share{display:flex;justify-content:space-between;margin-top:12px}
-    .pool-share .label{color:var(--muted)}
-    .pool-share .value{font-weight:600}
-    .add-icon{display:flex;align-items:center;justify-content:center;margin:12px 0}
-    .add-icon div{width:24px;height:24px;border-radius:50%;background:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:16px}
-    .tabs{display:flex;gap:8px;margin-bottom:16px}
-    .tab{flex:1;padding:10px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
-    .tab.active{background:var(--primary)}
-    .tab:hover:not(.active){background:rgba(255,255,255,0.04)}
-
-    .pool-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:16px;margin-bottom:12px}
-    .pool-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .pool-tokens{display:flex;align-items:center;gap:8px}
-    .pool-token{display:flex;align-items:center;gap:6px}
-    .pool-token img{width:24px;height:24px;border-radius:6px}
-    .pool-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-    .metric{text-align:center}
-    .metric-value{font-weight:700;font-size:16px;margin-bottom:4px}
-    .metric-label{color:var(--muted);font-size:12px}
-    .pool-actions{display:flex;gap:8px;margin-top:12px}
-    .pool-action{flex:1;padding:8px;border-radius:8px;text-align:center;font-weight:600;cursor:pointer;font-size:13px}
-    .pool-add{background:var(--primary)}
-    .pool-remove{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
-
-    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
-    .modal{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;max-width:400px;width:100%}
-    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-    .modal-title{font-size:18px;font-weight:700}
-    .close-modal{background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer}
-    .percentage-buttons{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin:16px 0}
-    .percentage-btn{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-weight:600;text-align:center}
-    .percentage-btn.active{background:var(--primary);border-color:var(--primary)}
-    .remove-amounts{margin:16px 0}
-    .remove-amount{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
-    .remove-amount:last-child{border-bottom:none}
-    .slippage-info{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px}
-    .slippage-info .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
-
-    /* Custom token feature - IMPROVED */
-    .add-token-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);cursor:pointer;margin-top:8px;transition:all 0.2s ease}
-    .add-token-btn:hover{background:rgba(255,255,255,0.04);border-color:var(--primary)}
-    .add-token-btn span{font-weight:600;font-size:14px}
-    .add-token-form{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;margin-top:12px;border:1px solid rgba(255,255,255,0.05)}
-    .form-group{margin-bottom:12px}
-    .form-label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
-    .form-input{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05);color:var(--text);font-size:14px}
-    .form-input:focus{outline:none;border-color:var(--primary)}
-    .form-actions{display:flex;gap:8px;margin-top:16px}
-    .btn{flex:1;padding:10px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:14px}
-    .btn-primary{background:var(--primary);color:white}
-    .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text)}
-    .warning-box{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:12px;margin-top:12px}
-    .warning-header{display:flex;align-items:center;gap:8px;color:var(--warning);font-weight:600;margin-bottom:6px}
-    .warning-text{color:var(--warning);font-size:13px;line-height:1.4}
-    .token-verified{color:var(--accent);font-size:11px;margin-left:6px}
-    .token-imported{color:var(--primary);font-size:11px;margin-left:6px}
-    .token-warning{color:var(--warning);font-size:11px;margin-left:6px}
-    .token-copy-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);font-size:11px;cursor:pointer;margin-left:8px;transition:all 0.2s}
-    .token-copy-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
-    .token-copy-btn.copied{background:var(--success);color:white}
-    .custom-token-list{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05)}
-    .custom-token-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
-    .custom-token-item:hover{background:rgba(255,255,255,0.04)}
-    .custom-token-symbol{font-weight:600;min-width:60px}
-    .custom-token-addr{flex:1;font-size:11px;color:var(--muted);word-break:break-all}
-    .custom-token-remove{color:var(--danger);cursor:pointer;font-size:14px;padding:4px;opacity:0.7}
-    .custom-token-remove:hover{opacity:1}
-    .token-option-actions{display:flex;gap:4px;align-items:center;margin-left:8px}
-
-    .tvl-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-    .tvl-stat{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
-    .tvl-value{font-weight:700;font-size:18px;color:var(--accent);margin-bottom:4px}
-    .tvl-label{color:var(--muted);font-size:12px}
-
-    .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
-    .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
-
-    /* Network Selector Styles */
-    .wallet-network-container{position:relative;display:inline-block}
-    .network-dropdown{position:absolute;top:100%;background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;padding:8px;display:none;z-index:2000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:160px}
-    .network-option{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:14px}
-    .network-option:hover{background:rgba(255,255,255,0.05)}
-
-    /* Loading indicator */
-    .loading{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;margin-left:8px}
-
-    @media (max-width:520px){
-      .select img{width:28px;height:28px}.amount{font-size:20px}.menu-dropdown{right:12px;left:auto}.token-list{min-width:260px;left:0;right:0}
-      .pool-metrics{grid-template-columns:1fr}.tvl-stats{grid-template-columns:1fr}
-      .connect-wallet{min-width:120px;padding:6px 10px;font-size:14px}
-      .wallet-network-container{position:static}
-      .network-dropdown{right:20px !important;left:20px !important;width:auto}
-      .token-option-actions{flex-direction:column;gap:2px}
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    
+    /* Header Styles */
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1300;
+      border-bottom: 1px solid rgba(0,0,0,0.25);
+    }
+    
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    
+    .logo span {
+      font-weight: 700;
+      font-size: 18px;
+    }
+    
+    /* Wallet Connect Button */
+    .connect-wallet {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #052017;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 1400;
+      position: relative;
+      min-width: 140px;
+      transition: all 0.2s ease;
+    }
+    
+    .connect-wallet:hover {
+      background: #3ad8b1;
+    }
+    
+    /* Menu Styles */
+    .menu-dot-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 18px;
+      position: relative;
+      z-index: 1400;
+    }
+    
+    .menu-dropdown {
+      position: absolute;
+      right: 20px;
+      top: 64px;
+      min-width: 180px;
+      background: rgba(20, 60, 45, 0.98);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: all .18s ease;
+      z-index: 1600;
+    }
+    
+    .menu-dropdown.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    
+    .menu-item {
+      padding: 10px;
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    
+    .menu-item:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .menu-sep {
+      height: 1px;
+      background: rgba(255,255,255,0.03);
+      margin: 6px 0;
+      border-radius: 2px;
+    }
+    
+    /* Main Content */
+    .main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    
+    .swap-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    
+    @media (max-width: 980px) {
+      .swap-row {
+        flex-direction: column;
+        padding-bottom: 40px;
+      }
+    }
+    
+    /* Card Styles */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+      flex: 1;
+      max-width: 540px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+    }
+    
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    /* Token Input Blocks */
+    .token-block {
+      background: rgba(255,255,255,0.02);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid transparent;
+    }
+    
+    .token-block:focus-within {
+      border-color: var(--primary);
+    }
+    
+    .input-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .label {
+      color: #cfece0;
+      font-size: 13px;
+    }
+    
+    .balance {
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    /* Token Selector */
+    .select-wrap {
+      position: relative;
+      min-width: 140px;
+    }
+    
+    .select {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.12);
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.02);
+      min-width: 120px;
+      z-index: 1500;
+    }
+    
+    .select img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    
+    .symbol {
+      font-weight: 700;
+    }
+    
+    .amount-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-width: 0;
+    }
+    
+    .amount {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 700;
+      text-align: right;
+      padding: 6px 0;
+      outline: none;
+    }
+    
+    .amount::placeholder {
+      color: var(--muted);
+    }
+    
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    
+    .usd {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    
+    .max {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    
+    .max:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Token List */
+    .token-list {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(6px);
+      border-radius: 12px;
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+      min-width: 320px;
+      max-height: 320px;
+      overflow: auto;
+      z-index: 2200;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+      pointer-events: auto;
+    }
+    
+    .token-search input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.03);
+      background: transparent;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    
+    .token-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    
+    .token-option:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .token-addr {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    /* Controls */
+    .controls {
+      text-align: center;
+      margin: 8px 0;
+    }
+    
+    .flip {
+      background: var(--primary-dark);
+      border: none;
+      color: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .price {
+      background: rgba(255,255,255,0.02);
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+    
+    .info {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 6px 0;
+    }
+    
+    /* Buttons */
+    .primary {
+      width: 100%;
+      background: var(--primary);
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    
+    .primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .secondary {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--primary);
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 12px;
+      color: var(--primary);
+    }
+    
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.12);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    /* Panel Styles */
+    .panel {
+      flex: 1;
+      min-width: 260px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    
+    .panel h4 {
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    
+    .panel-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      padding: 8px 0;
+    }
+    
+    /* Footer */
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    
+    /* Liquidity Info */
+    .liquidity-info {
+      background: rgba(255,255,255,0.02);
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 16px;
+    }
+    
+    .liquidity-info h4 {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    
+    .liquidity-info p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    
+    .pool-share {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+    
+    .pool-share .label {
+      color: var(--muted);
+    }
+    
+    .pool-share .value {
+      font-weight: 600;
+    }
+    
+    .add-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 12px 0;
+    }
+    
+    .add-icon div {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    
+    .tab.active {
+      background: var(--primary);
+    }
+    
+    .tab:hover:not(.active) {
+      background: rgba(255,255,255,0.04);
+    }
+    
+    /* Pool Cards */
+    .pool-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .pool-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .pool-tokens {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .pool-token {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .pool-token img {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+    }
+    
+    .pool-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .metric {
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    
+    .pool-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .pool-action {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    
+    .pool-add {
+      background: var(--primary);
+    }
+    
+    .pool-remove {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    
+    .percentage-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    
+    .percentage-btn {
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .percentage-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .remove-amounts {
+      margin: 16px 0;
+    }
+    
+    .remove-amount {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .remove-amount:last-child {
+      border-bottom: none;
+    }
+    
+    .slippage-info {
+      background: rgba(255,152,0,0.1);
+      border: 1px solid rgba(255,152,0,0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    
+    .slippage-info .warning-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--warning);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    
+    /* Custom Token Styles */
+    .add-token-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.1);
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s ease;
+    }
+    
+    .add-token-btn:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: var(--primary);
+    }
+    
+    .add-token-btn span {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .add-token-form {
+      background: rgba(255,255,255,0.02);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-size: 14px;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+    
+    .warning-box {
+      background: rgba(255,152,0,0.1);
+      border: 1px solid rgba(255,152,0,0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    
+    .warning-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--warning);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    
+    .warning-text {
+      color: var(--warning);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    .token-verified {
+      color: var(--accent);
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    
+    .token-imported {
+      color: var(--primary);
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    
+    .token-warning {
+      color: var(--warning);
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    
+    .token-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      margin-left: 8px;
+      transition: all 0.2s;
+    }
+    
+    .token-copy-btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+    
+    .token-copy-btn.copied {
+      background: var(--success);
+      color: white;
+    }
+    
+    .custom-token-list {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .custom-token-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .custom-token-item:hover {
+      background: rgba(255,255,255,0.04);
+    }
+    
+    .custom-token-symbol {
+      flex: 1;
+      font-weight: 600;
+      min-width: 60px;
+    }
+    
+    .custom-token-addr {
+      flex: 2;
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    
+    .custom-token-remove {
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      opacity: 0.7;
+    }
+    
+    .custom-token-remove:hover {
+      opacity: 1;
+    }
+    
+    .token-option-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      margin-left: 8px;
+    }
+    
+    /* TVL Stats */
+    .tvl-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .tvl-stat {
+      background: rgba(255,255,255,0.02);
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .tvl-value {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    
+    .tvl-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    /* Network Selector */
+    .wallet-network-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .network-dropdown {
+      position: absolute;
+      top: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      margin-top: 4px;
+      padding: 8px;
+      display: none;
+      z-index: 2000;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      min-width: 160px;
+    }
+    
+    .network-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .network-option:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    /* Loading Indicator */
+    .loading {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.12);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+    }
+    
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity .18s;
+      max-width: 90%;
+      text-align: center;
+    }
+    
+    /* Responsive */
+    @media (max-width: 520px) {
+      .select img {
+        width: 28px;
+        height: 28px;
+      }
+      
+      .amount {
+        font-size: 20px;
+      }
+      
+      .menu-dropdown {
+        right: 12px;
+        left: auto;
+      }
+      
+      .token-list {
+        min-width: 260px;
+        left: 0;
+        right: 0;
+      }
+      
+      .pool-metrics {
+        grid-template-columns: 1fr;
+      }
+      
+      .tvl-stats {
+        grid-template-columns: 1fr;
+      }
+      
+      .connect-wallet {
+        min-width: 120px;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      
+      .wallet-network-container {
+        position: static;
+      }
+      
+      .network-dropdown {
+        right: 20px !important;
+        left: 20px !important;
+        width: auto;
+      }
+      
+      .token-option-actions {
+        flex-direction: column;
+        gap: 2px;
+      }
     }
   </style>
 </head>
 <body>
 
+  <!-- Header -->
   <header class="header">
     <div class="nav-container">
       <a class="logo" href="swap.html">
@@ -258,7 +1184,7 @@
             </div>
             <div class="network-option" data-network="berachain">
               <img src="https://vanswap.xyz/assets/bera.png" style="width:20px;height:20px;border-radius:4px">
-              <span>Berachain Artio</span>
+              <span>Berachain</span>
             </div>
             <div style="height:1px;background:rgba(255,255,255,0.1);margin:6px 0"></div>
             <div id="disconnectBtn" class="network-option" style="color:var(--danger)">
@@ -270,6 +1196,7 @@
     </div>
   </header>
 
+  <!-- Main Content -->
   <main class="main">
     <div class="swap-row">
       <section class="card" aria-label="Liquidity">
@@ -294,6 +1221,7 @@
           <div class="tab" id="importTab">Import Pool</div>
         </div>
 
+        <!-- My Pools View -->
         <div id="myPoolsView">
           <div id="poolsList"></div>
           <div class="empty-state" id="noPoolsMessage" style="display:none">
@@ -304,6 +1232,7 @@
           </div>
         </div>
 
+        <!-- Add Liquidity View -->
         <div id="addLiquidityView" style="display:none">
           <div class="token-block" id="fromBlock">
             <div class="input-head">
@@ -373,6 +1302,7 @@
           <button id="actionBtn" class="primary">Connect Wallet</button>
         </div>
 
+        <!-- Import Pool View -->
         <div id="importPoolView" style="display:none">
           <div class="add-token-form">
             <div class="form-group">
@@ -406,6 +1336,7 @@
         </div>
       </section>
 
+      <!-- Info Panel -->
       <aside class="panel" aria-label="Info">
         <h4 id="panelTitle">Pool Information</h4>
         <div class="panel-row"><div>Network</div><div id="networkDisplay">Vana Network</div></div>
@@ -428,6 +1359,7 @@
     </div>
   </main>
 
+  <!-- Remove Liquidity Modal -->
   <div id="removeLiquidityModal" class="modal-overlay" style="display:none">
     <div class="modal">
       <div class="modal-header">
@@ -469,12 +1401,13 @@
     </div>
   </div>
 
-  <footer>© 2025 VanSwap DEX - Built on Vana Chain and Beyond</footer>
+  <footer>© 2025 VanSwap DEX - Built on Vana Chain, 0G Network & Bera Chain</footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  
   <script>
     // ==============================
-    // KONFIGURASI JARINGAN
+    // NETWORK CONFIGURATION
     // ==============================
     const NETWORK_CONFIG = {
       vana: {
@@ -495,7 +1428,7 @@
         },
         nativeCurrency: {
           name: "VANA",
-          symbol: "VANA", 
+          symbol: "VANA",
           decimals: 18
         }
       },
@@ -521,19 +1454,18 @@
         }
       },
       berachain: {
-        chainId: 80085,
-        chainIdHex: '0x138d5',
-        name: "Berachain Artio",
-        rpcUrl: "https://artio.rpc.berachain.com/",
-        explorer: "https://artio.beratrail.io/",
+        chainId: 80095,
+        chainIdHex: '0x138de',
+        name: "Berachain",
+        rpcUrl: "https://rpc.berachain.com/",
+        explorer: "https://berascan.com/",
         logo: "https://vanswap.xyz/assets/bera.png",
         contracts: {
-          // Placeholder 0x00 untuk Berachain
-          router: '0x0000000000000000000000000000000000000000',
-          factory: '0x0000000000000000000000000000000000000000',
-          wbera: '0x0000000000000000000000000000000000000000',
-          usdc: '0x0000000000000000000000000000000000000000',
-          usdt: '0x0000000000000000000000000000000000000000'
+          router: '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D',
+          factory: '0x82741ff5937933244eb562A4b396f8079F1de914',
+          wbera: '0x6969696969696969696969696969696969696969',
+          usdc: '0x549943e04f40284185054145c6E4e9568C1D3241',
+          artio: '0x5994334DC71C8BD6959C617637132Ab2aE4f7199'
         },
         nativeCurrency: {
           name: "BERA",
@@ -544,160 +1476,67 @@
     };
 
     // ==============================
-    // NETWORK MANAGER
+    // CONTRACT ABIs
     // ==============================
-    class NetworkManager {
-      constructor() {
-        this.currentNetwork = this.getStoredNetwork() || 'vana';
-        this.listeners = [];
-        this.isSwitchingNetwork = false;
-      }
-      
-      async setNetwork(network) {
-        if (!NETWORK_CONFIG[network] || this.isSwitchingNetwork) return;
-        
-        this.isSwitchingNetwork = true;
-        console.log(`Switching network to: ${network}`);
-        
-        const walletText = document.getElementById('walletText');
-        const originalText = walletText ? walletText.textContent : '';
-        if (walletText) {
-          walletText.innerHTML = `Switching... <span class="loading"></span>`;
-        }
-        
-        try {
-          this.currentNetwork = network;
-          localStorage.setItem('vanswap-network', network);
-          
-          this.updateNetworkUI();
-          this.notifyAllListeners();
-          
-          this.reloadDataForNetwork();
-          
-          if (account) {
-            console.log('Reconnecting wallet to new network...');
-            await reconnectWalletForNewNetwork();
-          }
-          
-          showToast(`Switched to ${NETWORK_CONFIG[network].name}`);
-          
-        } catch (error) {
-          console.error('Network switch error:', error);
-          showToast(`Failed to switch network: ${error.message}`);
-        } finally {
-          this.isSwitchingNetwork = false;
-          updateWalletDisplay();
-        }
-      }
-      
-      getCurrentNetwork() {
-        return this.currentNetwork;
-      }
-      
-      getCurrentConfig() {
-        return NETWORK_CONFIG[this.currentNetwork];
-      }
-      
-      getStoredNetwork() {
-        return localStorage.getItem('vanswap-network');
-      }
-      
-      addListener(callback) {
-        this.listeners.push(callback);
-      }
-      
-      notifyAllListeners() {
-        this.listeners.forEach(callback => callback(this.currentNetwork));
-      }
-      
-      updateNetworkUI() {
-        const config = this.getCurrentConfig();
-        const networkDisplay = document.getElementById('networkDisplay');
-        if (networkDisplay) {
-          networkDisplay.textContent = config.name;
-        }
-      }
-      
-      reloadDataForNetwork() {
-        console.log('Reloading data for network:', this.currentNetwork);
-        
-        const fromAmount = document.getElementById('fromAmount');
-        const toAmount = document.getElementById('toAmount');
-        if (fromAmount) fromAmount.value = '';
-        if (toAmount) toAmount.value = '';
-        
-        // Reset cache
-        cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+    const ROUTER_ABI = [
+      'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
+      'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
+      'function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)',
+      'function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)',
+      'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)'
+    ];
 
-        const status = document.getElementById('status');
-        const txLink = document.getElementById('txLink');
-        if (status) status.textContent = 'Switched to ' + this.getCurrentConfig().name;
-        if (txLink) txLink.innerHTML = '';
-        
-        initNetworkConfig();
-        updateTokenDisplay();
-        
-        const fromBalance = document.getElementById('fromBalance');
-        const toBalance = document.getElementById('toBalance');
-        if (fromBalance) fromBalance.textContent = '—';
-        if (toBalance) toBalance.textContent = '—';
-      }
-    }
+    const FACTORY_ABI = [
+      'function getPair(address tokenA, address tokenB) external view returns (address pair)',
+      'function createPair(address tokenA, address tokenB) external returns (address pair)',
+      'function allPairsLength() external view returns (uint)',
+      'function allPairs(uint) external view returns (address)'
+    ];
 
-    const networkManager = new NetworkManager();
+    const PAIR_ABI = [
+      'function getReserves() view returns (uint112,uint112,uint32)',
+      'function token0() view returns (address)',
+      'function token1() view returns (address)',
+      'function totalSupply() view returns (uint256)',
+      'function balanceOf(address) view returns (uint256)',
+      'function symbol() view returns (string)',
+      'function approve(address spender, uint256 amount) external returns (bool)',
+      'function allowance(address owner, address spender) external view returns (uint256)'
+    ];
+
+    const ERC20_ABI = [
+      'function balanceOf(address account) external view returns (uint256)',
+      'function transfer(address to, uint256 amount) external returns (bool)',
+      'function approve(address spender, uint256 amount) external returns (bool)',
+      'function allowance(address owner, address spender) external view returns (uint256)',
+      'function decimals() external view returns (uint8)',
+      'function symbol() external view returns (string memory)',
+      'function name() external view returns (string memory)'
+    ];
 
     // ==============================
-    // CUSTOM TOKEN MANAGER
+    // GLOBAL STATE
     // ==============================
-    class CustomTokenManager {
-      constructor() {
-        this.customTokens = this.loadCustomTokens();
-      }
-      
-      loadCustomTokens() {
-        const tokens = localStorage.getItem('vanswap-custom-tokens');
-        return tokens ? JSON.parse(tokens) : [];
-      }
-      
-      saveCustomTokens() {
-        localStorage.setItem('vanswap-custom-tokens', JSON.stringify(this.customTokens));
-      }
-      
-      addToken(token) {
-        const exists = this.customTokens.find(t => 
-          t.address.toLowerCase() === token.address.toLowerCase()
-        );
-        
-        if (!exists) {
-          this.customTokens.push(token);
-          this.saveCustomTokens();
-          return true;
-        }
-        return false;
-      }
-      
-      removeToken(address) {
-        this.customTokens = this.customTokens.filter(t => 
-          t.address.toLowerCase() !== address.toLowerCase()
-        );
-        this.saveCustomTokens();
-      }
-      
-      getTokensForNetwork(network) {
-        return this.customTokens.filter(token => token.network === network);
-      }
-      
-      getTokenByAddress(address) {
-        return this.customTokens.find(t => 
-          t.address.toLowerCase() === address.toLowerCase()
-        );
-      }
-    }
-
-    const customTokenManager = new CustomTokenManager();
+    let provider = null;
+    let signer = null;
+    let account = null;
+    let router = null;
+    let factory = null;
+    let currentPair = null;
+    let userPools = [];
+    let currentRemovePool = null;
+    let currentRemovePercentage = 0;
+    let tokens = [];
+    let selectedFrom = null;
+    let selectedTo = null;
+    let cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+    
+    let ROUTER, FACTORY, WVANA, VANS, USDC, RPC, CHAIN_ID_HEX;
+    
+    let currentNetwork = localStorage.getItem('vanswap-network') || 'vana';
 
     // ==============================
-    // UTILS
+    // UTILITY FUNCTIONS
     // ==============================
     const $ = id => document.getElementById(id);
 
@@ -705,22 +1544,6 @@
       const el = document.createElement('div');
       el.className = 'toast';
       el.textContent = msg;
-      el.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--primary);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        z-index: 9999;
-        font-weight: 600;
-        opacity: 0;
-        transition: opacity .18s;
-        max-width: 90%;
-        text-align: center;
-      `;
       document.body.appendChild(el);
       setTimeout(() => el.style.opacity = '1', 10);
       setTimeout(() => {
@@ -772,86 +1595,30 @@
       return button;
     }
 
-    // ==============================
-    // GLOBAL VARIABLES & ABI
-    // ==============================
-    let ROUTER, FACTORY, WVANA, VANS, USDC, RPC, CHAIN_ID_HEX;
-    let BERY = '0x6043921876841e8f421a4f9E748825DC6C430255';
-
-    const ROUTER_ABI = [
-      'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
-      'function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)',
-      'function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)',
-      'function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)',
-      'function removeLiquidityETH(address token, uint liquidity, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external returns (uint amountToken, uint amountETH)'
-    ];
-
-    const FACTORY_ABI = [
-      'function getPair(address tokenA, address tokenB) external view returns (address pair)',
-      'function createPair(address tokenA, address tokenB) external returns (address pair)',
-      'function allPairsLength() external view returns (uint)',
-      'function allPairs(uint) external view returns (address)'
-    ];
-
-    const PAIR_ABI = [
-      'function getReserves() view returns (uint112,uint112,uint32)',
-      'function token0() view returns (address)',
-      'function token1() view returns (address)',
-      'function totalSupply() view returns (uint256)',
-      'function balanceOf(address) view returns (uint256)',
-      'function symbol() view returns (string)',
-      'function approve(address spender, uint256 amount) external returns (bool)',
-      'function allowance(address owner, address spender) external view returns (uint256)'
-    ];
-
-    const ERC20_ABI = [
-      'function balanceOf(address account) external view returns (uint256)',
-      'function transfer(address to, uint256 amount) external returns (bool)',
-      'function approve(address spender, uint256 amount) external returns (bool)',
-      'function allowance(address owner, address spender) external view returns (uint256)',
-      'function decimals() external view returns (uint8)',
-      'function symbol() external view returns (string memory)',
-      'function name() external view returns (string memory)'
-    ];
-
-    let provider = null;
-    let signer = null;
-    let account = null;
-    let router = null;
-    let factory = null;
-    let currentPair = null;
-    let userPools = [];
-    let currentRemovePool = null;
-    let currentRemovePercentage = 0;
-    let tokens = [];
-    let selectedFrom = null;
-    let selectedTo = null;
-    let isCalculatingA = false;
-    let isCalculatingB = false;
-    
-    // CACHED RESERVES FOR OPTIMIZED CALCULATION
-    let cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
-
-    function updateWalletDisplay() {
-      const walletText = document.getElementById('walletText');
-      const walletArrow = document.getElementById('walletArrow');
-      
-      if (!walletText) return;
-      
-      if (account) {
-        walletText.textContent = account.substring(0, 6) + '...' + account.substring(38);
-        if (walletArrow) walletArrow.textContent = '▼';
-      } else {
-        walletText.textContent = 'Connect Wallet';
-        if (walletArrow) walletArrow.textContent = '▼';
-      }
+    function formatPrice(price) {
+      if (price === 0) return '0';
+      if (price < 0.000001) return price.toExponential(6);
+      if (price < 0.001) return price.toFixed(8);
+      if (price < 1) return price.toFixed(6);
+      if (price < 1000) return price.toFixed(4);
+      if (price < 1000000) return price.toFixed(2);
+      return price.toExponential(4);
     }
 
+    function formatUSD(amount) {
+      if (amount === 0) return '$0';
+      if (amount < 0.01) return '< $0.01';
+      if (amount < 1000) return `$${amount.toFixed(2)}`;
+      if (amount < 1000000) return `$${(amount / 1000).toFixed(2)}K`;
+      if (amount < 1000000000) return `$${(amount / 1000000).toFixed(2)}M`;
+      return `$${(amount / 1000000000).toFixed(2)}B`;
+    }
+
+    // ==============================
+    // NETWORK MANAGEMENT
+    // ==============================
     function initNetworkConfig() {
-      const currentNetwork = networkManager.getCurrentNetwork();
       const config = NETWORK_CONFIG[currentNetwork];
-      
-      console.log('Initializing network config for:', currentNetwork);
       
       ROUTER = config.contracts.router;
       FACTORY = config.contracts.factory;
@@ -866,15 +1633,13 @@
         WVANA = config.contracts.w0g;
         VANS = config.contracts.wvans;
         USDC = config.contracts.usdc;
-      } else { // Berachain
+      } else if (currentNetwork === 'berachain') {
         WVANA = config.contracts.wbera;
-        VANS = '0x0000000000000000000000000000000000000000'; // Placeholder
+        VANS = '0x0000000000000000000000000000000000000000';
         USDC = config.contracts.usdc;
       }
       
-      const baseTokens = getBaseTokensForNetwork(currentNetwork);
-      const customTokens = customTokenManager.getTokensForNetwork(currentNetwork);
-      tokens = [...baseTokens, ...customTokens];
+      tokens = getBaseTokensForNetwork(currentNetwork);
       selectedFrom = tokens[0];
       selectedTo = tokens[2] || tokens[1];
     }
@@ -899,234 +1664,58 @@
           { symbol: 'PANDA', address: config.contracts.panda, logo: 'https://vanswap.xyz/assets/panda.png', decimals: 18, verified: true, type: 'token' },
           { symbol: 'wVANS', address: config.contracts.wvans, logo: 'https://vanswap.xyz/assets/vans.png', decimals: 18, verified: true, type: 'utility' }
         ];
-      } else { // Berachain
+      } else if (network === 'berachain') {
         return [
           { symbol: 'BERA', address: 'BERA_NATIVE', logo: 'https://vanswap.xyz/assets/bera.png', decimals: 18, verified: true, type: 'native', displayAddress: 'Native Token' },
           { symbol: 'WBERA', address: config.contracts.wbera, logo: 'https://vanswap.xyz/assets/wbera.png', decimals: 18, verified: true, type: 'wrapped' },
           { symbol: 'USDC', address: config.contracts.usdc, logo: 'https://vanswap.xyz/assets/usdc.png', decimals: 6, verified: true, type: 'stablecoin' },
-          { symbol: 'USDT', address: config.contracts.usdt, logo: 'https://vanswap.xyz/assets/token.png', decimals: 6, verified: true, type: 'stablecoin' }
+          { symbol: 'ARTIO', address: config.contracts.artio, logo: 'https://vanswap.xyz/assets/artio.png', decimals: 18, verified: true, type: 'token' }
         ];
       }
     }
 
     function updateTokenDisplay() {
       if (selectedFrom) {
-        const fromLogo = $('fromLogo');
-        const fromSymbol = $('fromSymbol');
-        if (fromLogo) fromLogo.src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
-        if (fromSymbol) fromSymbol.textContent = selectedFrom.symbol;
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
+        $('fromSymbol').textContent = selectedFrom.symbol;
       }
       if (selectedTo) {
-        const toLogo = $('toLogo');
-        const toSymbol = $('toSymbol');
-        if (toLogo) toLogo.src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
-        if (toSymbol) toSymbol.textContent = selectedTo.symbol;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
+        $('toSymbol').textContent = selectedTo.symbol;
       }
-    }
-
-    function initNetworkSelector() {
-      const connectBtn = $('connectBtn');
-      const dropdown = $('walletNetworkDropdown');
-      const disconnectBtn = $('disconnectBtn');
-
-      if (!connectBtn || !dropdown) return;
-
-      connectBtn.addEventListener('click', (e) => {
-        if (e) e.preventDefault();
-        
-        if (!account) {
-          connectWallet();
-        } else {
-          const isVisible = dropdown.style.display === 'block';
-          dropdown.style.display = isVisible ? 'none' : 'block';
-        }
-      });
-
-      dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
-        option.addEventListener('click', async (e) => {
-          if (e) e.preventDefault();
-          
-          const network = option.getAttribute('data-network');
-          console.log('Selected network:', network);
-          
-          dropdown.style.display = 'none';
-          await networkManager.setNetwork(network);
-        });
-      });
-
-      if (disconnectBtn) {
-        disconnectBtn.addEventListener('click', (e) => {
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          disconnectWallet();
-          dropdown.style.display = 'none';
-        });
-      }
-
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.wallet-network-container')) {
-          dropdown.style.display = 'none';
-        }
-      });
-
-      networkManager.addListener((network) => {
-        console.log('Network changed to:', network);
-        updateNetworkUI();
-        updateWalletDisplay();
-      });
-
-      updateWalletDisplay();
-      updateNetworkUI();
     }
 
     function updateNetworkUI() {
-      const config = networkManager.getCurrentConfig();
-      const networkDisplay = $('networkDisplay');
-      if (networkDisplay) {
-        networkDisplay.textContent = config.name;
-      }
+      const config = NETWORK_CONFIG[currentNetwork];
+      $('networkDisplay').textContent = config.name;
     }
 
-    async function reconnectWalletForNewNetwork() {
-      if (!account || !window.ethereum) return;
+    // ==============================
+    // WALLET MANAGEMENT
+    // ==============================
+    function updateWalletDisplay() {
+      const walletText = $('walletText');
+      const walletArrow = $('walletArrow');
       
-      try {
-        console.log('Reconnecting wallet for new network...');
-        setStatus('Reconnecting wallet...');
-        
-        await ensureCorrectChain();
-        
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-        
-        // Safety for Berachain
-        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
-           router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-        }
-        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
-           factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-        }
-        
-        updateWalletDisplay();
-        
-        await updateBalances();
-        await updateDropdownBalances();
-        await updateLiquidityInfo();
-        loadUserPools();
-        updateTVLStats();
-        
-        setStatus('Connected to new network');
-        showToast('Wallet reconnected to new network');
-        
-      } catch (error) {
-        console.error('Reconnect error:', error);
-        
-        if (error.code === 4001) {
-          showToast('Please approve network switch in your wallet');
-          setStatus('Network switch rejected');
-        } else {
-          showToast('Failed to reconnect: ' + error.message);
-          setStatus('Reconnection failed');
-        }
-        
-        const fromBalance = document.getElementById('fromBalance');
-        const toBalance = document.getElementById('toBalance');
-        if (fromBalance) fromBalance.textContent = '—';
-        if (toBalance) toBalance.textContent = '—';
-        
-        updateWalletDisplay();
+      if (!walletText) return;
+      
+      if (account) {
+        walletText.textContent = account.substring(0, 6) + '...' + account.substring(38);
+        if (walletArrow) walletArrow.textContent = '▼';
+      } else {
+        walletText.textContent = 'Connect Wallet';
+        if (walletArrow) walletArrow.textContent = '▼';
       }
-    }
-
-    async function connectWallet() {
-      console.log('Connecting wallet...');
-      
-      if (!window.ethereum) {
-        alert('Please install MetaMask or another Ethereum wallet');
-        return;
-      }
-
-      try {
-        await ensureCorrectChain();
-        
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
-        
-        account = accounts[0];
-        console.log('Connected account:', account);
-        
-        updateWalletDisplay();
-        
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-        
-        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
-           router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
-        }
-        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
-           factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
-        }
-        
-        setStatus('Wallet connected');
-        showToast('Wallet connected successfully!');
-        
-        await updateBalances();
-        await updateDropdownBalances();
-        await updateLiquidityInfo();
-        loadUserPools();
-        updateTVLStats();
-        
-      } catch (error) {
-        console.error('Wallet connection error:', error);
-        
-        if (error.code === 4001) {
-          showToast('Connection rejected by user');
-        } else {
-          showToast('Connection failed: ' + (error.message || error));
-        }
-        setStatus('Connection failed');
-      }
-    }
-
-    function disconnectWallet() {
-      console.log('Disconnecting wallet...');
-      
-      account = null;
-      signer = null;
-      
-      updateWalletDisplay();
-      
-      const fromBalance = $('fromBalance');
-      const toBalance = $('toBalance');
-      const fromAmount = $('fromAmount');
-      const toAmount = $('toAmount');
-      
-      if (fromBalance) fromBalance.textContent = '—';
-      if (toBalance) toBalance.textContent = '—';
-      if (fromAmount) fromAmount.value = '';
-      if (toAmount) toAmount.value = '';
-      
-      setStatus('Disconnected');
-      showToast('Wallet disconnected');
     }
 
     async function ensureCorrectChain() {
       if (!window.ethereum) return false;
       
       try {
-        const currentNetwork = networkManager.getCurrentNetwork();
         const config = NETWORK_CONFIG[currentNetwork];
-        
-        const currentChainId = await window.ethereum.request({
-          method: 'eth_chainId'
-        });
+        const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
         
         if (currentChainId !== config.chainIdHex) {
-          console.log('Switching chain to:', config.chainIdHex);
-          
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
@@ -1157,6 +1746,263 @@
       }
     }
 
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert('Please install MetaMask or another Ethereum wallet');
+        return;
+      }
+
+      try {
+        await ensureCorrectChain();
+        
+        const accounts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+        
+        account = accounts[0];
+        console.log('Connected account:', account);
+        
+        updateWalletDisplay();
+        
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        
+        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        }
+        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
+          factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        }
+        
+        setStatus('Wallet connected');
+        showToast('Wallet connected successfully!');
+        
+        await updateBalances();
+        await updateLiquidityInfo();
+        loadUserPools();
+        updateTVLStats();
+        updateActionBtn();
+        
+      } catch (error) {
+        console.error('Wallet connection error:', error);
+        
+        if (error.code === 4001) {
+          showToast('Connection rejected by user');
+        } else {
+          showToast('Connection failed: ' + (error.message || error));
+        }
+        setStatus('Connection failed');
+      }
+    }
+
+    function disconnectWallet() {
+      account = null;
+      signer = null;
+      
+      updateWalletDisplay();
+      
+      $('fromBalance').textContent = '—';
+      $('toBalance').textContent = '—';
+      $('fromAmount').value = '';
+      $('toAmount').value = '';
+      
+      setStatus('Disconnected');
+      showToast('Wallet disconnected');
+      
+      updateActionBtn();
+    }
+
+    // ==============================
+    // BALANCE UPDATES
+    // ==============================
+    async function updateBalances() {
+      if (!provider || !account) return;
+      
+      try {
+        // Update from token balance
+        if (selectedFrom.address.endsWith('NATIVE')) {
+          const bal = await provider.getBalance(account);
+          $('fromBalance').textContent = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
+          $('btnMax').disabled = false;
+        } else {
+          const contract = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
+          const bal = await contract.balanceOf(account);
+          $('fromBalance').textContent = parseFloat(ethers.utils.formatUnits(bal, selectedFrom.decimals)).toFixed(4);
+          $('btnMax').disabled = false;
+        }
+        
+        // Update to token balance
+        if (selectedTo.address.endsWith('NATIVE')) {
+          const bal = await provider.getBalance(account);
+          $('toBalance').textContent = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
+        } else {
+          const contract = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
+          const bal = await contract.balanceOf(account);
+          $('toBalance').textContent = parseFloat(ethers.utils.formatUnits(bal, selectedTo.decimals)).toFixed(4);
+        }
+      } catch (e) {
+        console.error('Balance update error:', e);
+      }
+    }
+
+    // ==============================
+    // LIQUIDITY INFO UPDATES
+    // ==============================
+    async function updateLiquidityInfo() {
+      if (!provider) return;
+      
+      $('tokenASymbol').textContent = selectedFrom.symbol;
+      $('tokenASymbol2').textContent = selectedFrom.symbol;
+      $('tokenASymbol3').textContent = selectedFrom.symbol;
+      $('tokenBSymbol').textContent = selectedTo.symbol;
+      $('tokenBSymbol2').textContent = selectedTo.symbol;
+      $('tokenBSymbol3').textContent = selectedTo.symbol;
+
+      if (FACTORY === '0x0000000000000000000000000000000000000000') {
+        cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+        resetPoolInfo();
+        $('liquidityDescription').textContent = "Contracts not deployed on this network yet.";
+        return;
+      }
+
+      try {
+        const tokenA = selectedFrom.address.endsWith('NATIVE') ? WVANA : selectedFrom.address;
+        const tokenB = selectedTo.address.endsWith('NATIVE') ? WVANA : selectedTo.address;
+
+        currentPair = await factory.getPair(tokenA, tokenB);
+
+        if (currentPair && currentPair !== '0x0000000000000000000000000000000000000000') {
+          const pairContract = new ethers.Contract(currentPair, PAIR_ABI, provider);
+          const [reserve0, reserve1] = await pairContract.getReserves();
+          const token0 = await pairContract.token0();
+          const totalSupply = await pairContract.totalSupply();
+
+          let reserveA, reserveB;
+          if (token0.toLowerCase() === tokenA.toLowerCase()) {
+            reserveA = reserve0;
+            reserveB = reserve1;
+          } else {
+            reserveA = reserve1;
+            reserveB = reserve0;
+          }
+          
+          cachedReserves = { reserveA, reserveB };
+
+          const rA = parseFloat(ethers.utils.formatUnits(reserveA, selectedFrom.decimals));
+          const rB = parseFloat(ethers.utils.formatUnits(reserveB, selectedTo.decimals));
+
+          $('pooledTokenA').textContent = rA.toFixed(4);
+          $('pooledTokenB').textContent = rB.toFixed(4);
+
+          const priceAB = rA > 0 ? rB / rA : 0;
+          const priceBA = rB > 0 ? rA / rB : 0;
+
+          $('priceA').textContent = formatPrice(priceAB);
+          $('priceB').textContent = formatPrice(priceBA);
+
+          const totalLiquidityUSD = (rA * 0.5) + (rB * 0.5);
+          $('totalLiquidity').textContent = formatUSD(totalLiquidityUSD);
+
+          const dailyVolumeUSD = totalLiquidityUSD * 0.1;
+          $('dailyVolume').textContent = formatUSD(dailyVolumeUSD);
+
+          if (account) {
+            const userBalance = await pairContract.balanceOf(account);
+            const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
+            $('poolSharePercent').textContent = userShare.toFixed(6) + '%';
+            $('poolShareValue').textContent = userShare.toFixed(6) + '%';
+            $('poolTokens').textContent = parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6);
+          } else {
+            resetPoolShare();
+          }
+
+          $('liquidityDescription').textContent = `By adding liquidity, you'll earn 0.25% fees on all trades for this token pair. Fees are added to the pool and can be claimed when you remove your liquidity.`;
+
+        } else {
+          cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+          resetPoolInfo();
+          $('liquidityDescription').textContent = `You are the first liquidity provider for this pair. The ratio of tokens you add will set the price of this pool.`;
+        }
+      } catch (error) {
+        console.error('Error updating liquidity info:', error);
+        resetPoolInfo();
+      }
+    }
+
+    function resetPoolInfo() {
+      $('pooledTokenA').textContent = '0';
+      $('pooledTokenB').textContent = '0';
+      $('priceA').textContent = '0';
+      $('priceB').textContent = '0';
+      $('totalLiquidity').textContent = '$0';
+      $('dailyVolume').textContent = '$0';
+      resetPoolShare();
+    }
+
+    function resetPoolShare() {
+      $('poolSharePercent').textContent = '0%';
+      $('poolShareValue').textContent = '0%';
+      $('poolTokens').textContent = '0';
+    }
+
+    // ==============================
+    // PRICE CALCULATION
+    // ==============================
+    function calculateOptimalAmountB() {
+      const val = $('fromAmount').value;
+      if (!val || cachedReserves.reserveA.isZero()) return;
+      
+      try {
+        const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
+        const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
+        $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+        updateActionBtn();
+      } catch(e) {
+        console.error('Calculate amount B error:', e);
+      }
+    }
+
+    function calculateOptimalAmountA() {
+      const val = $('toAmount').value;
+      if (!val || cachedReserves.reserveB.isZero()) return;
+      
+      try {
+        const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
+        const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
+        $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
+        updateActionBtn();
+      } catch(e) {
+        console.error('Calculate amount A error:', e);
+      }
+    }
+
+    // ==============================
+    // TVL STATS
+    // ==============================
+    async function updateTVLStats() {
+      if (!provider || FACTORY === '0x0000000000000000000000000000000000000000') {
+        $('totalTVL').textContent = '$---';
+        $('totalPairs').textContent = '--';
+        return;
+      }
+      
+      try {
+        const totalPairs = await factory.allPairsLength();
+        $('totalPairs').textContent = totalPairs.toString();
+        
+        // Calculate TVL (simplified)
+        let totalTVL = 0;
+        $('totalTVL').textContent = formatUSD(totalTVL);
+      } catch (error) {
+        console.error('Error updating TVL stats:', error);
+        $('totalTVL').textContent = '$---';
+        $('totalPairs').textContent = '--';
+      }
+    }
+
+    // ==============================
+    // VIEW MANAGEMENT
+    // ==============================
     function switchToMyPoolsView() {
       $('myPoolsTab').classList.add('active');
       $('addTab').classList.remove('active');
@@ -1183,6 +2029,7 @@
       $('toAmount').value = '';
       
       updateLiquidityInfo();
+      updateActionBtn();
     }
 
     function switchToImportView() {
@@ -1196,30 +2043,36 @@
       $('panelTitle').textContent = 'Pool Information';
     }
 
+    // ==============================
+    // TOKEN SELECTION
+    // ==============================
     function buildTokenListHtml(type) {
       const listEl = type === 'from' ? $('fromList') : $('toList');
       if (!listEl) return;
       
       listEl.innerHTML = '';
       
+      // Search input
       const searchDiv = document.createElement('div');
       searchDiv.className = 'token-search';
       searchDiv.innerHTML = `<input placeholder="Search token by name, symbol or address..." oninput="filterTokens('${type}', this.value)" />`;
       listEl.appendChild(searchDiv);
       
+      // Base tokens header
       const baseHeader = document.createElement('div');
       baseHeader.style.cssText = 'color: var(--muted); font-size: 13px; margin-bottom: 8px; margin-top: 8px;';
       baseHeader.textContent = 'Default Tokens';
       listEl.appendChild(baseHeader);
       
-      const baseTokens = getBaseTokensForNetwork(networkManager.getCurrentNetwork());
+      // Base tokens
+      const baseTokens = getBaseTokensForNetwork(currentNetwork);
       for (const token of baseTokens) {
         const option = document.createElement('div');
         option.className = 'token-option';
         option.setAttribute('data-addr', token.address);
         
         let displayAddr = token.displayAddress || 
-          (token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' ? 
+          (token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' || token.address === 'BERA_NATIVE' ? 
            'Native Token' : 
            (token.address.substring(0,6) + '...' + token.address.substring(38)));
         
@@ -1231,14 +2084,15 @@
             </div>
             <div class="token-addr">${displayAddr}</div>
           </div>
-          <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
         `;
         
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'token-option-actions';
         
-        const copyAddress = token.address === 'VANA_NATIVE' || token.address === '0G_NATIVE' ? 
-          (networkManager.getCurrentNetwork() === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g) : 
+        const copyAddress = token.address.endsWith('_NATIVE') ? 
+          (currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana : 
+           currentNetwork === 'zerog' ? NETWORK_CONFIG.zerog.contracts.w0g : 
+           NETWORK_CONFIG.berachain.contracts.wbera) : 
           token.address;
         
         const copyBtn = createCopyButton(copyAddress, token.symbol);
@@ -1254,59 +2108,7 @@
         listEl.appendChild(option);
       }
       
-      const customTokens = customTokenManager.getTokensForNetwork(networkManager.getCurrentNetwork());
-      if (customTokens.length > 0) {
-        const customHeader = document.createElement('div');
-        customHeader.style.cssText = 'color: var(--muted); font-size: 13px; margin-bottom: 8px; margin-top: 16px;';
-        customHeader.textContent = 'Custom Tokens';
-        listEl.appendChild(customHeader);
-        
-        for (const token of customTokens) {
-          const option = document.createElement('div');
-          option.className = 'token-option';
-          option.setAttribute('data-addr', token.address);
-          
-          option.innerHTML = `
-            <img src="${token.logo || 'https://vanswap.xyz/assets/token.png'}" style="width:28px;height:28px;border-radius:6px;margin-right:8px"/>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;display:flex;align-items:center">
-                ${token.symbol} <span class="token-imported">Imported</span>
-              </div>
-              <div class="token-addr">${token.address.substring(0,6) + '...' + token.address.substring(38)}</div>
-            </div>
-            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
-          `;
-          
-          const actionsDiv = document.createElement('div');
-          actionsDiv.className = 'token-option-actions';
-          const copyBtn = createCopyButton(token.address, token.symbol);
-          actionsDiv.appendChild(copyBtn);
-          option.appendChild(actionsDiv);
-          
-          option.addEventListener('click', (e) => {
-            if (!e.target.closest('.token-copy-btn')) {
-              selectToken(type, token);
-            }
-          });
-          
-          listEl.appendChild(option);
-        }
-      }
-      
-      const addTokenBtn = document.createElement('div');
-      addTokenBtn.className = 'add-token-btn';
-      addTokenBtn.innerHTML = '<span>+ Add Custom Token</span>';
-      addTokenBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showAddTokenForm(type, listEl);
-      });
-      listEl.appendChild(addTokenBtn);
-      
       listEl.style.display = 'block';
-      
-      if (account) {
-        updateDropdownBalances();
-      }
     }
 
     function filterTokens(type, term) {
@@ -1340,237 +2142,14 @@
       $('fromAmount').value = '';
       $('toAmount').value = '';
       
-      await updateBalances(); 
+      await updateBalances();
       await updateLiquidityInfo();
       updateActionBtn();
     }
 
-    async function updateBalances() {
-      if(!provider || !account) return;
-      try {
-        if (selectedFrom.address === '0x0000000000000000000000000000000000000000') return;
-
-        if(selectedFrom.address.endsWith('NATIVE')) {
-          const bal = await provider.getBalance(account);
-          $('fromBalance').textContent = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
-          $('btnMax').disabled = false;
-        } else {
-          const contract = new ethers.Contract(selectedFrom.address, ERC20_ABI, provider);
-          const bal = await c.balanceOf(account);
-          $('fromBalance').textContent = parseFloat(ethers.utils.formatUnits(bal, selectedFrom.decimals)).toFixed(4);
-          $('btnMax').disabled = false;
-        }
-        
-        if(selectedTo.address.endsWith('NATIVE')) {
-          const bal = await provider.getBalance(account);
-          $('toBalance').textContent = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
-        } else {
-          const contract = new ethers.Contract(selectedTo.address, ERC20_ABI, provider);
-          const bal = await c.balanceOf(account);
-          $('toBalance').textContent = parseFloat(ethers.utils.formatUnits(bal, selectedTo.decimals)).toFixed(4);
-        }
-      } catch(e) { console.error('Bal update err', e); }
-    }
-
     // ==============================
-    // UPDATE LIQUIDITY INFO & CACHING (ANTI-LAG)
+    // USER POOLS MANAGEMENT
     // ==============================
-    async function updateLiquidityInfo() {
-      if (!provider) return;
-      
-      // Safety for Berachain (0x0 contract)
-      if (FACTORY === '0x0000000000000000000000000000000000000000') {
-         cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
-         $('pooledTokenA').textContent = '0';
-         $('pooledTokenB').textContent = '0';
-         $('priceA').textContent = '0';
-         $('priceB').textContent = '0';
-         $('poolSharePercent').textContent = '0%';
-         $('poolShareValue').textContent = '0%';
-         $('poolTokens').textContent = '0';
-         $('totalLiquidity').textContent = '$0';
-         $('dailyVolume').textContent = '$0';
-         $('liquidityDescription').textContent = "Contracts not deployed on this network yet.";
-         return;
-      }
-
-      try {
-        $('tokenASymbol').textContent = selectedFrom.symbol;
-        $('tokenASymbol2').textContent = selectedFrom.symbol;
-        $('tokenASymbol3').textContent = selectedFrom.symbol;
-        $('tokenBSymbol').textContent = selectedTo.symbol;
-        $('tokenBSymbol2').textContent = selectedTo.symbol;
-        $('tokenBSymbol3').textContent = selectedTo.symbol;
-
-        const tokenA = selectedFrom.address.endsWith('NATIVE') ? WVANA : selectedFrom.address;
-        const tokenB = selectedTo.address.endsWith('NATIVE') ? WVANA : selectedTo.address;
-
-        currentPair = await factory.getPair(tokenA, tokenB);
-
-        if (currentPair && currentPair !== '0x0000000000000000000000000000000000000000') {
-          const pairContract = new ethers.Contract(currentPair, PAIR_ABI, provider);
-          const [reserve0, reserve1] = await pairContract.getReserves();
-          const token0 = await pairContract.token0();
-          const totalSupply = await pairContract.totalSupply();
-
-          let reserveA, reserveB;
-          if (token0.toLowerCase() === tokenA.toLowerCase()) {
-            reserveA = reserve0;
-            reserveB = reserve1;
-          } else {
-            reserveA = reserve1;
-            reserveB = reserve0;
-          }
-          
-          // CACHE RESERVES FOR INSTANT CALCULATION
-          cachedReserves = { reserveA: reserveA, reserveB: reserveB };
-
-          const rA = parseFloat(ethers.utils.formatUnits(reserveA, selectedFrom.decimals));
-          const rB = parseFloat(ethers.utils.formatUnits(reserveB, selectedTo.decimals));
-
-          $('pooledTokenA').textContent = rA.toFixed(4);
-          $('pooledTokenB').textContent = rB.toFixed(4);
-
-          const priceAB = rA > 0 ? rB / rA : 0;
-          const priceBA = rB > 0 ? rA / rB : 0;
-
-          $('priceA').textContent = formatPrice(priceAB);
-          $('priceB').textContent = formatPrice(priceBA);
-
-          const totalLiquidityUSD = (rA * 0.5) + (rB * 0.5); // Simplified
-          $('totalLiquidity').textContent = formatUSD(totalLiquidityUSD);
-
-          const dailyVolumeUSD = totalLiquidityUSD * 0.1;
-          $('dailyVolume').textContent = formatUSD(dailyVolumeUSD);
-
-          if (account) {
-            const userBalance = await pairContract.balanceOf(account);
-            const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
-            $('poolSharePercent').textContent = userShare.toFixed(6) + '%';
-            $('poolShareValue').textContent = userShare.toFixed(6) + '%';
-            $('poolTokens').textContent = parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6);
-          } else {
-            $('poolSharePercent').textContent = '0%';
-            $('poolShareValue').textContent = '0%';
-            $('poolTokens').textContent = '0';
-          }
-
-          $('liquidityDescription').textContent = `By adding liquidity, you'll earn 0.25% fees on all trades for this token pair. Fees are added to the pool and can be claimed when you remove your liquidity.`;
-
-        } else {
-          cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
-          $('pooledTokenA').textContent = '0';
-          $('pooledTokenB').textContent = '0';
-          $('priceA').textContent = '0';
-          $('priceB').textContent = '0';
-          $('poolSharePercent').textContent = '0%';
-          $('poolShareValue').textContent = '0%';
-          $('poolTokens').textContent = '0';
-          $('totalLiquidity').textContent = '$0';
-          $('dailyVolume').textContent = '$0';
-
-          $('liquidityDescription').textContent = `You are the first liquidity provider for this pair. The ratio of tokens you add will set the price of this pool.`;
-        }
-      } catch (error) {
-        console.error('Error updating liquidity info:', error);
-      }
-    }
-
-    // ==============================
-    // INSTANT CALCULATION (NO RPC CALLS)
-    // ==============================
-    function calculateOptimalAmountB() {
-      const val = $('fromAmount').value;
-      if (!val || cachedReserves.reserveA.isZero()) return;
-      
-      try {
-        const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
-        $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
-        updateActionBtn();
-      } catch(e) {}
-    }
-
-    function calculateOptimalAmountA() {
-      const val = $('toAmount').value;
-      if (!val || cachedReserves.reserveB.isZero()) return;
-      
-      try {
-        const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
-        const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
-        $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
-        updateActionBtn();
-      } catch(e) {}
-    }
-
-    // ==============================
-    // HELPER FUNCTIONS (Preserved)
-    // ==============================
-    function formatPrice(price) {
-      if (price === 0) return '0';
-      if (price < 0.000001) return price.toExponential(6);
-      if (price < 0.001) return price.toFixed(8);
-      if (price < 1) return price.toFixed(6);
-      if (price < 1000) return price.toFixed(4);
-      if (price < 1000000) return price.toFixed(2);
-      return price.toExponential(4);
-    }
-
-    function formatUSD(amount) {
-      if (amount === 0) return '$0';
-      if (amount < 0.01) return '< $0.01';
-      if (amount < 1000) return `$${amount.toFixed(2)}`;
-      if (amount < 1000000) return `$${(amount / 1000).toFixed(2)}K`;
-      if (amount < 1000000000) return `$${(amount / 1000000).toFixed(2)}M`;
-      return `$${(amount / 1000000000).toFixed(2)}B`;
-    }
-
-    async function updateTVLStats() {
-      if (!provider) return;
-      // Safety for Berachain
-      if (FACTORY === '0x0000000000000000000000000000000000000000') return;
-      try {
-        let totalTVL = 0;
-        const totalPairs = await factory.allPairsLength();
-        $('totalTVL').textContent = formatUSD(totalTVL);
-        $('totalPairs').textContent = totalPairs.toString();
-      } catch (error) {
-        console.error('Error updating TVL stats:', error);
-        $('totalTVL').textContent = '$---';
-      }
-    }
-
-    async function updateDropdownBalances() {
-      if (!provider || !account) return;
-      
-      for (const token of tokens) {
-        try {
-          // Skip placeholder address
-          if (token.address === '0x0000000000000000000000000000000000000000') continue;
-
-          let balance = '0';
-          
-          if (token.address.endsWith('NATIVE')) {
-            const bal = await provider.getBalance(account);
-            balance = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
-          } else {
-            const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-            const [bal, decimals] = await Promise.all([
-              contract.balanceOf(account),
-              contract.decimals()
-            ]);
-            balance = parseFloat(ethers.utils.formatUnits(bal, decimals)).toFixed(4);
-          }
-          
-          const balanceEl = document.querySelector(`#bal-${token.symbol}`);
-          if (balanceEl) balanceEl.textContent = balance;
-        } catch (error) {
-          const balanceEl = document.querySelector(`#bal-${token.symbol}`);
-          if (balanceEl) balanceEl.textContent = '0';
-        }
-      }
-    }
-
     async function loadUserPools() {
       if (!account || !provider) {
         $('noPoolsMessage').style.display = 'block';
@@ -1579,8 +2158,8 @@
       }
       
       if (FACTORY === '0x0000000000000000000000000000000000000000') {
-         $('noPoolsMessage').style.display = 'block';
-         return;
+        $('noPoolsMessage').style.display = 'block';
+        return;
       }
 
       try {
@@ -1590,11 +2169,10 @@
         const totalPairs = await factory.allPairsLength();
         $('totalPairs').textContent = totalPairs.toString();
 
-        for (let i = 0; i < Math.min(totalPairs, 100); i++) {
+        for (let i = 0; i < Math.min(totalPairs, 50); i++) {
           try {
             const pairAddress = await factory.allPairs(i);
             const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-
             const userBalance = await pairContract.balanceOf(account);
 
             if (userBalance.gt(0)) {
@@ -1607,21 +2185,17 @@
               const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
 
               const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
-                token0Contract.symbol(),
-                token1Contract.symbol(),
-                token0Contract.decimals(),
-                token1Contract.decimals()
+                token0Contract.symbol().catch(() => 'UNKNOWN'),
+                token1Contract.symbol().catch(() => 'UNKNOWN'),
+                token0Contract.decimals().catch(() => 18),
+                token1Contract.decimals().catch(() => 18)
               ]);
 
               const reserve0Formatted = parseFloat(ethers.utils.formatUnits(reserve0, decimals0));
               const reserve1Formatted = parseFloat(ethers.utils.formatUnits(reserve1, decimals1));
 
-              const reserve0Value = reserve0Formatted * 0.5; // Simplified
-              const reserve1Value = reserve1Formatted * 0.5;
-              const totalPoolValue = reserve0Value + reserve1Value;
-
               const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
-              const userValue = totalPoolValue * (userShare / 100);
+              const userValue = (reserve0Formatted + reserve1Formatted) * (userShare / 100);
 
               userPools.push({
                 address: pairAddress,
@@ -1674,16 +2248,16 @@
           <div class="pool-header">
             <div class="pool-tokens">
               <div class="pool-token">
-                <img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" alt="${pool.tokenA}" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+                <img src="https://vanswap.xyz/assets/${pool.tokenA.toLowerCase()}.png" alt="${pool.tokenA}" onerror="this.src='https://vanswap.xyz/assets/token.png'">
                 <span>${pool.tokenA}</span>
               </div>
               <span>+</span>
               <div class="pool-token">
-                <img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" alt="${pool.tokenB}" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+                <img src="https://vanswap.xyz/assets/${pool.tokenB.toLowerCase()}.png" alt="${pool.tokenB}" onerror="this.src='https://vanswap.xyz/assets/token.png'">
                 <span>${pool.tokenB}</span>
               </div>
             </div>
-            <div style="color:var(--accent);font-weight:700">$${pool.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div style="color:var(--accent);font-weight:700">$${pool.value.toFixed(2)}</div>
           </div>
           <div class="pool-metrics">
             <div class="metric">
@@ -1705,6 +2279,9 @@
       });
     }
 
+    // ==============================
+    // ADD LIQUIDITY
+    // ==============================
     async function addLiquidity() {
       if (!account || !signer) {
         await connectWallet();
@@ -1719,10 +2296,9 @@
         return;
       }
       
-      // Safety check
       if (ROUTER === '0x0000000000000000000000000000000000000000') {
-         showToast('Contracts not deployed on this network');
-         return;
+        showToast('Contracts not deployed on this network');
+        return;
       }
 
       const btn = $('actionBtn');
@@ -1740,119 +2316,107 @@
         const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
         const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
-        const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
-        if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
-          try {
-            const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
-            const [reserve0, reserve1] = await pairContract.getReserves();
-            const token0 = await pairContract.token0();
-
-            let reserveA, reserveB;
-            if (token0.toLowerCase() === addressA.toLowerCase()) {
-              reserveA = reserve0;
-              reserveB = reserve1;
-            } else {
-              reserveA = reserve1;
-              reserveB = reserve0;
-            }
-
-            const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
-            const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
-
-            if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
-              const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
-              if (!confirmRemove) {
-                btn.disabled = false;
-                btn.textContent = 'Add Liquidity';
-                return;
-              }
-            }
-          } catch (error) {
-            console.error('Error validating ratio:', error);
-          }
-        }
-
-        let finalPairAddr = pairAddr;
-        if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
+        // Check if pair exists
+        let pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+        
+        // If pair doesn't exist, create it (FIX FOR BERA CHAIN)
+        if (!pairAddr || pairAddr === ethers.constants.AddressZero || pairAddr === '0x0000000000000000000000000000000000000000') {
           showToast('Creating new pool...');
           setStatus('Creating new pool...');
+          
           try {
             const txCreate = await factoryWithSigner.createPair(addressA, addressB);
-            const explorerUrl = networkManager.getCurrentConfig().explorer;
+            const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
             $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txCreate.hash}" target="_blank" style="color:var(--accent)">Creating Pair...</a>`;
+            
             await txCreate.wait();
             showToast('Pool created successfully!');
             setStatus('Pool created successfully!');
-            finalPairAddr = await factoryWithSigner.getPair(addressA, addressB);
+            
+            // Get the new pair address
+            pairAddr = await factoryWithSigner.getPair(addressA, addressB);
           } catch(e) {
             console.error('Failed to create pair', e);
             showToast('Failed to create pool: ' + (e.message || e));
             setStatus('Create pool failed');
+            btn.disabled = false;
+            btn.textContent = 'Add Liquidity';
             return;
           }
         }
 
-        const amountAMin = amountADesired.mul(95).div(100);
-        const amountBMin = amountBDesired.mul(95).div(100);
+        // Calculate minimum amounts with 0.5% slippage
+        const amountAMin = amountADesired.mul(995).div(1000);
+        const amountBMin = amountBDesired.mul(995).div(1000);
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
+        // Handle different token types
         if (selectedFrom.address.endsWith('NATIVE') && !selectedTo.address.endsWith('NATIVE')) {
+          // Native + Token
           await ensureApproved(selectedTo.address, amountBDesired);
-          setStatus('Sending addLiquidityETH (native -> token)...');
+          setStatus('Adding native + token liquidity...');
+          
           const tx = await routerWithSigner.addLiquidityETH(
-            selectedTo.address,
+            addressB,
             amountBDesired,
             amountBMin,
             amountAMin,
             account,
             deadline,
-            { value: amountADesired, gasLimit: 3000000 }
+            { value: amountADesired, gasLimit: 500000 }
           );
-          const explorerUrl = networkManager.getCurrentConfig().explorer;
+          
+          const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
           await tx.wait();
 
         } else if (selectedTo.address.endsWith('NATIVE') && !selectedFrom.address.endsWith('NATIVE')) {
+          // Token + Native
           await ensureApproved(selectedFrom.address, amountADesired);
-          setStatus('Sending addLiquidityETH (token -> native)...');
+          setStatus('Adding token + native liquidity...');
+          
           const tx = await routerWithSigner.addLiquidityETH(
-            selectedFrom.address,
+            addressA,
             amountADesired,
             amountAMin,
             amountBMin,
             account,
             deadline,
-            { value: amountBDesired, gasLimit: 3000000 }
+            { value: amountBDesired, gasLimit: 500000 }
           );
-          const explorerUrl = networkManager.getCurrentConfig().explorer;
+          
+          const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
           await tx.wait();
 
         } else {
+          // Token + Token
           await ensureApproved(selectedFrom.address, amountADesired);
           await ensureApproved(selectedTo.address, amountBDesired);
-          setStatus('Sending addLiquidity (ERC20 <-> ERC20)...');
+          setStatus('Adding token + token liquidity...');
+          
           const tx = await routerWithSigner.addLiquidity(
-            selectedFrom.address,
-            selectedTo.address,
+            addressA,
+            addressB,
             amountADesired,
             amountBDesired,
             amountAMin,
             amountBMin,
             account,
             deadline,
-            { gasLimit: 3000000 }
+            { gasLimit: 500000 }
           );
-          const explorerUrl = networkManager.getCurrentConfig().explorer;
+          
+          const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
           await tx.wait();
         }
 
-        showToast('Liquidity added successfully');
+        showToast('Liquidity added successfully!');
         setStatus('Liquidity added successfully!');
 
+        // Update UI
         await updateBalances();
-        await updateDropdownBalances();
         await updateLiquidityInfo();
         await loadUserPools();
 
@@ -1860,8 +2424,8 @@
         $('toAmount').value = '';
 
       } catch (err) {
-        console.error('addLiquidity error:', err);
-        showToast('Add liquidity failed: ' + (err && err.message ? err.message : err));
+        console.error('Add liquidity error:', err);
+        showToast('Add liquidity failed: ' + (err.message || 'Unknown error'));
         setStatus('Add liquidity failed');
       } finally {
         btn.disabled = false;
@@ -1870,6 +2434,28 @@
       }
     }
 
+    async function ensureApproved(tokenAddress, neededAmount) {
+      if (!tokenAddress || tokenAddress.endsWith('NATIVE')) return;
+
+      try {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+        const allowance = await tokenContract.allowance(account, ROUTER);
+        
+        if (allowance.lt(neededAmount)) {
+          setStatus('Approving token...');
+          const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+          await tx.wait();
+          setStatus('Approval successful');
+        }
+      } catch (err) {
+        console.error('Approve error:', err);
+        throw err;
+      }
+    }
+
+    // ==============================
+    // QUICK ADD LIQUIDITY
+    // ==============================
     function addMoreLiquidity(tokenA, tokenB) {
       const tokenAObj = tokens.find(t => t.symbol === tokenA);
       const tokenBObj = tokens.find(t => t.symbol === tokenB);
@@ -1878,11 +2464,7 @@
         selectedFrom = tokenAObj;
         selectedTo = tokenBObj;
 
-        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
-        $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
-        $('toSymbol').textContent = selectedTo.symbol;
-
+        updateTokenDisplay();
         switchToAddView();
         updateLiquidityInfo();
         showToast(`Ready to add more ${tokenA}-${tokenB} liquidity`);
@@ -1897,17 +2479,16 @@
         selectedFrom = tokenA;
         selectedTo = tokenB;
 
-        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
-        $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
-        $('toSymbol').textContent = selectedTo.symbol;
-
+        updateTokenDisplay();
         switchToAddView();
         updateLiquidityInfo();
         showToast(`Ready to add ${tokenASymbol}-${tokenBSymbol} liquidity`);
       }
     }
 
+    // ==============================
+    // ACTION BUTTON
+    // ==============================
     function updateActionBtn() {
       const btn = $('actionBtn');
       if (!account) {
@@ -1929,6 +2510,31 @@
       btn.disabled = false;
     }
 
+    function setMax() {
+      if (!selectedFrom || !$('fromBalance')) return;
+      
+      const balanceText = $('fromBalance').textContent;
+      if (balanceText === '—') return;
+      
+      try {
+        const balance = parseFloat(balanceText);
+        if (balance > 0) {
+          // Use 95% of balance to account for gas
+          const maxAmount = balance * 0.95;
+          $('fromAmount').value = maxAmount.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+          
+          if ($('fromAmount').value && !isNaN(parseFloat($('fromAmount').value)) && parseFloat($('fromAmount').value) > 0) {
+            calculateOptimalAmountB();
+          }
+        }
+      } catch (e) {
+        console.error('Error setting max:', e);
+      }
+    }
+
+    // ==============================
+    // REMOVE LIQUIDITY
+    // ==============================
     async function showRemoveModal(poolAddress) {
       currentRemovePool = poolAddress;
       currentRemovePercentage = 0;
@@ -1945,10 +2551,10 @@
         const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
 
         const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([
-          token0Contract.symbol(),
-          token1Contract.symbol(),
-          token0Contract.decimals(),
-          token1Contract.decimals()
+          token0Contract.symbol().catch(() => 'UNKNOWN'),
+          token1Contract.symbol().catch(() => 'UNKNOWN'),
+          token0Contract.decimals().catch(() => 18),
+          token1Contract.decimals().catch(() => 18)
         ]);
 
         const hasAllowance = await checkLPAllowance(poolAddress);
@@ -1956,10 +2562,10 @@
         $('removePoolInfo').innerHTML = `
           <div style="text-align:center;margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
-              <img src="https://vanswap.xyz/assets/${symbol0.toLowerCase()}.png" alt="${symbol0}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+              <img src="https://vanswap.xyz/assets/${symbol0.toLowerCase()}.png" alt="${symbol0}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/token.png'">
               <span style="font-weight:600">${symbol0}</span>
               <span>+</span>
-              <img src="https://vanswap.xyz/assets/${symbol1.toLowerCase()}.png" alt="${symbol1}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/unknown.png'">
+              <img src="https://vanswap.xyz/assets/${symbol1.toLowerCase()}.png" alt="${symbol1}" style="width:24px;height:24px;border-radius:6px" onerror="this.src='https://vanswap.xyz/assets/token.png'">
               <span style="font-weight:600">${symbol1}</span>
             </div>
             <div style="color:var(--muted);font-size:13px">Your LP Tokens: ${parseFloat(ethers.utils.formatEther(userBalance)).toFixed(6)}</div>
@@ -2041,6 +2647,7 @@
 
         const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
 
+        // Check and approve if needed
         if (!currentRemovePool.hasAllowance) {
           setStatus('Approving LP tokens...');
           btn.innerHTML = '<span class="spinner"></span>Approving...';
@@ -2055,14 +2662,18 @@
           btn.innerHTML = '<span class="spinner"></span>Removing...';
         }
 
+        // Calculate minimum amounts with 5% slippage
         const amount0Min = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
         const amount1Min = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply).mul(95).div(100);
-
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
         setStatus('Removing liquidity...');
 
-        const wrappedNative = (networkManager.getCurrentNetwork() === 'vana') ? NETWORK_CONFIG.vana.contracts.wvana : NETWORK_CONFIG.zerog.contracts.w0g;
+        // Check if one of the tokens is native
+        const wrappedNative = currentNetwork === 'vana' ? NETWORK_CONFIG.vana.contracts.wvana :
+                             currentNetwork === 'zerog' ? NETWORK_CONFIG.zerog.contracts.w0g :
+                             NETWORK_CONFIG.berachain.contracts.wbera;
+        
         const token0IsNative = currentRemovePool.token0 === wrappedNative;
         const token1IsNative = currentRemovePool.token1 === wrappedNative;
 
@@ -2095,19 +2706,18 @@
           );
         }
 
-        const explorerUrl = networkManager.getCurrentConfig().explorer;
+        const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
         $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
         
         setStatus('Submitted — waiting confirmation...');
 
-        const receipt = await tx.wait();
+        await tx.wait();
 
         showToast('Liquidity removed successfully!');
         setStatus('Liquidity removed');
 
         closeRemoveModal();
         await updateBalances();
-        await updateDropdownBalances();
         loadUserPools();
         updateTVLStats();
 
@@ -2164,6 +2774,9 @@
       }
     }
 
+    // ==============================
+    // IMPORT POOL
+    // ==============================
     async function importPool() {
       const tokenAInput = $('tokenAInput').value.trim();
       const tokenBInput = $('tokenBInput').value.trim();
@@ -2191,20 +2804,20 @@
         const tokenBContract = new ethers.Contract(tokenBInput, ERC20_ABI, provider);
 
         const [symbolA, symbolB, decimalsA, decimalsB] = await Promise.all([
-          tokenAContract.symbol(),
-          tokenBContract.symbol(),
-          tokenAContract.decimals(),
-          tokenBContract.decimals()
+          tokenAContract.symbol().catch(() => 'UNKNOWN'),
+          tokenBContract.symbol().catch(() => 'UNKNOWN'),
+          tokenAContract.decimals().catch(() => 18),
+          tokenBContract.decimals().catch(() => 18)
         ]);
 
+        // Add to tokens list
         const tokenAObj = {
           symbol: symbolA,
           address: tokenAInput,
           decimals: decimalsA,
           logo: `https://vanswap.xyz/assets/${symbolA.toLowerCase()}.png`,
           custom: true,
-          verified: false,
-          network: networkManager.getCurrentNetwork()
+          verified: false
         };
 
         const tokenBObj = {
@@ -2213,23 +2826,15 @@
           decimals: decimalsB,
           logo: `https://vanswap.xyz/assets/${symbolB.toLowerCase()}.png`,
           custom: true,
-          verified: false,
-          network: networkManager.getCurrentNetwork()
+          verified: false
         };
 
-        customTokenManager.addToken(tokenAObj);
-        customTokenManager.addToken(tokenBObj);
-
-        initNetworkConfig();
+        tokens.push(tokenAObj, tokenBObj);
 
         selectedFrom = tokenAObj;
         selectedTo = tokenBObj;
 
-        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
-        $('fromSymbol').textContent = selectedFrom.symbol;
-        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
-        $('toSymbol').textContent = selectedTo.symbol;
-
+        updateTokenDisplay();
         switchToAddView();
         updateLiquidityInfo();
 
@@ -2243,23 +2848,311 @@
       }
     }
 
-    async function ensureApproved(tokenAddress, neededAmount) {
-      if (!tokenAddress || tokenAddress.endsWith('NATIVE')) return;
+    // ==============================
+    // NETWORK SELECTOR
+    // ==============================
+    function initNetworkSelector() {
+      const connectBtn = $('connectBtn');
+      const dropdown = $('walletNetworkDropdown');
+      const disconnectBtn = $('disconnectBtn');
 
-      try {
-        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-        const allowance = await tokenContract.allowance(account, ROUTER);
-        if (ethers.BigNumber.from(allowance).lt(neededAmount)) {
-          setStatus('Approving token ' + (tokenAddress) + ' ...');
-          const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
-          await tx.wait();
+      if (!connectBtn || !dropdown) return;
+
+      connectBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        if (!account) {
+          connectWallet();
+        } else {
+          const isVisible = dropdown.style.display === 'block';
+          dropdown.style.display = isVisible ? 'none' : 'block';
         }
-      } catch (err) {
-        console.error('ensureApproved error for', tokenAddress, err);
-        throw err;
+      });
+
+      dropdown.querySelectorAll('.network-option[data-network]').forEach(option => {
+        option.addEventListener('click', async (e) => {
+          e.preventDefault();
+          
+          const network = option.getAttribute('data-network');
+          console.log('Selected network:', network);
+          
+          dropdown.style.display = 'none';
+          
+          // Update current network
+          currentNetwork = network;
+          localStorage.setItem('vanswap-network', network);
+          
+          // Reinitialize
+          initNetworkConfig();
+          updateNetworkUI();
+          updateTokenDisplay();
+          
+          // Reconnect wallet if connected
+          if (account) {
+            showToast(`Switching to ${NETWORK_CONFIG[network].name}...`);
+            setStatus('Switching network...');
+            
+            try {
+              await ensureCorrectChain();
+              await reconnectWallet();
+            } catch (error) {
+              console.error('Network switch error:', error);
+              showToast('Failed to switch network');
+            }
+          }
+          
+          showToast(`Switched to ${NETWORK_CONFIG[network].name}`);
+        });
+      });
+
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          disconnectWallet();
+          dropdown.style.display = 'none';
+        });
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.wallet-network-container')) {
+          dropdown.style.display = 'none';
+        }
+      });
+
+      updateWalletDisplay();
+      updateNetworkUI();
+    }
+
+    async function reconnectWallet() {
+      if (!account || !window.ethereum) return;
+      
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        
+        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        }
+        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
+          factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        }
+        
+        updateWalletDisplay();
+        
+        await updateBalances();
+        await updateLiquidityInfo();
+        loadUserPools();
+        updateTVLStats();
+        
+        setStatus('Connected to new network');
+        
+      } catch (error) {
+        console.error('Reconnect error:', error);
+        showToast('Failed to reconnect: ' + error.message);
+        setStatus('Reconnection failed');
       }
     }
 
+    // ==============================
+    // INITIALIZATION
+    // ==============================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize network config
+      initNetworkConfig();
+      updateTokenDisplay();
+      updateNetworkUI();
+      
+      // Setup menu button
+      const menuBtn = document.getElementById('menuBtn');
+      const menuDropdown = document.getElementById('menuDropdown');
+      
+      if (menuBtn && menuDropdown) {
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isVisible = menuDropdown.classList.contains('show');
+          if (isVisible) {
+            menuDropdown.classList.remove('show');
+          } else {
+            menuDropdown.classList.add('show');
+          }
+        });
+        
+        // Close menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.menu-dot-btn') && !e.target.closest('.menu-dropdown')) {
+            menuDropdown.classList.remove('show');
+          }
+        });
+        
+        // Menu item click handlers
+        menuDropdown.querySelectorAll('.menu-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const href = item.getAttribute('data-href');
+            if (href) {
+              window.location.href = href;
+            }
+            menuDropdown.classList.remove('show');
+          });
+        });
+      }
+      
+      // Setup token select dropdowns
+      const fromSelect = document.getElementById('fromSelect');
+      const toSelect = document.getElementById('toSelect');
+      
+      if (fromSelect) {
+        fromSelect.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          
+          if (fromList.style.display === 'block') {
+            fromList.style.display = 'none';
+          } else {
+            fromList.style.display = 'block';
+            toList.style.display = 'none';
+            buildTokenListHtml('from');
+          }
+        });
+      }
+      
+      if (toSelect) {
+        toSelect.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          
+          if (toList.style.display === 'block') {
+            toList.style.display = 'none';
+          } else {
+            toList.style.display = 'block';
+            fromList.style.display = 'none';
+            buildTokenListHtml('to');
+          }
+        });
+      }
+      
+      // Close dropdowns when clicking elsewhere
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.select-wrap')) {
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          if (fromList) fromList.style.display = 'none';
+          if (toList) toList.style.display = 'none';
+        }
+      });
+      
+      // Setup tab switching
+      const myPoolsTab = document.getElementById('myPoolsTab');
+      const addTab = document.getElementById('addTab');
+      const importTab = document.getElementById('importTab');
+      
+      if (myPoolsTab) {
+        myPoolsTab.addEventListener('click', switchToMyPoolsView);
+      }
+      
+      if (addTab) {
+        addTab.addEventListener('click', switchToAddView);
+      }
+      
+      if (importTab) {
+        importTab.addEventListener('click', switchToImportView);
+      }
+      
+      // Setup input events
+      const fromAmount = document.getElementById('fromAmount');
+      const toAmount = document.getElementById('toAmount');
+      
+      if (fromAmount) {
+        fromAmount.addEventListener('input', () => {
+          if (fromAmount.value && !isNaN(parseFloat(fromAmount.value)) && parseFloat(fromAmount.value) > 0) {
+            calculateOptimalAmountB();
+          } else {
+            toAmount.value = '';
+            updateActionBtn();
+          }
+        });
+      }
+      
+      if (toAmount) {
+        toAmount.addEventListener('input', () => {
+          if (toAmount.value && !isNaN(parseFloat(toAmount.value)) && parseFloat(toAmount.value) > 0) {
+            calculateOptimalAmountA();
+          } else {
+            fromAmount.value = '';
+            updateActionBtn();
+          }
+        });
+      }
+      
+      // Setup MAX button
+      const btnMax = document.getElementById('btnMax');
+      if (btnMax) {
+        btnMax.addEventListener('click', setMax);
+      }
+      
+      // Setup action button
+      const actionBtn = document.getElementById('actionBtn');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', addLiquidity);
+      }
+      
+      // Initialize network selector
+      initNetworkSelector();
+      
+      // Load initial data
+      updateTVLStats();
+      loadUserPools();
+      updateLiquidityInfo();
+      updateActionBtn();
+      
+      // Handle wallet changes
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            disconnectWallet();
+          } else {
+            account = accounts[0];
+            updateWalletDisplay();
+            updateBalances();
+            loadUserPools();
+            updateLiquidityInfo();
+            updateActionBtn();
+          }
+        });
+        
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+      }
+      
+      // Check for existing wallet connection
+      if (window.ethereum && window.ethereum.selectedAddress) {
+        account = window.ethereum.selectedAddress;
+        updateWalletDisplay();
+        
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        
+        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        }
+        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
+          factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        }
+        
+        updateBalances();
+        updateLiquidityInfo();
+        loadUserPools();
+        updateTVLStats();
+        updateActionBtn();
+      }
+    });
+
+    // ==============================
+    // EXPORT FUNCTIONS TO WINDOW
+    // ==============================
     window.filterTokens = filterTokens;
     window.switchToMyPoolsView = switchToMyPoolsView;
     window.switchToAddView = switchToAddView;
@@ -2275,10 +3168,7 @@
     window.importPool = importPool;
     window.connectWallet = connectWallet;
     window.disconnectWallet = disconnectWallet;
-    window.pasteFromClipboard = pasteFromClipboard;
-    window.clearTokenForm = clearTokenForm;
-    window.cancelAddToken = cancelAddToken;
-    window.addCustomToken = addCustomToken;
+    window.selectToken = selectToken;
   </script>
 </body>
 </html>
