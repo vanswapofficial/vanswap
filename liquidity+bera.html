@@ -657,6 +657,8 @@
         const toBalance = document.getElementById('toBalance');
         if (fromBalance) fromBalance.textContent = '—';
         if (toBalance) toBalance.textContent = '—';
+        
+        updateWalletDisplay();
       }
     }
 
@@ -827,6 +829,7 @@
     let selectedTo = null;
     
     let cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+    let isNewPool = true;
 
     function updateWalletDisplay() {
       const walletText = document.getElementById('walletText');
@@ -1370,6 +1373,7 @@
       
       if (FACTORY === '0x0000000000000000000000000000000000000000') {
          cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+         isNewPool = true;
          $('pooledTokenA').textContent = '0';
          $('pooledTokenB').textContent = '0';
          $('priceA').textContent = '0';
@@ -1412,6 +1416,7 @@
           }
           
           cachedReserves = { reserveA: reserveA, reserveB: reserveB };
+          isNewPool = reserveA.isZero() || reserveB.isZero();
 
           const rA = parseFloat(ethers.utils.formatUnits(reserveA, selectedFrom.decimals));
           const rB = parseFloat(ethers.utils.formatUnits(reserveB, selectedTo.decimals));
@@ -1447,6 +1452,7 @@
 
         } else {
           cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+          isNewPool = true;
           $('pooledTokenA').textContent = '0';
           $('pooledTokenB').textContent = '0';
           $('priceA').textContent = '0';
@@ -1461,31 +1467,49 @@
         }
       } catch (error) {
         console.error('Error updating liquidity info:', error);
+        cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+        isNewPool = true;
       }
     }
 
+    // PERBAIKAN: Fungsi untuk menghitung amount token kedua berdasarkan input pertama
     function calculateOptimalAmountB() {
       const val = $('fromAmount').value;
-      if (!val || cachedReserves.reserveA.isZero()) return;
+      if (!val) return;
       
       try {
-        const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
-        const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
-        $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+        // Untuk pool baru (isNewPool = true), biarkan user input manual
+        // Untuk pool yang sudah ada, hitung berdasarkan reserves
+        if (!isNewPool && !cachedReserves.reserveA.isZero()) {
+          const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
+          const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
+          $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
+        }
+        // Untuk pool baru, biarkan kolom kedua kosong atau user isi manual
         updateActionBtn();
-      } catch(e) {}
+      } catch(e) {
+        console.error('Error calculating optimal amount B:', e);
+      }
     }
 
+    // PERBAIKAN: Fungsi untuk menghitung amount token pertama berdasarkan input kedua
     function calculateOptimalAmountA() {
       const val = $('toAmount').value;
-      if (!val || cachedReserves.reserveB.isZero()) return;
+      if (!val) return;
       
       try {
-        const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
-        const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
-        $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
+        // Untuk pool baru (isNewPool = true), biarkan user input manual
+        // Untuk pool yang sudah ada, hitung berdasarkan reserves
+        if (!isNewPool && !cachedReserves.reserveB.isZero()) {
+          const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
+          const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
+          $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
+        }
+        // Untuk pool baru, biarkan kolom pertama kosong atau user isi manual
         updateActionBtn();
-      } catch(e) {}
+      } catch(e) {
+        console.error('Error calculating optimal amount A:', e);
+      }
     }
 
     function formatPrice(price) {
@@ -1735,15 +1759,18 @@
               reserveB = reserve0;
             }
 
-            const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
-            const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
+            // Hanya validasi ratio jika pool sudah ada dan memiliki liquidity
+            if (!reserveA.isZero() && !reserveB.isZero()) {
+              const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
+              const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
 
-            if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
-              const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
-              if (!confirmRemove) {
-                btn.disabled = false;
-                btn.textContent = 'Add Liquidity';
-                return;
+              if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
+                const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
+                if (!confirmRemove) {
+                  btn.disabled = false;
+                  btn.textContent = 'Add Liquidity';
+                  return;
+                }
               }
             }
           } catch (error) {
@@ -2250,11 +2277,12 @@
         if (balance > 0) {
           $('fromAmount').value = balance.toString();
           
-          // Trigger calculation for the other token
-          const fromAmountVal = $('fromAmount').value;
-          if (fromAmountVal && !isNaN(parseFloat(fromAmountVal)) && parseFloat(fromAmountVal) > 0) {
+          // PERBAIKAN: Untuk pool yang sudah ada, hitung amount token kedua
+          // Untuk pool baru, biarkan user input manual
+          if (!isNewPool && !cachedReserves.reserveA.isZero()) {
             calculateOptimalAmountB();
           }
+          updateActionBtn();
         }
       } catch (e) {
         console.error('Error setting max:', e);
@@ -2500,14 +2528,19 @@
         });
       }
       
-      // Setup input events
+      // PERBAIKAN: Setup input events dengan logika yang benar
       const fromAmount = document.getElementById('fromAmount');
       const toAmount = document.getElementById('toAmount');
       
       if (fromAmount) {
-        fromAmount.addEventListener('input', () => {
-          if (fromAmount.value && !isNaN(parseFloat(fromAmount.value)) && parseFloat(fromAmount.value) > 0) {
-            calculateOptimalAmountB();
+        fromAmount.addEventListener('input', (e) => {
+          const value = e.target.value;
+          if (value && !isNaN(parseFloat(value)) && parseFloat(value) > 0) {
+            // Hanya hitung otomatis jika pool sudah ada
+            if (!isNewPool) {
+              calculateOptimalAmountB();
+            }
+            updateActionBtn();
           } else {
             toAmount.value = '';
             updateActionBtn();
@@ -2516,9 +2549,14 @@
       }
       
       if (toAmount) {
-        toAmount.addEventListener('input', () => {
-          if (toAmount.value && !isNaN(parseFloat(toAmount.value)) && parseFloat(toAmount.value) > 0) {
-            calculateOptimalAmountA();
+        toAmount.addEventListener('input', (e) => {
+          const value = e.target.value;
+          if (value && !isNaN(parseFloat(value)) && parseFloat(value) > 0) {
+            // Hanya hitung otomatis jika pool sudah ada
+            if (!isNewPool) {
+              calculateOptimalAmountA();
+            }
+            updateActionBtn();
           } else {
             fromAmount.value = '';
             updateActionBtn();
