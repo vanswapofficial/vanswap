@@ -1242,9 +1242,9 @@
             <div class="row">
               <div class="select-wrap">
                 <div id="fromSelect" class="select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-                  <img id="fromLogo" src="https://vanswap.xyz/assets/vana.png" alt="">
+                  <img id="fromLogo" src="https://vanswap.xyz/assets/bera.png" alt="">
                   <div style="min-width:0">
-                    <div id="fromSymbol" class="symbol">VANA</div>
+                    <div id="fromSymbol" class="symbol">BERA</div>
                   </div>
                   <div style="margin-left:auto;color:var(--muted)">▼</div>
                 </div>
@@ -1339,22 +1339,22 @@
       <!-- Info Panel -->
       <aside class="panel" aria-label="Info">
         <h4 id="panelTitle">Pool Information</h4>
-        <div class="panel-row"><div>Network</div><div id="networkDisplay">Vana Network</div></div>
-        <div class="panel-row"><div>Pooled <span id="tokenASymbol">VANA</span></div><div id="pooledTokenA">—</div></div>
+        <div class="panel-row"><div>Network</div><div id="networkDisplay">Berachain</div></div>
+        <div class="panel-row"><div>Pooled <span id="tokenASymbol">BERA</span></div><div id="pooledTokenA">—</div></div>
         <div class="panel-row"><div>Pooled <span id="tokenBSymbol">USDC</span></div><div id="pooledTokenB">—</div></div>
         <div class="panel-row"><div>Your pool tokens</div><div id="poolTokens">—</div></div>
         <div class="panel-row"><div>Your pool share</div><div id="poolSharePercent">0%</div></div>
 
         <h4 style="margin-top:14px">Pool Stats</h4>
-        <div class="panel-row"><div><span id="tokenASymbol2">VANA</span> per <span id="tokenBSymbol2">USDC</span></div><div id="priceA">—</div></div>
-        <div class="panel-row"><div><span id="tokenBSymbol3">USDC</span> per <span id="tokenASymbol3">VANA</span></div><div id="priceB">—</div></div>
+        <div class="panel-row"><div><span id="tokenASymbol2">BERA</span> per <span id="tokenBSymbol2">USDC</span></div><div id="priceA">—</div></div>
+        <div class="panel-row"><div><span id="tokenBSymbol3">USDC</span> per <span id="tokenASymbol3">BERA</span></div><div id="priceB">—</div></div>
         <div class="panel-row"><div>Total Liquidity</div><div id="totalLiquidity">$—</div></div>
         <div class="panel-row"><div>24h Volume</div><div id="dailyVolume">$—</div></div>
 
         <h4 style="margin-top:14px">Quick Add Liquidity</h4>
-        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'USDC')">VANA-USDC</button>
-        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANA', 'VANS')" style="margin-top:8px">VANA-VANS</button>
-        <button class="pool-action pool-add" onclick="quickAddLiquidity('VANS', 'USDC')" style="margin-top:8px">VANS-USDC</button>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('BERA', 'USDC')">BERA-USDC</button>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('BERA', 'ARTIO')" style="margin-top:8px">BERA-ARTIO</button>
+        <button class="pool-action pool-add" onclick="quickAddLiquidity('ARTIO', 'USDC')" style="margin-top:8px">ARTIO-USDC</button>
       </aside>
     </div>
   </main>
@@ -1533,7 +1533,7 @@
     
     let ROUTER, FACTORY, WVANA, VANS, USDC, RPC, CHAIN_ID_HEX;
     
-    let currentNetwork = localStorage.getItem('vanswap-network') || 'vana';
+    let currentNetwork = localStorage.getItem('vanswap-network') || 'berachain'; // Default to Berachain
 
     // ==============================
     // UTILITY FUNCTIONS
@@ -2280,23 +2280,33 @@
     }
 
     // ==============================
-    // ADD LIQUIDITY
+    // ADD LIQUIDITY - PERBAIKAN UTAMA
     // ==============================
     async function addLiquidity() {
+      console.log('addLiquidity called');
+      
       if (!account || !signer) {
+        console.log('No account or signer, connecting wallet...');
         await connectWallet();
-        if (!account || !signer) return;
+        if (!account || !signer) {
+          console.log('Failed to connect wallet');
+          return;
+        }
       }
 
       const fromAmt = $('fromAmount').value;
       const toAmt = $('toAmount').value;
 
+      console.log('Input amounts:', { fromAmt, toAmt });
+
       if (!fromAmt || parseFloat(fromAmt) <= 0 || !toAmt || parseFloat(toAmt) <= 0) {
+        console.log('Invalid amounts');
         showToast('Please enter amounts for both tokens');
         return;
       }
       
       if (ROUTER === '0x0000000000000000000000000000000000000000') {
+        console.log('Contracts not deployed');
         showToast('Contracts not deployed on this network');
         return;
       }
@@ -2310,31 +2320,41 @@
         const amountADesired = ethers.utils.parseUnits(fromAmt, selectedFrom.decimals);
         const amountBDesired = ethers.utils.parseUnits(toAmt, selectedTo.decimals);
 
+        console.log('Parsed amounts:', { amountADesired: amountADesired.toString(), amountBDesired: amountBDesired.toString() });
+
         const addressA = selectedFrom.address.endsWith('NATIVE') ? WVANA : selectedFrom.address;
         const addressB = selectedTo.address.endsWith('NATIVE') ? WVANA : selectedTo.address;
+
+        console.log('Token addresses:', { addressA, addressB, WVANA });
 
         const routerWithSigner = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
         const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
         // Check if pair exists
         let pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+        console.log('Pair address:', pairAddr);
         
-        // If pair doesn't exist, create it (FIX FOR BERA CHAIN)
+        // If pair doesn't exist, create it
         if (!pairAddr || pairAddr === ethers.constants.AddressZero || pairAddr === '0x0000000000000000000000000000000000000000') {
+          console.log('Pair does not exist, creating new pair...');
           showToast('Creating new pool...');
           setStatus('Creating new pool...');
           
           try {
-            const txCreate = await factoryWithSigner.createPair(addressA, addressB);
+            console.log('Creating pair with addresses:', addressA, addressB);
+            const txCreate = await factoryWithSigner.createPair(addressA, addressB, { gasLimit: 5000000 });
             const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
             $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${txCreate.hash}" target="_blank" style="color:var(--accent)">Creating Pair...</a>`;
+            console.log('Pair creation tx:', txCreate.hash);
             
             await txCreate.wait();
+            console.log('Pair created successfully');
             showToast('Pool created successfully!');
             setStatus('Pool created successfully!');
             
             // Get the new pair address
             pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+            console.log('New pair address:', pairAddr);
           } catch(e) {
             console.error('Failed to create pair', e);
             showToast('Failed to create pool: ' + (e.message || e));
@@ -2350,9 +2370,16 @@
         const amountBMin = amountBDesired.mul(995).div(1000);
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
+        console.log('Min amounts and deadline:', {
+          amountAMin: amountAMin.toString(),
+          amountBMin: amountBMin.toString(),
+          deadline
+        });
+
         // Handle different token types
         if (selectedFrom.address.endsWith('NATIVE') && !selectedTo.address.endsWith('NATIVE')) {
           // Native + Token
+          console.log('Adding native + token liquidity');
           await ensureApproved(selectedTo.address, amountBDesired);
           setStatus('Adding native + token liquidity...');
           
@@ -2363,15 +2390,17 @@
             amountAMin,
             account,
             deadline,
-            { value: amountADesired, gasLimit: 500000 }
+            { value: amountADesired, gasLimit: 5000000 }
           );
           
           const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+          console.log('Add liquidity tx:', tx.hash);
           await tx.wait();
 
         } else if (selectedTo.address.endsWith('NATIVE') && !selectedFrom.address.endsWith('NATIVE')) {
           // Token + Native
+          console.log('Adding token + native liquidity');
           await ensureApproved(selectedFrom.address, amountADesired);
           setStatus('Adding token + native liquidity...');
           
@@ -2382,15 +2411,17 @@
             amountBMin,
             account,
             deadline,
-            { value: amountBDesired, gasLimit: 500000 }
+            { value: amountBDesired, gasLimit: 5000000 }
           );
           
           const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+          console.log('Add liquidity tx:', tx.hash);
           await tx.wait();
 
         } else {
           // Token + Token
+          console.log('Adding token + token liquidity');
           await ensureApproved(selectedFrom.address, amountADesired);
           await ensureApproved(selectedTo.address, amountBDesired);
           setStatus('Adding token + token liquidity...');
@@ -2404,14 +2435,16 @@
             amountBMin,
             account,
             deadline,
-            { gasLimit: 500000 }
+            { gasLimit: 5000000 }
           );
           
           const explorerUrl = NETWORK_CONFIG[currentNetwork].explorer;
           $('txLink').innerHTML = `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" style="color:var(--accent)">View on Explorer</a>`;
+          console.log('Add liquidity tx:', tx.hash);
           await tx.wait();
         }
 
+        console.log('Liquidity added successfully');
         showToast('Liquidity added successfully!');
         setStatus('Liquidity added successfully!');
 
@@ -2425,7 +2458,25 @@
 
       } catch (err) {
         console.error('Add liquidity error:', err);
-        showToast('Add liquidity failed: ' + (err.message || 'Unknown error'));
+        console.error('Error details:', {
+          message: err.message,
+          code: err.code,
+          data: err.data,
+          stack: err.stack
+        });
+        
+        let errorMsg = 'Add liquidity failed';
+        if (err.message.includes('insufficient funds')) {
+          errorMsg = 'Insufficient funds for transaction';
+        } else if (err.message.includes('user rejected')) {
+          errorMsg = 'Transaction rejected by user';
+        } else if (err.message.includes('gas')) {
+          errorMsg = 'Gas estimation failed. Try increasing gas limit.';
+        } else {
+          errorMsg = 'Add liquidity failed: ' + (err.message || 'Unknown error');
+        }
+        
+        showToast(errorMsg);
         setStatus('Add liquidity failed');
       } finally {
         btn.disabled = false;
@@ -2443,13 +2494,74 @@
         
         if (allowance.lt(neededAmount)) {
           setStatus('Approving token...');
-          const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256);
+          const tx = await tokenContract.approve(ROUTER, ethers.constants.MaxUint256, { gasLimit: 500000 });
           await tx.wait();
           setStatus('Approval successful');
         }
       } catch (err) {
         console.error('Approve error:', err);
         throw err;
+      }
+    }
+
+    // ==============================
+    // ACTION BUTTON - PERBAIKAN UTAMA
+    // ==============================
+    function updateActionBtn() {
+      const btn = $('actionBtn');
+      console.log('updateActionBtn called');
+      
+      if (!account) {
+        console.log('No account, showing Connect Wallet');
+        btn.textContent = 'Connect Wallet';
+        btn.disabled = false;
+        return;
+      }
+
+      const fromAmt = $('fromAmount').value;
+      const toAmt = $('toAmount').value;
+
+      console.log('Checking amounts:', { fromAmt, toAmt });
+
+      // Parse the amounts
+      const fromAmountNum = parseFloat(fromAmt);
+      const toAmountNum = parseFloat(toAmt);
+
+      console.log('Parsed amounts:', { fromAmountNum, toAmountNum });
+
+      // Check if both amounts are valid numbers and greater than 0
+      if (!fromAmt || isNaN(fromAmountNum) || fromAmountNum <= 0 || 
+          !toAmt || isNaN(toAmountNum) || toAmountNum <= 0) {
+        console.log('Invalid amounts, showing Enter Amounts');
+        btn.textContent = 'Enter Amounts';
+        btn.disabled = true;
+        return;
+      }
+
+      console.log('Valid amounts, showing Add Liquidity');
+      btn.textContent = 'Add Liquidity';
+      btn.disabled = false;
+    }
+
+    function setMax() {
+      if (!selectedFrom || !$('fromBalance')) return;
+      
+      const balanceText = $('fromBalance').textContent;
+      if (balanceText === '—') return;
+      
+      try {
+        const balance = parseFloat(balanceText);
+        if (balance > 0) {
+          // Use 95% of balance to account for gas
+          const maxAmount = balance * 0.95;
+          $('fromAmount').value = maxAmount.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
+          
+          if ($('fromAmount').value && !isNaN(parseFloat($('fromAmount').value)) && parseFloat($('fromAmount').value) > 0) {
+            calculateOptimalAmountB();
+          }
+        }
+      } catch (e) {
+        console.error('Error setting max:', e);
       }
     }
 
@@ -2483,52 +2595,6 @@
         switchToAddView();
         updateLiquidityInfo();
         showToast(`Ready to add ${tokenASymbol}-${tokenBSymbol} liquidity`);
-      }
-    }
-
-    // ==============================
-    // ACTION BUTTON
-    // ==============================
-    function updateActionBtn() {
-      const btn = $('actionBtn');
-      if (!account) {
-        btn.textContent = 'Connect Wallet';
-        btn.disabled = false;
-        return;
-      }
-
-      const fromAmt = parseFloat($('fromAmount').value);
-      const toAmt = parseFloat($('toAmount').value);
-
-      if (!fromAmt || fromAmt <= 0 || !toAmt || toAmt <= 0) {
-        btn.textContent = 'Enter Amounts';
-        btn.disabled = true;
-        return;
-      }
-
-      btn.textContent = 'Add Liquidity';
-      btn.disabled = false;
-    }
-
-    function setMax() {
-      if (!selectedFrom || !$('fromBalance')) return;
-      
-      const balanceText = $('fromBalance').textContent;
-      if (balanceText === '—') return;
-      
-      try {
-        const balance = parseFloat(balanceText);
-        if (balance > 0) {
-          // Use 95% of balance to account for gas
-          const maxAmount = balance * 0.95;
-          $('fromAmount').value = maxAmount.toFixed(selectedFrom.decimals > 6 ? 6 : selectedFrom.decimals);
-          
-          if ($('fromAmount').value && !isNaN(parseFloat($('fromAmount').value)) && parseFloat($('fromAmount').value) > 0) {
-            calculateOptimalAmountB();
-          }
-        }
-      } catch (e) {
-        console.error('Error setting max:', e);
       }
     }
 
@@ -2765,7 +2831,7 @@
 
       try {
         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, signer);
-        const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256);
+        const txApprove = await pairContract.approve(ROUTER, ethers.constants.MaxUint256, { gasLimit: 500000 });
         await txApprove.wait();
         return true;
       } catch (error) {
@@ -2958,6 +3024,8 @@
     // INITIALIZATION
     // ==============================
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM Content Loaded');
+      
       // Initialize network config
       initNetworkConfig();
       updateTokenDisplay();
@@ -3066,6 +3134,7 @@
       
       if (fromAmount) {
         fromAmount.addEventListener('input', () => {
+          console.log('From amount input:', fromAmount.value);
           if (fromAmount.value && !isNaN(parseFloat(fromAmount.value)) && parseFloat(fromAmount.value) > 0) {
             calculateOptimalAmountB();
           } else {
@@ -3077,6 +3146,7 @@
       
       if (toAmount) {
         toAmount.addEventListener('input', () => {
+          console.log('To amount input:', toAmount.value);
           if (toAmount.value && !isNaN(parseFloat(toAmount.value)) && parseFloat(toAmount.value) > 0) {
             calculateOptimalAmountA();
           } else {
@@ -3110,6 +3180,7 @@
       // Handle wallet changes
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', (accounts) => {
+          console.log('Accounts changed:', accounts);
           if (accounts.length === 0) {
             disconnectWallet();
           } else {
@@ -3123,12 +3194,14 @@
         });
         
         window.ethereum.on('chainChanged', () => {
+          console.log('Chain changed, reloading...');
           window.location.reload();
         });
       }
       
       // Check for existing wallet connection
       if (window.ethereum && window.ethereum.selectedAddress) {
+        console.log('Found existing wallet connection');
         account = window.ethereum.selectedAddress;
         updateWalletDisplay();
         
