@@ -1631,45 +1631,42 @@
       }
     }
 
-    // PERBAIKAN: Fungsi untuk menghitung amount token kedua berdasarkan input pertama
-    function calculateOptimalAmountB() {
-      const val = $('fromAmount').value;
-      if (!val) return;
-      
-      try {
-        // Untuk pool baru (isNewPool = true), biarkan user input manual
-        // Untuk pool yang sudah ada, hitung berdasarkan reserves
-        if (!isNewPool && !cachedReserves.reserveA.isZero()) {
-          const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
-          const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
-          $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
-        }
-        // Untuk pool baru, biarkan kolom kedua kosong atau user isi manual
-        updateActionBtn();
-      } catch(e) {
-        console.error('Error calculating optimal amount B:', e);
-      }
+function calculateOptimalAmountB() {
+  const val = $('fromAmount').value;
+  if (!val) return;
+  
+  try {
+    // Untuk pool yang sudah ada, hitung berdasarkan reserves
+    if (!isNewPool && !cachedReserves.reserveA.isZero()) {
+      const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
+      const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
+      $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
     }
+    // Untuk pool baru, TIDAK menghapus nilai di kolom B
+    // Biarkan user mengisi manual atau tampilkan placeholder
+    updateActionBtn();
+  } catch(e) {
+    console.error('Error calculating optimal amount B:', e);
+  }
+}
 
-    // PERBAIKAN: Fungsi untuk menghitung amount token pertama berdasarkan input kedua
-    function calculateOptimalAmountA() {
-      const val = $('toAmount').value;
-      if (!val) return;
-      
-      try {
-        // Untuk pool baru (isNewPool = true), biarkan user input manual
-        // Untuk pool yang sudah ada, hitung berdasarkan reserves
-        if (!isNewPool && !cachedReserves.reserveB.isZero()) {
-          const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
-          const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
-          $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
-        }
-        // Untuk pool baru, biarkan kolom pertama kosong atau user isi manual
-        updateActionBtn();
-      } catch(e) {
-        console.error('Error calculating optimal amount A:', e);
-      }
+function calculateOptimalAmountA() {
+  const val = $('toAmount').value;
+  if (!val) return;
+  
+  try {
+    // Untuk pool yang sudah ada, hitung berdasarkan reserves
+    if (!isNewPool && !cachedReserves.reserveB.isZero()) {
+      const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
+      const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
+      $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
     }
+    // Untuk pool baru, TIDAK menghapus nilai di kolom A
+    updateActionBtn();
+  } catch(e) {
+    console.error('Error calculating optimal amount A:', e);
+  }
+}
 
     function formatPrice(price) {
       if (price === 0) return '0';
