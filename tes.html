@@ -1549,52 +1549,99 @@
     // USD PRICE FUNCTIONS
     // ==============================
     async function getTokenUsdPrice(token) {
-      if (!token || !router) return 0;
+      if (!token || !provider) return 0;
       
       const config = networkManager.getCurrentConfig();
       const usdcAddress = config.contracts.usdc;
       
       let tokenAddress = token.address;
       // Resolve native/wrapped address
+      let wrappedNative = config.contracts.wvana;
+      if (networkManager.getCurrentNetwork() === 'zerog') wrappedNative = config.contracts.w0g;
+      if (networkManager.getCurrentNetwork() === 'berachain') wrappedNative = config.contracts.wbera;
+
       if (token.address.endsWith('NATIVE')) {
-         if (networkManager.getCurrentNetwork() === 'vana') tokenAddress = config.contracts.wvana;
-         else if (networkManager.getCurrentNetwork() === 'zerog') tokenAddress = config.contracts.w0g;
-         else tokenAddress = config.contracts.wbera;
+         tokenAddress = wrappedNative;
       }
       
       // If token is USDC, return 1
       if (tokenAddress.toLowerCase() === usdcAddress.toLowerCase()) return 1;
 
       try {
-        // Use 1 unit of token to get price
-        const amountIn = ethers.utils.parseUnits("1", token.decimals);
+        // 1. Try Direct Pair [Token, USDC]
+        const pairAddress = await factory.getPair(tokenAddress, usdcAddress);
         
-        // Try direct path [Token, USDC]
-        let path = [tokenAddress, usdcAddress];
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+           const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+           const [reserves, token0] = await Promise.all([
+             pairContract.getReserves(),
+             pairContract.token0()
+           ]);
+           
+           const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
+           const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
+           
+           let reserveToken, reserveUsdc;
+           if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
+             reserveToken = r0;
+             reserveUsdc = r1;
+           } else {
+             reserveToken = r1;
+             reserveUsdc = r0;
+           }
+           
+           // USDC is 6 decimals
+           if (reserveToken > 0) {
+              // Price = (ReserveUSDC / 10^6) / (ReserveToken / 10^TokenDecimals)
+              return (reserveUsdc / 1e6) / (reserveToken / Math.pow(10, token.decimals));
+           }
+        }
         
-        try {
-            const amounts = await router.getAmountsOut(amountIn, path);
-            const usdcOut = amounts[amounts.length - 1];
-            // USDC is 6 decimals
-            return parseFloat(ethers.utils.formatUnits(usdcOut, 6));
-        } catch (e) {
-            // Direct path failed, try via Native
-            let wrappedNative = config.contracts.wvana;
-            if (networkManager.getCurrentNetwork() === 'zerog') wrappedNative = config.contracts.w0g;
-            if (networkManager.getCurrentNetwork() === 'berachain') wrappedNative = config.contracts.wbera;
+        // 2. Try Indirect via Native [Token, Native] -> [Native, USDC]
+        // If the current token is NOT the wrapped native token
+        if (tokenAddress.toLowerCase() !== wrappedNative.toLowerCase()) {
             
-            if (tokenAddress.toLowerCase() !== wrappedNative.toLowerCase()) {
-                path = [tokenAddress, wrappedNative, usdcAddress];
-                try {
-                    const amounts = await router.getAmountsOut(amountIn, path);
-                    const usdcOut = amounts[amounts.length - 1];
-                    return parseFloat(ethers.utils.formatUnits(usdcOut, 6));
-                } catch (e2) {
-                    return 0;
+            // First get price of Native in USDC
+            const nativeToken = {
+                 address: wrappedNative,
+                 decimals: 18, 
+                 symbol: 'Native'
+            };
+            const nativePrice = await getTokenUsdPrice(nativeToken);
+            
+            if (nativePrice > 0) {
+                // Get Token-Native Pair
+                const pairNative = await factory.getPair(tokenAddress, wrappedNative);
+                
+                if (pairNative && pairNative !== '0x0000000000000000000000000000000000000000') {
+                    const pairContract = new ethers.Contract(pairNative, PAIR_ABI, provider);
+                    const [reserves, token0] = await Promise.all([
+                        pairContract.getReserves(),
+                        pairContract.token0()
+                    ]);
+                    
+                    const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
+                    const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
+                    
+                    let reserveToken, reserveNative;
+                    if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
+                        reserveToken = r0;
+                        reserveNative = r1;
+                    } else {
+                        reserveToken = r1;
+                        reserveNative = r0;
+                    }
+                    
+                    if (reserveToken > 0) {
+                        // Price in Native = (ReserveNative / 10^18) / (ReserveToken / 10^TokenDecimals)
+                        const priceInNative = (reserveNative / 1e18) / (reserveToken / Math.pow(10, token.decimals));
+                        return priceInNative * nativePrice;
+                    }
                 }
             }
-            return 0;
         }
+        
+        return 0;
       } catch (error) {
         console.error("getTokenUsdPrice error", error);
         return 0;
