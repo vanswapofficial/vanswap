@@ -435,6 +435,8 @@
         <h4 style="margin-top:14px">Pool Stats</h4>
         <div class="panel-row"><div><span id="tokenASymbol2">VANA</span> per <span id="tokenBSymbol2">USDC</span></div><div id="priceA">—</div></div>
         <div class="panel-row"><div><span id="tokenBSymbol3">USDC</span> per <span id="tokenASymbol3">VANA</span></div><div id="priceB">—</div></div>
+        <div class="panel-row"><div>1 <span id="tokenASymbol4">VANA</span></div><div id="priceAUSD">$—</div></div>
+        <div class="panel-row"><div>1 <span id="tokenBSymbol4">USDC</span></div><div id="priceBUSD">$—</div></div>
         <div class="panel-row"><div>Total Liquidity</div><div id="totalLiquidity">$—</div></div>
         <div class="panel-row"><div>24h Volume</div><div id="dailyVolume">$—</div></div>
 
@@ -458,6 +460,14 @@
         <button class="percentage-btn" data-percent="50" onclick="setRemovePercentage(50)">50%</button>
         <button class="percentage-btn" data-percent="75" onclick="setRemovePercentage(75)">75%</button>
         <button class="percentage-btn" data-percent="100" onclick="setRemovePercentage(100)">100%</button>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label class="form-label" style="font-size:12px;margin-bottom:4px">Percentage to remove</label>
+        <div style="display:flex;gap:8px">
+          <input id="removePercentageInput" class="form-input" placeholder="0" type="number" min="0" max="100" oninput="onRemoveInput(this.value)">
+          <div style="align-self:center;font-weight:600;font-size:14px;white-space:nowrap">%</div>
+        </div>
       </div>
 
       <div class="remove-amounts">
@@ -1225,7 +1235,10 @@
             </div>
             <div class="token-addr">${displayAddr}</div>
           </div>
-          <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+          <div style="text-align:right;margin-right:8px">
+            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px">—</div>
+            <div id="price-${token.symbol}" style="color:var(--accent);font-size:11px;font-weight:600">$—</div>
+          </div>
         `;
         
         const actionsDiv = document.createElement('div');
@@ -1268,7 +1281,10 @@
               </div>
               <div class="token-addr">${token.address.substring(0,6) + '...' + token.address.substring(38)}</div>
             </div>
-            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+            <div style="text-align:right;margin-right:8px">
+              <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px">—</div>
+              <div id="price-${token.symbol}" style="color:var(--accent);font-size:11px;font-weight:600">$—</div>
+            </div>
           `;
           
           const actionsDiv = document.createElement('div');
@@ -1298,8 +1314,28 @@
       
       listEl.style.display = 'block';
       
+      updateTokenListPrices();
+      
       if (account) {
         updateDropdownBalances();
+      }
+    }
+
+    async function updateTokenListPrices() {
+      if (!provider) return;
+      
+      const allTokens = [...getBaseTokensForNetwork(networkManager.getCurrentNetwork()), ...customTokenManager.getTokensForNetwork(networkManager.getCurrentNetwork())];
+      
+      for (const token of allTokens) {
+         try {
+            const price = await getTokenPriceUSD(token.address, token.decimals);
+            const priceEl = document.getElementById(`price-${token.symbol}`);
+            if (priceEl) {
+               priceEl.textContent = formatUSD(price);
+            }
+         } catch(e) {
+            console.error('Error fetching price for list', token.symbol, e);
+         }
       }
     }
 
@@ -1475,6 +1511,8 @@
          $('pooledTokenB').textContent = '0';
          $('priceA').textContent = '0';
          $('priceB').textContent = '0';
+         $('priceAUSD').textContent = '$0';
+         $('priceBUSD').textContent = '$0';
          $('poolSharePercent').textContent = '0%';
          $('poolShareValue').textContent = '0%';
          $('poolTokens').textContent = '0';
@@ -1488,9 +1526,11 @@
         $('tokenASymbol').textContent = selectedFrom.symbol;
         $('tokenASymbol2').textContent = selectedFrom.symbol;
         $('tokenASymbol3').textContent = selectedFrom.symbol;
+        $('tokenASymbol4').textContent = selectedFrom.symbol;
         $('tokenBSymbol').textContent = selectedTo.symbol;
         $('tokenBSymbol2').textContent = selectedTo.symbol;
         $('tokenBSymbol3').textContent = selectedTo.symbol;
+        $('tokenBSymbol4').textContent = selectedTo.symbol;
 
         const tokenA = selectedFrom.address.endsWith('NATIVE') ? WVANA : selectedFrom.address;
         const tokenB = selectedTo.address.endsWith('NATIVE') ? WVANA : selectedTo.address;
@@ -1535,6 +1575,9 @@
           const priceAUSD = await getTokenPriceUSD(selectedFrom.address, selectedFrom.decimals);
           const priceBUSD = await getTokenPriceUSD(selectedTo.address, selectedTo.decimals);
           
+          $('priceAUSD').textContent = formatUSD(priceAUSD);
+          $('priceBUSD').textContent = formatUSD(priceBUSD);
+          
           let totalLiquidityUSD = 0;
           if (priceAUSD > 0 && priceBUSD > 0) {
              totalLiquidityUSD = (rA * priceAUSD) + (rB * priceBUSD);
@@ -1570,6 +1613,8 @@
           $('pooledTokenB').textContent = '0';
           $('priceA').textContent = '0';
           $('priceB').textContent = '0';
+          $('priceAUSD').textContent = '$0';
+          $('priceBUSD').textContent = '$0';
           $('poolSharePercent').textContent = '0%';
           $('poolShareValue').textContent = '0%';
           $('poolTokens').textContent = '0';
@@ -2186,6 +2231,7 @@
 
         $('removeTokenAAmount').textContent = '0';
         $('removeTokenBAmount').textContent = '0';
+        $('removePercentageInput').value = '';
 
         $('removeLiquidityModal').style.display = 'flex';
 
@@ -2193,6 +2239,39 @@
         console.error('Error loading remove modal:', error);
         showToast('Failed to load pool information');
       }
+    }
+
+    function onRemoveInput(val) {
+      if(!currentRemovePool) return;
+      
+      let percent = parseFloat(val);
+      if (isNaN(percent) || percent < 0) percent = 0;
+      if (percent > 100) percent = 100;
+      
+      // Update internal state
+      currentRemovePercentage = percent;
+      
+      // Clear preset buttons if not matching
+      document.querySelectorAll('.percentage-btn').forEach(btn => {
+         if(parseInt(btn.getAttribute('data-percent')) === percent) {
+            btn.classList.add('active');
+         } else {
+            btn.classList.remove('active');
+         }
+      });
+      
+      try {
+        // Calculate amount based on percentage
+        // balance * percent / 100
+        const balance = currentRemovePool.userBalance;
+        const liquidityAmount = balance.mul(Math.floor(percent * 100)).div(10000); // Higher precision if needed, but simple % is fine: mul(percent).div(100) works for integers
+        
+        const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+        const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+
+        $('removeTokenAAmount').textContent = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
+        $('removeTokenBAmount').textContent = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
+      } catch(e) { console.error(e); }
     }
 
     function setRemovePercentage(percent) {
@@ -2205,6 +2284,9 @@
           btn.classList.remove('active');
         }
       });
+      
+      // Update input field
+      $('removePercentageInput').value = percent;
 
       if (currentRemovePool) {
         const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
@@ -2224,8 +2306,10 @@
     }
 
     async function confirmRemoveLiquidity() {
-      if (!currentRemovePool || currentRemovePercentage === 0) {
-        showToast('Please select a percentage to remove');
+      if (!currentRemovePool) return;
+      
+      if (currentRemovePercentage <= 0) {
+        showToast('Please enter a valid percentage');
         return;
       }
 
@@ -2235,7 +2319,32 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span>Removing...';
 
-        const liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+        // Calculate actual LP amount from percentage
+        // Using Math.floor(percent * 100) / 10000 for 2 decimal places support if needed, but input is number
+        // Just use mul(percent).div(100) for standard integer percents
+        let liquidityAmount;
+        
+        // Handle potential float input like 33.3%
+        const percentStr = currentRemovePercentage.toString();
+        if (percentStr.includes('.')) {
+           const [intPart, decPart] = percentStr.split('.');
+           const decimals = decPart.length;
+           const factor = Math.pow(10, decimals);
+           const percentBN = ethers.BigNumber.from(intPart + decPart);
+           liquidityAmount = currentRemovePool.userBalance.mul(percentBN).div(100 * factor);
+        } else {
+           liquidityAmount = currentRemovePool.userBalance.mul(Math.floor(currentRemovePercentage)).div(100);
+        }
+        
+        if (liquidityAmount.gt(currentRemovePool.userBalance)) {
+           liquidityAmount = currentRemovePool.userBalance; // Cap at max
+        }
+        if (liquidityAmount.isZero()) {
+           showToast('Amount too small');
+           btn.disabled = false;
+           btn.textContent = 'Remove Liquidity';
+           return;
+        }
 
         if (!currentRemovePool.hasAllowance) {
           setStatus('Approving LP tokens...');
@@ -2875,6 +2984,7 @@
     window.addCustomToken = addCustomToken;
     window.cancelAddToken = cancelAddToken;
     window.selectToken = selectToken;
+    window.onRemoveInput = onRemoveInput;
   </script>
 </body>
 </html>
