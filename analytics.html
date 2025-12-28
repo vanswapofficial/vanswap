@@ -7,89 +7,481 @@
   <meta name="description" content="View analytics for VanSwap DEX on Vana Chain & 0G Network. TVL, Volume, Top Tokens, and Pools.">
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  
   <style>
-    :root{
+    :root {
       --primary: #1a7f5e;
       --primary-dark: #146c4d;
       --accent: #31d0aa;
       --text: #ffffff;
-      --muted: rgba(255,255,255,0.12);
+      --muted: rgba(255,255,255,0.6);
       --card-bg: rgba(14,42,33,0.85);
       --card-border: rgba(26,127,94,0.12);
       --warning: #ff9800;
       --danger: #f44336;
       --success: #4caf50;
+      --loading: rgba(49, 208, 170, 0.2);
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:'Kanit',sans-serif;
-      background:linear-gradient(180deg,#04140d 0%, #07261b 100%);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
-      min-height:100vh;
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    .header{background: linear-gradient(135deg,var(--primary-dark),#0f593c);padding:12px 0;position:sticky;top:0;z-index:1300;border-bottom:1px solid rgba(0,0,0,0.25);}
-    .nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;}
-    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-    .logo img{width:40px;height:40px;border-radius:8px;object-fit:cover}
-    .logo span{font-weight:700;font-size:18px}
-    .menu-dot-btn{width:40px;height:40px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:18px;position:relative;z-index:1400;}
-    .menu-dropdown{position:absolute;right:20px;top:64px;min-width:180px;background:rgba(20, 60, 45, 0.98);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,0.8);opacity:0;transform:translateY(-6px);pointer-events:none;transition:all .18s ease;z-index:1600;}
-    .menu-dropdown.show{opacity:1;transform:translateY(0);pointer-events:auto}
-    .menu-item{padding:10px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
-    .menu-item:hover{background:rgba(255,255,255,0.02)}
-    .menu-sep{height:1px;background:rgba(255,255,255,0.03);margin:6px 0;border-radius:2px}
     
-    .main{max-width:1200px;margin:32px auto;padding:0 20px}
-    .title-section{margin-bottom:24px}
-    .page-title{font-size:28px;font-weight:700;margin-bottom:8px}
-    .page-desc{color:var(--muted);font-size:14px}
-
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:32px}
-    .stat-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px}
-    .stat-label{color:var(--muted);font-size:13px;margin-bottom:8px}
-    .stat-value{font-size:24px;font-weight:700;color:var(--text)}
-    .stat-change{font-size:12px;margin-top:4px}
-    .positive{color:var(--success)}
-    .negative{color:var(--danger)}
-
-    .charts-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px;margin-bottom:32px}
-    .chart-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;height:320px}
-    .chart-header{display:flex;justify-content:space-between;margin-bottom:16px}
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(180deg, #04140d 0%, #07261b 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
     
-    .table-section{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px;margin-bottom:32px;overflow:hidden}
-    .table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .table-title{font-size:20px;font-weight:700}
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark), #0f593c);
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1300;
+      border-bottom: 1px solid rgba(0,0,0,0.25);
+    }
     
-    .data-table{width:100%;border-collapse:collapse}
-    .data-table th{text-align:left;padding:12px;color:var(--muted);font-size:13px;font-weight:500;border-bottom:1px solid rgba(255,255,255,0.05)}
-    .data-table td{padding:16px 12px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px}
-    .data-table tr:hover{background:rgba(255,255,255,0.02)}
-    .token-cell{display:flex;align-items:center;gap:8px}
-    .token-cell img{width:24px;height:24px;border-radius:50%}
-    .rank-cell{color:var(--muted);width:40px}
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    
+    .logo span {
+      font-weight: 700;
+      font-size: 18px;
+    }
+    
+    .menu-dot-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 18px;
+      position: relative;
+      z-index: 1400;
+    }
+    
+    .menu-dropdown {
+      position: absolute;
+      right: 20px;
+      top: 64px;
+      min-width: 180px;
+      background: rgba(20, 60, 45, 0.98);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: all .18s ease;
+      z-index: 1600;
+    }
+    
+    .menu-dropdown.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    
+    .menu-item {
+      padding: 10px;
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    
+    .menu-item:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .menu-sep {
+      height: 1px;
+      background: rgba(255,255,255,0.03);
+      margin: 6px 0;
+      border-radius: 2px;
+    }
+    
+    .main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    
+    .title-section {
+      margin-bottom: 24px;
+    }
+    
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .page-desc {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card.loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--loading), transparent);
+      animation: loading 1.5s infinite;
+    }
+    
+    @keyframes loading {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+    
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    
+    .stat-change {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    
+    .positive {
+      color: var(--success);
+    }
+    
+    .negative {
+      color: var(--danger);
+    }
+    
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .chart-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      height: 320px;
+      position: relative;
+    }
+    
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .table-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+    
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .table-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .data-table th {
+      text-align: left;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .data-table td {
+      padding: 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      font-size: 14px;
+    }
+    
+    .data-table tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .token-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .token-cell img {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+    }
+    
+    .rank-cell {
+      color: var(--muted);
+      width: 40px;
+    }
     
     /* Network Selector */
-    .wallet-network-container{position:relative;display:inline-block}
-    .network-dropdown{position:absolute;top:100%;background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;padding:8px;display:none;z-index:2000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:160px;right:0;left:auto}
-    .network-option{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:14px}
-    .network-option:hover{background:rgba(255,255,255,0.05)}
-    .network-btn{display:flex;align-items:center;justify-content:center;background:var(--card-bg);border:1px solid var(--card-border);color:var(--text);padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer;min-width:140px}
-    .network-btn:hover{background:rgba(255,255,255,0.05)}
-
-    footer{margin-top:28px;text-align:center;padding:20px;color:var(--muted);font-size:13px}
+    .wallet-network-container {
+      position: relative;
+      display: inline-block;
+    }
     
-    /* Loading */
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    @media (max-width:768px){
-      .charts-row{grid-template-columns:1fr}
-      .data-table{display:block;overflow-x:auto}
+    .network-dropdown {
+      position: absolute;
+      top: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      margin-top: 4px;
+      padding: 8px;
+      display: none;
+      z-index: 2000;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      min-width: 160px;
+      right: 0;
+      left: auto;
+    }
+    
+    .network-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .network-option:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .network-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 140px;
+    }
+    
+    .network-btn:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    
+    /* Loading States */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(4, 20, 13, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.12);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    
+    .error-message {
+      background: rgba(244, 67, 54, 0.1);
+      border: 1px solid var(--danger);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 16px 0;
+      color: var(--danger);
+      text-align: center;
+    }
+    
+    .refresh-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: 'Kanit', sans-serif;
+    }
+    
+    .refresh-btn:hover {
+      background: var(--primary-dark);
+    }
+    
+    .network-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    
+    .status-dot.offline {
+      background: var(--danger);
+    }
+    
+    @media (max-width: 768px) {
+      .charts-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .data-table {
+        display: block;
+        overflow-x: auto;
+      }
+      
+      .nav-container {
+        padding: 0 12px;
+      }
+      
+      .main {
+        padding: 0 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-card {
+        height: 280px;
+      }
+      
+      .page-title {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
+
 <body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Loading analytics data...</div>
+  </div>
 
   <header class="header">
     <div class="nav-container">
@@ -121,6 +513,11 @@
           </div>
         </div>
 
+        <div class="network-status">
+          <div class="status-dot" id="networkStatus"></div>
+          <span id="networkStatusText">Online</span>
+        </div>
+
         <button id="menuBtn" class="menu-dot-btn" title="Menu">⋮</button>
         <div id="menuDropdown" class="menu-dropdown" aria-hidden="true">
           <div class="menu-item" data-href="swap.html">Swap</div>
@@ -143,39 +540,42 @@
       <p class="page-desc">Overview of VanSwap exchange statistics and liquidity pools.</p>
     </div>
 
+    <!-- Error Display -->
+    <div id="errorDisplay" style="display: none;"></div>
+
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card" id="tvlCard">
         <div class="stat-label">Total Value Locked</div>
         <div class="stat-value" id="tvlDisplay">$0.00</div>
-        <div class="stat-change positive"></div>
+        <div class="stat-change positive" id="tvlChange">Real-time</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Volume 24h (Est)</div>
-        <div class="stat-value" id="volumeDisplay">$0.00</div>
-        <div class="stat-change positive"></div>
+      <div class="stat-card" id="volumeCard">
+        <div class="stat-label">Volume 24h</div>
+        <div class="stat-value" id="volumeDisplay">--</div>
+        <div class="stat-change" style="color:var(--muted); font-size: 11px;">Requires Indexer</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="pairsCard">
         <div class="stat-label">Total Pairs</div>
         <div class="stat-value" id="pairsDisplay">0</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Transactions 24h</div>
-        <div class="stat-value">--</div>
+      <div class="stat-card" id="transactionsCard">
+        <div class="stat-label">Block Height</div>
+        <div class="stat-value" id="transactionsDisplay">--</div>
       </div>
     </div>
 
     <div class="charts-row">
       <div class="chart-card">
         <div class="chart-header">
-          <div style="font-weight:600">Liquidity</div>
-          <div style="color:var(--muted);font-size:12px">All Time</div>
+          <div style="font-weight:600">Top Pools by TVL</div>
+          <div style="color:var(--muted);font-size:12px">Real-time Data</div>
         </div>
         <canvas id="tvlChart"></canvas>
       </div>
       <div class="chart-card">
         <div class="chart-header">
-          <div style="font-weight:600">Volume</div>
-          <div style="color:var(--muted);font-size:12px">All Time</div>
+          <div style="font-weight:600">Top Pools by Reserves</div>
+          <div style="color:var(--muted);font-size:12px">Raw Data</div>
         </div>
         <canvas id="volChart"></canvas>
       </div>
@@ -184,6 +584,7 @@
     <div class="table-section">
       <div class="table-header">
         <div class="table-title">Top Tokens</div>
+        <button id="refreshTokens" class="refresh-btn">Refresh</button>
       </div>
       <table class="data-table">
         <thead>
@@ -191,13 +592,12 @@
             <th>#</th>
             <th>Name</th>
             <th>Price</th>
-            <th>Price Change</th>
-            <th>Volume 24h</th>
             <th>Liquidity</th>
+            <th>Decimals</th>
           </tr>
         </thead>
         <tbody id="tokensTableBody">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading...</td></tr>
+          <tr><td colspan="5" style="text-align:center;color:var(--muted)">Loading tokens data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -205,19 +605,19 @@
     <div class="table-section">
       <div class="table-header">
         <div class="table-title">Top Pools</div>
+        <button id="refreshPools" class="refresh-btn">Refresh</button>
       </div>
       <table class="data-table">
         <thead>
           <tr>
             <th>#</th>
             <th>Pool</th>
-            <th>TVL</th>
-            <th>Volume 24h</th>
-            <th>APR</th>
+            <th>TVL (Est)</th>
+            <th>Reserves</th>
           </tr>
         </thead>
         <tbody id="poolsTableBody">
-          <tr><td colspan="5" style="text-align:center;color:var(--muted)">Loading...</td></tr>
+          <tr><td colspan="4" style="text-align:center;color:var(--muted)">Loading pools data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -225,7 +625,6 @@
 
   <footer>© 2025 VanSwap DEX - Built on Vana Chain and Beyond</footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
   <script>
     // ==============================
     // CONFIG & CONSTANTS
@@ -236,40 +635,55 @@
         name: "Vana Network",
         rpcUrl: "https://rpc.vana.org",
         explorer: "https://vanascan.io",
+        blockTime: 2,
         contracts: {
           factory: '0x7Cba03E40FCE39c55AC3280E4eedB9c5d733D35D',
           wvana: '0x00eddd9621fb08436d0331c149d1690909a5906d',
           usdc: '0xF1815bd50389c46847f0Bda824eC8da914045D14'
-        }
+        },
+        enabled: true
       },
       zerog: {
         chainId: 16661,
         name: "0G Network",
         rpcUrl: "https://evmrpc.0g.ai",
         explorer: "https://chainscan.0g.ai",
+        blockTime: 2,
         contracts: {
           factory: '0x82741ff5937933244eb562a4b396f8079f1de914',
           w0g: '0x1cd0690ff9a693f5ef2dd976660a8dafc81a109c',
           usdc: '0x1f3aa82227281ca364bfb3d253b0f1af1da6473e'
-        }
+        },
+        enabled: true
       },
       berachain: {
         chainId: 80095,
         name: "Berachain",
         rpcUrl: "https://rpc.berachain.com/",
         explorer: "https://berascan.com/",
+        blockTime: 2,
         contracts: {
           factory: '0x82741ff5937933244eb562A4b396f8079F1de914',
           wbera: '0x6969696969696969696969696969696969696969',
           usdc: '0x549943e04f40284185054145c6E4e9568C1D3241'
-        }
+        },
+        enabled: true
       }
+    };
+
+    const API_CONFIG = {
+      cacheTime: 60000 // 1 minute cache
     };
 
     const FACTORY_ABI = [
       'function allPairsLength() external view returns (uint)',
-      'function allPairs(uint) external view returns (address)',
-      'function getPair(address tokenA, address tokenB) external view returns (address pair)'
+      'function allPairs(uint) external view returns (address)'
+    ];
+
+    const ERC20_ABI = [
+      'function symbol() view returns (string)',
+      'function decimals() view returns (uint8)',
+      'function name() view returns (string)'
     ];
 
     const PAIR_ABI = [
@@ -279,28 +693,55 @@
       'function totalSupply() view returns (uint256)'
     ];
 
-    const ERC20_ABI = [
-      'function symbol() view returns (string)',
-      'function decimals() view returns (uint8)'
-    ];
+    // ==============================
+    // STATE MANAGEMENT
+    // ==============================
+    let currentNetwork = localStorage.getItem('vanswap-network') || 'vana';
+    let provider = null;
+    let isOnline = true;
+    let lastUpdateTime = null;
+    let dataCache = {};
+    let chartInstances = { tvlChart: null, volChart: null };
+    let tokenCache = {}; // Cache for token details
 
     // ==============================
-    // STATE
-    // ==============================
-    let provider;
-    let factoryContract;
-    let currentNetwork = localStorage.getItem('vanswap-network') || 'vana';
-    
-    // ==============================
-    // INIT
+    // INITIALIZATION
     // ==============================
     document.addEventListener('DOMContentLoaded', () => {
-      setupNetworkSelector();
-      setupMenu();
-      initData();
+      console.log('VanSwap Analytics Initializing...');
+      setupEventListeners();
+      checkNetworkStatus();
+      loadData();
     });
 
-    function setupMenu() {
+    // ==============================
+    // EVENT LISTENERS SETUP
+    // ==============================
+    function setupEventListeners() {
+      // Network selector
+      const networkBtn = document.getElementById('networkBtn');
+      const networkDropdown = document.getElementById('networkDropdown');
+      
+      networkBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        networkDropdown.style.display = networkDropdown.style.display === 'block' ? 'none' : 'block';
+      });
+      
+      networkDropdown.querySelectorAll('.network-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const net = opt.getAttribute('data-network');
+          switchNetwork(net);
+          networkDropdown.style.display = 'none';
+        });
+      });
+      
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.wallet-network-container')) {
+          networkDropdown.style.display = 'none';
+        }
+      });
+      
+      // Menu dropdown
       const menuBtn = document.getElementById('menuBtn');
       const menuDropdown = document.getElementById('menuDropdown');
       
@@ -314,47 +755,36 @@
           menuDropdown.classList.remove('show');
         }
       });
-
+      
       menuDropdown.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', () => {
           const href = item.getAttribute('data-href');
           if (href) window.location.href = href;
         });
       });
-    }
-
-    function setupNetworkSelector() {
-      const btn = document.getElementById('networkBtn');
-      const dropdown = document.getElementById('networkDropdown');
       
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-      });
+      // Refresh buttons
+      document.getElementById('refreshTokens').addEventListener('click', () => refreshData('tokens'));
+      document.getElementById('refreshPools').addEventListener('click', () => refreshData('pools'));
       
-      dropdown.querySelectorAll('.network-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-          const net = opt.getAttribute('data-network');
-          switchNetwork(net);
-          dropdown.style.display = 'none';
-        });
-      });
-      
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.wallet-network-container')) {
-          dropdown.style.display = 'none';
+      // Auto-refresh every 60 seconds
+      setInterval(() => {
+        if (isOnline && document.visibilityState === 'visible') {
+          loadData(false); // Silent refresh
         }
-      });
-      
-      updateNetworkUI();
+      }, 60000);
     }
 
+    // ==============================
+    // NETWORK FUNCTIONS
+    // ==============================
     function switchNetwork(net) {
-      if (NETWORK_CONFIG[net]) {
+      if (NETWORK_CONFIG[net] && NETWORK_CONFIG[net].enabled) {
         currentNetwork = net;
         localStorage.setItem('vanswap-network', net);
         updateNetworkUI();
-        initData();
+        showLoading('Switching network...');
+        loadData();
       }
     }
 
@@ -363,221 +793,583 @@
       document.getElementById('networkDisplay').textContent = config.name;
     }
 
-    async function initData() {
-      const config = NETWORK_CONFIG[currentNetwork];
-      provider = new ethers.providers.JsonRpcProvider(config.rpcUrl);
-      
-      if (config.contracts.factory === '0x0000000000000000000000000000000000000000') {
-         renderEmptyState();
-         return;
+    async function checkNetworkStatus() {
+      try {
+        const config = NETWORK_CONFIG[currentNetwork];
+        // Simple fetch to check if RPC is responsive
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(config.rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "eth_blockNumber",
+            params: []
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        isOnline = response.ok;
+        updateStatusUI(isOnline);
+      } catch (error) {
+        console.error('Network check failed:', error);
+        isOnline = false;
+        updateStatusUI(false);
       }
+    }
+
+    function updateStatusUI(online) {
+      const statusDot = document.getElementById('networkStatus');
+      const statusText = document.getElementById('networkStatusText');
       
-      factoryContract = new ethers.Contract(config.contracts.factory, FACTORY_ABI, provider);
+      if (online) {
+        statusDot.classList.remove('offline');
+        statusDot.style.background = 'var(--success)';
+        statusText.textContent = 'Online';
+        hideError();
+      } else {
+        statusDot.classList.add('offline');
+        statusDot.style.background = 'var(--danger)';
+        statusText.textContent = 'Offline';
+      }
+    }
+
+    // ==============================
+    // LOADING & ERROR HANDLING
+    // ==============================
+    function showLoading(message = 'Loading analytics data...') {
+      const overlay = document.getElementById('loadingOverlay');
+      const text = document.getElementById('loadingText');
+      text.textContent = message;
+      overlay.style.display = 'flex';
+      
+      // Add loading animation to stat cards
+      ['tvlCard', 'volumeCard', 'pairsCard', 'transactionsCard'].forEach(id => {
+        const card = document.getElementById(id);
+        if (card) card.classList.add('loading');
+      });
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      overlay.style.display = 'none';
+      
+      // Remove loading animation
+      ['tvlCard', 'volumeCard', 'pairsCard', 'transactionsCard'].forEach(id => {
+        const card = document.getElementById(id);
+        if (card) card.classList.remove('loading');
+      });
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorDisplay');
+      errorDiv.innerHTML = `
+        <div class="error-message">
+          ${message}
+          <button onclick="loadData()" style="margin-left: 10px; padding: 4px 12px;" class="refresh-btn">Retry</button>
+        </div>
+      `;
+      errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+      const errorDiv = document.getElementById('errorDisplay');
+      errorDiv.style.display = 'none';
+    }
+
+    // ==============================
+    // DATA LOADING FUNCTIONS
+    // ==============================
+    async function loadData(showLoadingIndicator = true) {
+      if (showLoadingIndicator) {
+        showLoading();
+      }
       
       try {
-        const pairsCount = await factoryContract.allPairsLength();
-        document.getElementById('pairsDisplay').textContent = pairsCount.toString();
-        
-        await fetchAndRenderData(pairsCount);
-        renderCharts(); // Render dummy charts for visual completeness
-      } catch (e) {
-        console.error("Error fetching data:", e);
+        await loadDataFromRPC();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        showError('Failed to load real data from RPC. Network may be congested.');
         renderEmptyState();
+      } finally {
+        if (showLoadingIndicator) {
+          hideLoading();
+        }
+        lastUpdateTime = new Date();
       }
+    }
+
+    async function loadDataFromRPC() {
+      const config = NETWORK_CONFIG[currentNetwork];
+      
+      // Initialize provider
+      provider = new ethers.providers.JsonRpcProvider(config.rpcUrl);
+      
+      const blockNumber = await provider.getBlockNumber();
+      document.getElementById('transactionsDisplay').textContent = '#' + blockNumber;
+
+      if (!config.contracts.factory) {
+        throw new Error('Factory contract not deployed on this network');
+      }
+      
+      const factoryContract = new ethers.Contract(config.contracts.factory, FACTORY_ABI, provider);
+      
+      // Get total pairs
+      const pairsCount = await factoryContract.allPairsLength();
+      const totalPairs = pairsCount.toNumber();
+      document.getElementById('pairsDisplay').textContent = totalPairs.toLocaleString();
+
+      if (totalPairs === 0) {
+        renderData({ tvl: 0, volume24h: 0, totalPairs: 0, topTokens: [], topPools: [] });
+        return;
+      }
+
+      // Fetch pairs data
+      // Strategy: Fetch first 10 pairs (major pools) and last 10 pairs (newest)
+      // This keeps it fast (< 3 seconds) while giving relevant data
+      const pairsToFetch = new Set();
+      for (let i = 0; i < Math.min(totalPairs, 15); i++) pairsToFetch.add(i);
+      for (let i = Math.max(0, totalPairs - 10); i < totalPairs; i++) pairsToFetch.add(i);
+      
+      const pairIndices = Array.from(pairsToFetch);
+      
+      // Step 1: Get Pair Addresses
+      const pairAddresses = await Promise.all(
+        pairIndices.map(index => factoryContract.allPairs(index))
+      );
+
+      // Step 2: Get Reserves & Token Addresses for these pairs
+      // We process in batches of 5 to avoid rate limits
+      const pairsData = [];
+      const batchSize = 5;
+      
+      for (let i = 0; i < pairAddresses.length; i += batchSize) {
+        const batch = pairAddresses.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(async (address) => {
+          const pairContract = new ethers.Contract(address, PAIR_ABI, provider);
+          try {
+            const [reserves, t0, t1] = await Promise.all([
+              pairContract.getReserves(),
+              pairContract.token0(),
+              pairContract.token1()
+            ]);
+            return {
+              address,
+              reserves,
+              token0: t0,
+              token1: t1
+            };
+          } catch (e) {
+            console.warn('Failed to fetch pair:', address, e);
+            return null;
+          }
+        }));
+        pairsData.push(...batchResults.filter(p => p !== null));
+      }
+
+      // Step 3: Fetch Token Details
+      const uniqueTokens = new Set();
+      pairsData.forEach(p => {
+        uniqueTokens.add(p.token0);
+        uniqueTokens.add(p.token1);
+      });
+
+      await fetchTokenDetails(Array.from(uniqueTokens), provider);
+
+      // Step 4: Calculate Prices and TVL
+      const processedData = processPairsData(pairsData, config);
+      
+      renderData({
+        ...processedData,
+        totalPairs,
+        timestamp: Date.now()
+      });
+    }
+
+    async function fetchTokenDetails(addresses, provider) {
+      const missingTokens = addresses.filter(addr => !tokenCache[addr]);
+      
+      // Batch fetch token details
+      const batchSize = 10;
+      for (let i = 0; i < missingTokens.length; i += batchSize) {
+        const batch = missingTokens.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (address) => {
+          try {
+            const contract = new ethers.Contract(address, ERC20_ABI, provider);
+            // Some tokens might fail on symbol/decimals calls
+            const [symbol, decimals] = await Promise.all([
+               contract.symbol().catch(() => 'UNK'),
+               contract.decimals().catch(() => 18)
+            ]);
+            
+            tokenCache[address] = {
+              symbol,
+              decimals,
+              address
+            };
+          } catch (e) {
+            console.warn('Error fetching token:', address);
+            tokenCache[address] = { symbol: 'UNK', decimals: 18, address };
+          }
+        }));
+      }
+    }
+
+    function processPairsData(pairs, config) {
+      const usdc = config.contracts.usdc.toLowerCase();
+      const tokenPrices = {}; // Price in USD
+      tokenPrices[usdc] = 1.0;
+
+      // 1st Pass: Find prices from pools with USDC
+      pairs.forEach(p => {
+        const t0 = p.token0.toLowerCase();
+        const t1 = p.token1.toLowerCase();
+        const r0 = parseFloat(ethers.utils.formatUnits(p.reserves[0], tokenCache[p.token0].decimals));
+        const r1 = parseFloat(ethers.utils.formatUnits(p.reserves[1], tokenCache[p.token1].decimals));
+
+        if (r0 <= 0 || r1 <= 0) return;
+
+        if (t0 === usdc) {
+          tokenPrices[t1] = r0 / r1; // Price of t1 in terms of t0 (USD)
+        } else if (t1 === usdc) {
+          tokenPrices[t0] = r1 / r0;
+        }
+      });
+
+      // 2nd Pass: Find prices for tokens paired with already priced tokens
+      // (e.g. VANA-ETH where ETH is priced) - Simplified propagation
+      let changed = true;
+      let loops = 0;
+      while (changed && loops < 2) {
+        changed = false;
+        loops++;
+        pairs.forEach(p => {
+          const t0 = p.token0.toLowerCase();
+          const t1 = p.token1.toLowerCase();
+          
+          if (tokenPrices[t0] && !tokenPrices[t1]) {
+            const r0 = parseFloat(ethers.utils.formatUnits(p.reserves[0], tokenCache[p.token0].decimals));
+            const r1 = parseFloat(ethers.utils.formatUnits(p.reserves[1], tokenCache[p.token1].decimals));
+            if (r1 > 0) {
+              tokenPrices[t1] = (r0 * tokenPrices[t0]) / r1;
+              changed = true;
+            }
+          } else if (tokenPrices[t1] && !tokenPrices[t0]) {
+             const r0 = parseFloat(ethers.utils.formatUnits(p.reserves[0], tokenCache[p.token0].decimals));
+            const r1 = parseFloat(ethers.utils.formatUnits(p.reserves[1], tokenCache[p.token1].decimals));
+            if (r0 > 0) {
+              tokenPrices[t0] = (r1 * tokenPrices[t1]) / r0;
+              changed = true;
+            }
+          }
+        });
+      }
+
+      // Calculate TVL and build lists
+      let totalTVL = 0;
+      const poolsWithStats = pairs.map(p => {
+        const t0 = p.token0.toLowerCase();
+        const t1 = p.token1.toLowerCase();
+        const r0 = parseFloat(ethers.utils.formatUnits(p.reserves[0], tokenCache[p.token0].decimals));
+        const r1 = parseFloat(ethers.utils.formatUnits(p.reserves[1], tokenCache[p.token1].decimals));
+        
+        let tvl = 0;
+        const p0 = tokenPrices[t0] || 0;
+        const p1 = tokenPrices[t1] || 0;
+
+        if (p0 && p1) {
+          tvl = (r0 * p0) + (r1 * p1);
+        } else if (p0) {
+          tvl = (r0 * p0) * 2; // Estimate
+        } else if (p1) {
+          tvl = (r1 * p1) * 2; // Estimate
+        }
+
+        totalTVL += tvl;
+
+        return {
+          name: `${tokenCache[p.token0].symbol}-${tokenCache[p.token1].symbol}`,
+          token0: tokenCache[p.token0].symbol,
+          token1: tokenCache[p.token1].symbol,
+          tvl: tvl,
+          r0: r0,
+          r1: r1,
+          reservesDisplay: `${formatCompact(r0)} ${tokenCache[p.token0].symbol} / ${formatCompact(r1)} ${tokenCache[p.token1].symbol}`
+        };
+      });
+
+      // Aggregate Token Stats
+      const tokenStats = {};
+      Object.keys(tokenCache).forEach(addr => {
+        tokenStats[addr] = {
+           symbol: tokenCache[addr].symbol,
+           decimals: tokenCache[addr].decimals,
+           price: tokenPrices[addr.toLowerCase()] || 0,
+           liquidity: 0
+        };
+      });
+
+      pairs.forEach(p => {
+        const t0 = p.token0.toLowerCase();
+        const t1 = p.token1.toLowerCase();
+        const r0 = parseFloat(ethers.utils.formatUnits(p.reserves[0], tokenCache[p.token0].decimals));
+        const r1 = parseFloat(ethers.utils.formatUnits(p.reserves[1], tokenCache[p.token1].decimals));
+        const p0 = tokenPrices[t0] || 0;
+        const p1 = tokenPrices[t1] || 0;
+
+        if (tokenStats[p.token0]) tokenStats[p.token0].liquidity += (r0 * p0) || 0;
+        if (tokenStats[p.token1]) tokenStats[p.token1].liquidity += (r1 * p1) || 0;
+      });
+
+      return {
+        tvl: totalTVL,
+        topPools: poolsWithStats.sort((a, b) => b.tvl - a.tvl),
+        topTokens: Object.values(tokenStats).sort((a, b) => b.liquidity - a.liquidity).filter(t => t.liquidity > 0 || t.price > 0)
+      };
+    }
+
+    function refreshData(type) {
+      if (type === 'tokens' || type === 'pools') {
+        const tableBody = type === 'tokens' ? 
+          document.getElementById('tokensTableBody') : 
+          document.getElementById('poolsTableBody');
+        tableBody.innerHTML = `<tr><td colspan="${type === 'tokens' ? 5 : 4}" style="text-align:center;color:var(--muted)">Refreshing...</td></tr>`;
+        
+        loadData();
+      } else {
+        loadData();
+      }
+    }
+
+    // ==============================
+    // RENDERING FUNCTIONS
+    // ==============================
+    function renderData(data) {
+      if (!data) return;
+      
+      // Update main stats
+      document.getElementById('tvlDisplay').textContent = formatUSD(data.tvl);
+      // Volume is not available from RPC state, keep as --
+      
+      // Render tables
+      renderTableData('tokens', data.topTokens);
+      renderTableData('pools', data.topPools);
+      
+      // Render charts
+      renderCharts(data.topPools);
+    }
+
+    function renderTableData(type, items) {
+      if (!items || !Array.isArray(items)) return;
+      
+      const isTokens = type === 'tokens';
+      const tableBody = isTokens ? 
+        document.getElementById('tokensTableBody') : 
+        document.getElementById('poolsTableBody');
+      
+      if (!tableBody) return;
+      
+      let html = '';
+      
+      if (items.length === 0) {
+        html = `<tr><td colspan="${isTokens ? 5 : 4}" style="text-align:center;color:var(--muted)">No data available (Check network)</td></tr>`;
+      } else {
+        const displayItems = items.slice(0, 10); // Show top 10
+        displayItems.forEach((item, index) => {
+          if (isTokens) {
+            html += `
+              <tr>
+                <td class="rank-cell">${index + 1}</td>
+                <td>
+                  <div class="token-cell">
+                    <img src="https://vanswap.xyz/assets/${item.symbol.toLowerCase()}.png" 
+                         onerror="this.src='https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'" 
+                         alt="${item.symbol}">
+                    <span>${item.symbol}</span>
+                  </div>
+                </td>
+                <td>${item.price > 0 ? formatUSD(item.price) : '-'}</td>
+                <td>${formatUSD(item.liquidity)}</td>
+                <td>${item.decimals}</td>
+              </tr>
+            `;
+          } else {
+            html += `
+              <tr>
+                <td class="rank-cell">${index + 1}</td>
+                <td>
+                  <div class="token-cell">
+                    <img src="https://vanswap.xyz/assets/${item.token0.toLowerCase()}.png" 
+                         onerror="this.src='https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'" 
+                         alt="${item.token0}">
+                    <img src="https://vanswap.xyz/assets/${item.token1.toLowerCase()}.png" 
+                         onerror="this.src='https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'" 
+                         alt="${item.token1}"
+                         style="margin-left: -8px;">
+                    <span>${item.name}</span>
+                  </div>
+                </td>
+                <td>${formatUSD(item.tvl)}</td>
+                <td style="font-size:12px;color:var(--muted)">${item.reservesDisplay}</td>
+              </tr>
+            `;
+          }
+        });
+      }
+      
+      tableBody.innerHTML = html;
+    }
+
+    function renderCharts(pools) {
+      if (!pools || !Array.isArray(pools) || pools.length === 0) {
+        return;
+      }
+      
+      const topTvlPools = [...pools].sort((a, b) => b.tvl - a.tvl).slice(0, 5);
+      // For the second chart, since we don't have volume, let's show Reserves balance ratio or something useful,
+      // or just reuse TVL but different visualization? 
+      // User wanted "Real Data". 
+      // Let's make the second chart "Liquidity Distribution" (TVL pie chart?)
+      // Or just keep it as a Bar chart of "Token 0 Amount" vs "Token 1 Amount" (normalized)?
+      // For simplicity and truthfulness, let's make the second chart "Reserves Depth" (Sum of reserves in USD if possible, but that's TVL).
+      // Let's just make it Top 5 Tokens by Liquidity instead of Pools.
+      
+      // Update: User code had "Top Pools by Volume". I will change it to "Top Tokens by Liquidity".
+      
+      if (chartInstances.tvlChart) {
+        chartInstances.tvlChart.destroy();
+      }
+      if (chartInstances.volChart) {
+        chartInstances.volChart.destroy();
+      }
+      
+      // TVL Chart
+      const tvlCtx = document.getElementById('tvlChart').getContext('2d');
+      chartInstances.tvlChart = new Chart(tvlCtx, {
+        type: 'bar',
+        data: {
+          labels: topTvlPools.map(p => p.name),
+          datasets: [{
+            label: 'TVL',
+            data: topTvlPools.map(p => p.tvl),
+            backgroundColor: '#31d0aa',
+            borderRadius: 4,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `TVL: ${formatUSD(context.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false, drawBorder: false },
+              ticks: { color: 'rgba(255,255,255,0.5)' }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+              ticks: { 
+                color: 'rgba(255,255,255,0.5)',
+                callback: (value) => formatUSD(value, true)
+              }
+            }
+          }
+        }
+      });
+      
+      // Second Chart: Top Tokens Liquidity
+      // We need to recalculate top tokens here or pass it.
+      // I'll just use top pools reserves as a proxy for "Volume" chart slot replacement.
+      // Actually, let's just make it "Top Pools by Token 0 Reserve" to show something 'Real' but different.
+      // Or better: Just show the same top pools but normalized.
+      
+      // Let's stick to the "Top Tokens" concept for the second chart.
+      const topTokens = Object.values(tokenCache)
+        .map(t => {
+           // Find liquidity from pools
+           let liq = 0;
+           pools.forEach(p => {
+             if (p.token0 === t.symbol) liq += (p.r0 * (t.price || 0)); // Very rough since t.price might be missing
+             if (p.token1 === t.symbol) liq += (p.r1 * (t.price || 0));
+           });
+           return { symbol: t.symbol, liq: liq };
+        })
+        .sort((a, b) => b.liq - a.liq)
+        .slice(0, 5);
+
+      const volCtx = document.getElementById('volChart').getContext('2d');
+      chartInstances.volChart = new Chart(volCtx, {
+        type: 'doughnut',
+        data: {
+          labels: topTvlPools.map(p => p.name), // Reusing top pools for consistency with the card title "Top Pools"
+          datasets: [{
+            label: 'Reserve Distribution',
+            data: topTvlPools.map(p => p.tvl),
+            backgroundColor: ['#1a7f5e', '#31d0aa', '#146c4d', '#4caf50', '#81c784'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#fff' } }
+          }
+        }
+      });
     }
 
     function renderEmptyState() {
       document.getElementById('tvlDisplay').textContent = "$0.00";
-      document.getElementById('tokensTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No data available for this network</td></tr>';
-      document.getElementById('poolsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No data available</td></tr>';
+      document.getElementById('pairsDisplay').textContent = "0";
+      document.getElementById('transactionsDisplay').textContent = "--";
+      
+      document.getElementById('tokensTableBody').innerHTML = 
+        '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Unable to load tokens data</td></tr>';
+      document.getElementById('poolsTableBody').innerHTML = 
+        '<tr><td colspan="4" style="text-align:center;color:var(--muted)">Unable to load pools data</td></tr>';
     }
 
-    async function fetchAndRenderData(totalPairs) {
-      const config = NETWORK_CONFIG[currentNetwork];
-      const limit = Math.min(totalPairs.toNumber(), 20); // Limit to 20 for performance
-      
-      let totalTVL = 0;
-      const pools = [];
-      const tokensMap = new Map();
-      
-      // Helper to get token price (Simplified version of liquidity.html logic)
-      const getPrice = async (tokenAddr, decimals) => {
-         // Logic similar to liquidity.html but simplified for this view
-         // 1. USDC = $1
-         if(tokenAddr.toLowerCase() === config.contracts.usdc.toLowerCase()) return 1;
-         
-         // 2. Native logic
-         let wnative = config.contracts.wvana;
-         if(currentNetwork === 'zerog') wnative = config.contracts.w0g;
-         if(currentNetwork === 'berachain') wnative = config.contracts.wbera;
-         
-         // Try to find pair with USDC
-         try {
-           const pair = await factoryContract.getPair(tokenAddr, config.contracts.usdc);
-           if(pair !== ethers.constants.AddressZero) {
-             const pc = new ethers.Contract(pair, PAIR_ABI, provider);
-             const [r0, r1] = await pc.getReserves();
-             const t0 = await pc.token0();
-             // Assuming USDC is 6 decimals
-             if(t0.toLowerCase() === tokenAddr.toLowerCase()) {
-               const rToken = parseFloat(ethers.utils.formatUnits(r0, decimals));
-               const rUSDC = parseFloat(ethers.utils.formatUnits(r1, 6));
-               return rToken > 0 ? rUSDC / rToken : 0;
-             } else {
-               const rToken = parseFloat(ethers.utils.formatUnits(r1, decimals));
-               const rUSDC = parseFloat(ethers.utils.formatUnits(r0, 6));
-               return rToken > 0 ? rUSDC / rToken : 0;
-             }
-           }
-         } catch(e) {}
-         return 0; // Fallback
-      };
-
-      // Native Token Price for fallback
-      let wnative = config.contracts.wvana;
-      if(currentNetwork === 'zerog') wnative = config.contracts.w0g;
-      if(currentNetwork === 'berachain') wnative = config.contracts.wbera;
-      const nativePrice = await getPrice(wnative, 18);
-
-      for (let i = 0; i < limit; i++) {
-        try {
-          const pairAddr = await factoryContract.allPairs(i);
-          const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
-          
-          const [r0, r1] = await pairContract.getReserves();
-          const t0 = await pairContract.token0();
-          const t1 = await pairContract.token1();
-          
-          const t0c = new ethers.Contract(t0, ERC20_ABI, provider);
-          const t1c = new ethers.Contract(t1, ERC20_ABI, provider);
-          
-          const [sym0, sym1, dec0, dec1] = await Promise.all([
-            t0c.symbol(), t1c.symbol(), t0c.decimals(), t1c.decimals()
-          ]);
-          
-          let p0 = await getPrice(t0, dec0);
-          let p1 = await getPrice(t1, dec1);
-          
-          // Fallback using Native if USDC pair failed
-          if(p0 === 0 && p1 > 0) { /* logic to derive p0 from p1 could go here */ }
-          if(p0 === 0 && t0.toLowerCase() === wnative.toLowerCase()) p0 = nativePrice;
-          if(p1 === 0 && t1.toLowerCase() === wnative.toLowerCase()) p1 = nativePrice;
-
-          const amt0 = parseFloat(ethers.utils.formatUnits(r0, dec0));
-          const amt1 = parseFloat(ethers.utils.formatUnits(r1, dec1));
-          
-          let poolTVL = 0;
-          if (p0 > 0 && p1 > 0) poolTVL = (amt0 * p0) + (amt1 * p1);
-          else if (p0 > 0) poolTVL = amt0 * p0 * 2;
-          else if (p1 > 0) poolTVL = amt1 * p1 * 2;
-          
-          totalTVL += poolTVL;
-          
-          pools.push({
-            name: `${sym0}-${sym1}`,
-            tvl: poolTVL,
-            vol: poolTVL * 0.05 // Dummy volume estimation
-          });
-          
-          // Accumulate Token Data
-          if(!tokensMap.has(t0)) tokensMap.set(t0, { symbol: sym0, price: p0, liquidity: 0 });
-          if(!tokensMap.has(t1)) tokensMap.set(t1, { symbol: sym1, price: p1, liquidity: 0 });
-          
-          tokensMap.get(t0).liquidity += (amt0 * p0) || (poolTVL/2);
-          tokensMap.get(t1).liquidity += (amt1 * p1) || (poolTVL/2);
-          
-        } catch(e) { console.error(e); }
+    // ==============================
+    // UTILITY FUNCTIONS
+    // ==============================
+    function formatUSD(value, compact = false) {
+      if (isNaN(value) || value === null || value === undefined) {
+        return '$0.00';
       }
       
-      document.getElementById('tvlDisplay').textContent = formatUSD(totalTVL);
-      document.getElementById('volumeDisplay').textContent = formatUSD(totalTVL * 0.05); // Estimated global volume
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
       
-      renderPoolsTable(pools);
-      renderTokensTable(tokensMap);
+      if (compact && numValue >= 1000000) {
+        return '$' + (numValue / 1000000).toFixed(2) + 'M';
+      } else if (compact && numValue >= 1000) {
+        return '$' + (numValue / 1000).toFixed(2) + 'K';
+      }
+      
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(numValue);
     }
 
-    function renderPoolsTable(pools) {
-      pools.sort((a,b) => b.tvl - a.tvl);
-      const html = pools.map((p, i) => `
-        <tr>
-          <td>${i+1}</td>
-          <td>${p.name}</td>
-          <td>${formatUSD(p.tvl)}</td>
-          <td>${formatUSD(p.vol)}</td>
-          <td class="positive">12.5%</td> 
-        </tr>
-      `).join('');
-      document.getElementById('poolsTableBody').innerHTML = html || '<tr><td colspan="5" style="text-align:center">No pools found</td></tr>';
-    }
-
-    function renderTokensTable(map) {
-      const tokens = Array.from(map.values()).sort((a,b) => b.liquidity - a.liquidity);
-      const html = tokens.map((t, i) => `
-        <tr>
-          <td>${i+1}</td>
-          <td><div class="token-cell"><img src="https://vanswap.xyz/assets/${t.symbol.toLowerCase()}.png" onerror="this.src='https://vanswap.xyz/assets/token.png'">${t.symbol}</div></td>
-          <td>${formatUSD(t.price)}</td>
-          <td class="${Math.random() > 0.5 ? 'positive' : 'negative'}">${(Math.random() * 5).toFixed(2)}%</td>
-          <td>${formatUSD(t.liquidity * 0.1)}</td>
-          <td>${formatUSD(t.liquidity)}</td>
-        </tr>
-      `).join('');
-      document.getElementById('tokensTableBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center">No tokens found</td></tr>';
-    }
-
-    function formatUSD(num) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-    }
-
-    function renderCharts() {
-      // Mock Data for Visuals
-      const ctxTVL = document.getElementById('tvlChart').getContext('2d');
-      new Chart(ctxTVL, {
-        type: 'line',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{
-            label: 'TVL',
-            data: [10000, 15000, 12000, 25000, 32000, 45000],
-            borderColor: '#31d0aa',
-            backgroundColor: 'rgba(49, 208, 170, 0.1)',
-            fill: true,
-            tension: 0.4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false, drawBorder: false }, ticks: { color: 'rgba(255,255,255,0.5)' } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
-          }
-        }
-      });
-
-      const ctxVol = document.getElementById('volChart').getContext('2d');
-      new Chart(ctxVol, {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{
-            label: 'Volume',
-            data: [5000, 8000, 6000, 12000, 15000, 20000],
-            backgroundColor: '#1a7f5e',
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false, drawBorder: false }, ticks: { color: 'rgba(255,255,255,0.5)' } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
-          }
-        }
-      });
+    function formatCompact(value) {
+       if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+       if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+       return value.toFixed(2);
     }
   </script>
 </body>
