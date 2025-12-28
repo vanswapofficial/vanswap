@@ -463,10 +463,10 @@
       </div>
 
       <div style="margin-bottom:16px">
-        <label class="form-label" style="font-size:12px;margin-bottom:4px">Amount to remove</label>
+        <label class="form-label" style="font-size:12px;margin-bottom:4px">Percentage to remove</label>
         <div style="display:flex;gap:8px">
-          <input id="removeLPAmount" class="form-input" placeholder="0.0" inputmode="decimal" oninput="onRemoveInput(this.value)">
-          <div style="align-self:center;font-weight:600;font-size:14px;white-space:nowrap">LP Tokens</div>
+          <input id="removePercentageInput" class="form-input" placeholder="0" type="number" min="0" max="100" oninput="onRemoveInput(this.value)">
+          <div style="align-self:center;font-weight:600;font-size:14px;white-space:nowrap">%</div>
         </div>
       </div>
 
@@ -1235,7 +1235,10 @@
             </div>
             <div class="token-addr">${displayAddr}</div>
           </div>
-          <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+          <div style="text-align:right;margin-right:8px">
+            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px">—</div>
+            <div id="price-${token.symbol}" style="color:var(--accent);font-size:11px;font-weight:600">$—</div>
+          </div>
         `;
         
         const actionsDiv = document.createElement('div');
@@ -1278,7 +1281,10 @@
               </div>
               <div class="token-addr">${token.address.substring(0,6) + '...' + token.address.substring(38)}</div>
             </div>
-            <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px;margin-right:8px">—</div>
+            <div style="text-align:right;margin-right:8px">
+              <div id="bal-${token.symbol}" style="color:var(--muted);font-size:13px">—</div>
+              <div id="price-${token.symbol}" style="color:var(--accent);font-size:11px;font-weight:600">$—</div>
+            </div>
           `;
           
           const actionsDiv = document.createElement('div');
@@ -1308,8 +1314,28 @@
       
       listEl.style.display = 'block';
       
+      updateTokenListPrices();
+      
       if (account) {
         updateDropdownBalances();
+      }
+    }
+
+    async function updateTokenListPrices() {
+      if (!provider) return;
+      
+      const allTokens = [...getBaseTokensForNetwork(networkManager.getCurrentNetwork()), ...customTokenManager.getTokensForNetwork(networkManager.getCurrentNetwork())];
+      
+      for (const token of allTokens) {
+         try {
+            const price = await getTokenPriceUSD(token.address, token.decimals);
+            const priceEl = document.getElementById(`price-${token.symbol}`);
+            if (priceEl) {
+               priceEl.textContent = formatUSD(price);
+            }
+         } catch(e) {
+            console.error('Error fetching price for list', token.symbol, e);
+         }
       }
     }
 
@@ -2205,7 +2231,7 @@
 
         $('removeTokenAAmount').textContent = '0';
         $('removeTokenBAmount').textContent = '0';
-        $('removeLPAmount').value = '';
+        $('removePercentageInput').value = '';
 
         $('removeLiquidityModal').style.display = 'flex';
 
@@ -2217,35 +2243,35 @@
 
     function onRemoveInput(val) {
       if(!currentRemovePool) return;
-      if(!val || parseFloat(val) < 0) {
-         currentRemovePercentage = 0;
-         $('removeTokenAAmount').textContent = '0';
-         $('removeTokenBAmount').textContent = '0';
-         return;
-      }
+      
+      let percent = parseFloat(val);
+      if (isNaN(percent) || percent < 0) percent = 0;
+      if (percent > 100) percent = 100;
+      
+      // Update internal state
+      currentRemovePercentage = percent;
+      
+      // Clear preset buttons if not matching
+      document.querySelectorAll('.percentage-btn').forEach(btn => {
+         if(parseInt(btn.getAttribute('data-percent')) === percent) {
+            btn.classList.add('active');
+         } else {
+            btn.classList.remove('active');
+         }
+      });
       
       try {
-        const inputAmount = ethers.utils.parseEther(val);
+        // Calculate amount based on percentage
+        // balance * percent / 100
         const balance = currentRemovePool.userBalance;
+        const liquidityAmount = balance.mul(Math.floor(percent * 100)).div(10000); // Higher precision if needed, but simple % is fine: mul(percent).div(100) works for integers
         
-        // Update percentage buttons UI only if it matches exactly? 
-        // Or just clear them.
-        document.querySelectorAll('.percentage-btn').forEach(btn => btn.classList.remove('active'));
-        
-        if(inputAmount.gt(balance)) {
-           // Cap at max? or show error? For now let's just calculate based on what they typed but user might fail tx if too high
-        }
-        
-        // Calculate percentage for internal logic (can be > 100 if input is invalid, check later)
-        // Actually, we should store the exact amount instead of relying on percentage for the tx if user input manual
-        currentRemovePercentage = -1; // Flag for manual input
-        
-        const amount0 = currentRemovePool.reserves[0].mul(inputAmount).div(currentRemovePool.totalSupply);
-        const amount1 = currentRemovePool.reserves[1].mul(inputAmount).div(currentRemovePool.totalSupply);
+        const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
+        const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
 
         $('removeTokenAAmount').textContent = parseFloat(ethers.utils.formatUnits(amount0, currentRemovePool.decimals0)).toFixed(6);
         $('removeTokenBAmount').textContent = parseFloat(ethers.utils.formatUnits(amount1, currentRemovePool.decimals1)).toFixed(6);
-      } catch(e) {}
+      } catch(e) { console.error(e); }
     }
 
     function setRemovePercentage(percent) {
@@ -2258,12 +2284,12 @@
           btn.classList.remove('active');
         }
       });
+      
+      // Update input field
+      $('removePercentageInput').value = percent;
 
       if (currentRemovePool) {
         const liquidityAmount = currentRemovePool.userBalance.mul(percent).div(100);
-        
-        // Update input field
-        $('removeLPAmount').value = parseFloat(ethers.utils.formatEther(liquidityAmount)).toFixed(6);
 
         const amount0 = currentRemovePool.reserves[0].mul(liquidityAmount).div(currentRemovePool.totalSupply);
         const amount1 = currentRemovePool.reserves[1].mul(liquidityAmount).div(currentRemovePool.totalSupply);
@@ -2282,9 +2308,8 @@
     async function confirmRemoveLiquidity() {
       if (!currentRemovePool) return;
       
-      const inputVal = $('removeLPAmount').value;
-      if (!inputVal || parseFloat(inputVal) <= 0) {
-        showToast('Please enter an amount or select percentage');
+      if (currentRemovePercentage <= 0) {
+        showToast('Please enter a valid percentage');
         return;
       }
 
@@ -2294,16 +2319,31 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span>Removing...';
 
+        // Calculate actual LP amount from percentage
+        // Using Math.floor(percent * 100) / 10000 for 2 decimal places support if needed, but input is number
+        // Just use mul(percent).div(100) for standard integer percents
         let liquidityAmount;
-        if (currentRemovePercentage > 0) {
-           liquidityAmount = currentRemovePool.userBalance.mul(currentRemovePercentage).div(100);
+        
+        // Handle potential float input like 33.3%
+        const percentStr = currentRemovePercentage.toString();
+        if (percentStr.includes('.')) {
+           const [intPart, decPart] = percentStr.split('.');
+           const decimals = decPart.length;
+           const factor = Math.pow(10, decimals);
+           const percentBN = ethers.BigNumber.from(intPart + decPart);
+           liquidityAmount = currentRemovePool.userBalance.mul(percentBN).div(100 * factor);
         } else {
-           liquidityAmount = ethers.utils.parseEther(inputVal);
+           liquidityAmount = currentRemovePool.userBalance.mul(Math.floor(currentRemovePercentage)).div(100);
         }
         
         if (liquidityAmount.gt(currentRemovePool.userBalance)) {
-           showToast('Amount exceeds balance');
-           throw new Error('Insufficient balance');
+           liquidityAmount = currentRemovePool.userBalance; // Cap at max
+        }
+        if (liquidityAmount.isZero()) {
+           showToast('Amount too small');
+           btn.disabled = false;
+           btn.textContent = 'Remove Liquidity';
+           return;
         }
 
         if (!currentRemovePool.hasAllowance) {
