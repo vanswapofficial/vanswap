@@ -439,9 +439,7 @@
         <div class="panel-row"><div>24h Volume</div><div id="dailyVolume">$—</div></div>
 
         <h4 style="margin-top:14px">Quick Add Liquidity</h4>
-        <div id="quickAddContainer">
-          <!-- Buttons will be injected dynamically -->
-        </div>
+        <div id="quickAddContainer"></div>
       </aside>
     </div>
   </main>
@@ -633,7 +631,6 @@
         if (networkDisplay) {
           networkDisplay.textContent = config.name;
         }
-        updateQuickAddButtons(this.currentNetwork);
       }
       
       reloadDataForNetwork() {
@@ -653,7 +650,6 @@
         
         initNetworkConfig();
         updateTokenDisplay();
-        updateQuickAddButtons(this.currentNetwork);
         
         const fromBalance = document.getElementById('fromBalance');
         const toBalance = document.getElementById('toBalance');
@@ -833,140 +829,6 @@
     let cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
     let isNewPool = true;
 
-    // ==============================
-    // USD PRICE FUNCTIONS
-    // ==============================
-    async function getTokenUsdPrice(token) {
-      if (!token || !provider) return 0;
-      
-      const config = networkManager.getCurrentConfig();
-      const usdcAddress = config.contracts.usdc;
-      
-      let tokenAddress = token.address;
-      // Resolve native/wrapped address
-      let wrappedNative = config.contracts.wvana;
-      if (networkManager.getCurrentNetwork() === 'zerog') wrappedNative = config.contracts.w0g;
-      if (networkManager.getCurrentNetwork() === 'berachain') wrappedNative = config.contracts.wbera;
-
-      if (token.address.endsWith('NATIVE')) {
-         tokenAddress = wrappedNative;
-      }
-      
-      // If token is USDC, return 1
-      if (tokenAddress.toLowerCase() === usdcAddress.toLowerCase()) return 1;
-
-      try {
-        // 1. Try Direct Pair [Token, USDC]
-        const pairAddress = await factory.getPair(tokenAddress, usdcAddress);
-        
-        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-           const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-           const [reserves, token0] = await Promise.all([
-             pairContract.getReserves(),
-             pairContract.token0()
-           ]);
-           
-           const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
-           const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
-           
-           let reserveToken, reserveUsdc;
-           if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
-             reserveToken = r0;
-             reserveUsdc = r1;
-           } else {
-             reserveToken = r1;
-             reserveUsdc = r0;
-           }
-           
-           // USDC is 6 decimals
-           if (reserveToken > 0) {
-              // Price = (ReserveUSDC / 10^6) / (ReserveToken / 10^TokenDecimals)
-              return (reserveUsdc / 1e6) / (reserveToken / Math.pow(10, token.decimals));
-           }
-        }
-        
-        // 2. Try Indirect via Native [Token, Native] -> [Native, USDC]
-        if (tokenAddress.toLowerCase() !== wrappedNative.toLowerCase()) {
-            
-            const nativeToken = {
-                 address: wrappedNative,
-                 decimals: 18, 
-                 symbol: 'Native'
-            };
-            const nativePrice = await getTokenUsdPrice(nativeToken);
-            
-            if (nativePrice > 0) {
-                const pairNative = await factory.getPair(tokenAddress, wrappedNative);
-                
-                if (pairNative && pairNative !== '0x0000000000000000000000000000000000000000') {
-                    const pairContract = new ethers.Contract(pairNative, PAIR_ABI, provider);
-                    const [reserves, token0] = await Promise.all([
-                        pairContract.getReserves(),
-                        pairContract.token0()
-                    ]);
-                    
-                    const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
-                    const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
-                    
-                    let reserveToken, reserveNative;
-                    if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
-                        reserveToken = r0;
-                        reserveNative = r1;
-                    } else {
-                        reserveToken = r1;
-                        reserveNative = r0;
-                    }
-                    
-                    if (reserveToken > 0) {
-                        const priceInNative = (reserveNative / 1e18) / (reserveToken / Math.pow(10, token.decimals));
-                        return priceInNative * nativePrice;
-                    }
-                }
-            }
-        }
-        return 0;
-      } catch (error) {
-        console.error("getTokenUsdPrice error", error);
-        return 0;
-      }
-    }
-
-    async function updateUsdValues() {
-      const fromUsdEl = $('fromUsd');
-      const toUsdEl = $('toUsd');
-      
-      const fromPrice = await getTokenUsdPrice(selectedFrom);
-      const fromAmount = parseFloat($('fromAmount').value || '0');
-      
-      if (fromPrice > 0) {
-        if (fromAmount > 0) {
-          const total = fromAmount * fromPrice;
-          fromUsdEl.textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        } else {
-           fromUsdEl.textContent = `$${fromPrice.toFixed(4)}`;
-        }
-      } else {
-        fromUsdEl.textContent = '—';
-      }
-      
-      const toPrice = await getTokenUsdPrice(selectedTo);
-      const toAmount = parseFloat($('toAmount').value || '0');
-      
-      if (toPrice > 0) {
-        if (toAmount > 0) {
-           const total = toAmount * toPrice;
-           toUsdEl.textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        } else {
-           toUsdEl.textContent = `$${toPrice.toFixed(4)}`;
-        }
-      } else {
-        toUsdEl.textContent = '—';
-      }
-    }
-
-    // ==============================
-    // MAIN FUNCTIONS
-    // ==============================
     function updateWalletDisplay() {
       const walletText = document.getElementById('walletText');
       const walletArrow = document.getElementById('walletArrow');
@@ -1001,7 +863,7 @@
         WVANA = config.contracts.w0g;
         VANS = config.contracts.wvans;
         USDC = config.contracts.usdc;
-      } else { 
+      } else { // Berachain
         WVANA = config.contracts.wbera;
         VANS = '0x0000000000000000000000000000000000000000';
         USDC = config.contracts.usdc;
@@ -1012,36 +874,6 @@
       tokens = [...baseTokens, ...customTokens];
       selectedFrom = tokens[0];
       selectedTo = tokens[2] || tokens[1];
-      
-      updateQuickAddButtons(currentNetwork);
-    }
-
-    function updateQuickAddButtons(network) {
-        const container = $('quickAddContainer');
-        container.innerHTML = '';
-        
-        const createBtn = (t1, t2) => {
-            const btn = document.createElement('button');
-            btn.className = 'pool-action pool-add';
-            btn.style.marginTop = '8px';
-            btn.style.width = '100%';
-            btn.textContent = `${t1}-${t2}`;
-            btn.onclick = () => quickAddLiquidity(t1, t2);
-            return btn;
-        };
-
-        if (network === 'vana') {
-            container.appendChild(createBtn('VANA', 'USDC'));
-            container.appendChild(createBtn('VANA', 'VANS'));
-            container.appendChild(createBtn('VANS', 'USDC'));
-        } else if (network === 'zerog') {
-            container.appendChild(createBtn('0G', 'USDC'));
-            container.appendChild(createBtn('0G', 'wVANS'));
-            container.appendChild(createBtn('wVANS', 'USDC'));
-        } else if (network === 'berachain') {
-            container.appendChild(createBtn('BERA', 'USDC'));
-            container.appendChild(createBtn('BERA', 'ARTIO'));
-        }
     }
 
     function getBaseTokensForNetwork(network) {
@@ -1505,7 +1337,6 @@
       await updateBalances(); 
       await updateLiquidityInfo();
       updateActionBtn();
-      updateUsdValues();
     }
 
     async function updateBalances() {
@@ -1535,11 +1366,121 @@
       } catch(e) { console.error('Bal update err', e); }
     }
 
+    async function getNativePriceUSD() {
+       const config = NETWORK_CONFIG[networkManager.getCurrentNetwork()];
+       if (!provider || !config) return 0;
+       
+       const usdc = config.contracts.usdc;
+       let wnative;
+       if (networkManager.getCurrentNetwork() === 'vana') wnative = config.contracts.wvana;
+       else if (networkManager.getCurrentNetwork() === 'zerog') wnative = config.contracts.w0g;
+       else wnative = config.contracts.wbera;
+       
+       if (!wnative || !usdc) return 0;
+       
+       try {
+         const pairAddress = await factory.getPair(wnative, usdc);
+         if (pairAddress === ethers.constants.AddressZero || pairAddress === '0x0000000000000000000000000000000000000000') return 0;
+         
+         const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+         const [r0, r1] = await pairContract.getReserves();
+         const t0 = await pairContract.token0();
+         
+         let rNative, rUSDC;
+         if (t0.toLowerCase() === wnative.toLowerCase()) {
+            rNative = parseFloat(ethers.utils.formatEther(r0));
+            rUSDC = parseFloat(ethers.utils.formatUnits(r1, 6)); 
+         } else {
+            rNative = parseFloat(ethers.utils.formatEther(r1));
+            rUSDC = parseFloat(ethers.utils.formatUnits(r0, 6));
+         }
+         
+         if (rNative === 0) return 0;
+         return rUSDC / rNative;
+       } catch (e) {
+         console.error('Error fetching native price', e);
+         return 0;
+       }
+    }
+
+    async function getTokenPriceUSD(tokenAddress, decimals) {
+      if (!tokenAddress) return 0;
+      const config = NETWORK_CONFIG[networkManager.getCurrentNetwork()];
+      const usdc = config.contracts.usdc;
+      
+      let wnative;
+      if (networkManager.getCurrentNetwork() === 'vana') wnative = config.contracts.wvana;
+      else if (networkManager.getCurrentNetwork() === 'zerog') wnative = config.contracts.w0g;
+      else wnative = config.contracts.wbera;
+      
+      const addr = tokenAddress.endsWith('NATIVE') ? wnative : tokenAddress;
+
+      // 1. If USDC, price is 1
+      if (addr.toLowerCase() === usdc.toLowerCase()) return 1;
+      
+      // 2. If WNative, get native price
+      if (addr.toLowerCase() === wnative.toLowerCase()) return await getNativePriceUSD();
+      
+      // 3. Try Pair with USDC
+      try {
+        const pairUSDC = await factory.getPair(addr, usdc);
+        if (pairUSDC && pairUSDC !== ethers.constants.AddressZero && pairUSDC !== '0x0000000000000000000000000000000000000000') {
+           const pairContract = new ethers.Contract(pairUSDC, PAIR_ABI, provider);
+           const [r0, r1] = await pairContract.getReserves();
+           const t0 = await pairContract.token0();
+           
+           let rToken, rUSDC;
+           if (t0.toLowerCase() === addr.toLowerCase()) {
+             rToken = parseFloat(ethers.utils.formatUnits(r0, decimals));
+             rUSDC = parseFloat(ethers.utils.formatUnits(r1, 6));
+           } else {
+             rToken = parseFloat(ethers.utils.formatUnits(r1, decimals));
+             rUSDC = parseFloat(ethers.utils.formatUnits(r0, 6));
+           }
+           if (rToken > 0) return rUSDC / rToken;
+        }
+      } catch(e) {}
+      
+      // 4. Try Pair with Native
+      try {
+        const pairNative = await factory.getPair(addr, wnative);
+        if (pairNative && pairNative !== ethers.constants.AddressZero && pairNative !== '0x0000000000000000000000000000000000000000') {
+           const nativePrice = await getNativePriceUSD();
+           const pairContract = new ethers.Contract(pairNative, PAIR_ABI, provider);
+           const [r0, r1] = await pairContract.getReserves();
+           const t0 = await pairContract.token0();
+           
+           let rToken, rNative;
+           if (t0.toLowerCase() === addr.toLowerCase()) {
+             rToken = parseFloat(ethers.utils.formatUnits(r0, decimals));
+             rNative = parseFloat(ethers.utils.formatEther(r1));
+           } else {
+             rToken = parseFloat(ethers.utils.formatUnits(r1, decimals));
+             rNative = parseFloat(ethers.utils.formatEther(r0));
+           }
+           if (rToken > 0) return (rNative * nativePrice) / rToken;
+        }
+      } catch(e) {}
+
+      return 0;
+    }
+
     async function updateLiquidityInfo() {
       if (!provider) return;
       
       if (FACTORY === '0x0000000000000000000000000000000000000000') {
-         // ... existing reset logic
+         cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
+         isNewPool = true;
+         $('pooledTokenA').textContent = '0';
+         $('pooledTokenB').textContent = '0';
+         $('priceA').textContent = '0';
+         $('priceB').textContent = '0';
+         $('poolSharePercent').textContent = '0%';
+         $('poolShareValue').textContent = '0%';
+         $('poolTokens').textContent = '0';
+         $('totalLiquidity').textContent = '$0';
+         $('dailyVolume').textContent = '$0';
+         $('liquidityDescription').textContent = "Contracts not deployed on this network yet.";
          return;
       }
 
@@ -1577,23 +1518,35 @@
           const rA = parseFloat(ethers.utils.formatUnits(reserveA, selectedFrom.decimals));
           const rB = parseFloat(ethers.utils.formatUnits(reserveB, selectedTo.decimals));
 
-          $('pooledTokenA').textContent = rA.toLocaleString(undefined, { maximumFractionDigits: 4 });
-          $('pooledTokenB').textContent = rB.toLocaleString(undefined, { maximumFractionDigits: 4 });
+          $('pooledTokenA').textContent = rA.toFixed(4);
+          $('pooledTokenB').textContent = rB.toFixed(4);
 
-          const priceAB = rA > 0 ? rB / rA : 0;
-          const priceBA = rB > 0 ? rA / rB : 0;
-
-          $('priceA').textContent = formatPrice(priceAB);
-          $('priceB').textContent = formatPrice(priceBA);
-
-          // Calculates REAL TVL using spot prices
-          const priceA_USD = await getTokenUsdPrice(selectedFrom);
-          const priceB_USD = await getTokenUsdPrice(selectedTo);
+          // Correct "X per Y" logic
+          // "VANA per USDC" (A per B) -> how many A for 1 B -> rA / rB
+          // "USDC per VANA" (B per A) -> how many B for 1 A -> rB / rA
           
-          const totalLiquidityUSD = (rA * priceA_USD) + (rB * priceB_USD);
+          const priceAperB = rB > 0 ? rA / rB : 0; // A per B
+          const priceBperA = rA > 0 ? rB / rA : 0; // B per A
+
+          $('priceA').textContent = formatPrice(priceAperB);
+          $('priceB').textContent = formatPrice(priceBperA);
+
+          // Calculate Real TVL in USD
+          const priceAUSD = await getTokenPriceUSD(selectedFrom.address, selectedFrom.decimals);
+          const priceBUSD = await getTokenPriceUSD(selectedTo.address, selectedTo.decimals);
+          
+          let totalLiquidityUSD = 0;
+          if (priceAUSD > 0 && priceBUSD > 0) {
+             totalLiquidityUSD = (rA * priceAUSD) + (rB * priceBUSD);
+          } else if (priceAUSD > 0) {
+             totalLiquidityUSD = rA * priceAUSD * 2;
+          } else if (priceBUSD > 0) {
+             totalLiquidityUSD = rB * priceBUSD * 2;
+          }
+          
           $('totalLiquidity').textContent = formatUSD(totalLiquidityUSD);
 
-          const dailyVolumeUSD = totalLiquidityUSD * 0.1; // Simulated volume
+          const dailyVolumeUSD = totalLiquidityUSD * 0.1; // Dummy volume
           $('dailyVolume').textContent = formatUSD(dailyVolumeUSD);
 
           if (account) {
@@ -1611,7 +1564,6 @@
           $('liquidityDescription').textContent = `By adding liquidity, you'll earn 0.25% fees on all trades for this token pair. Fees are added to the pool and can be claimed when you remove your liquidity.`;
 
         } else {
-          // Reset logic for new pool
           cachedReserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
           isNewPool = true;
           $('pooledTokenA').textContent = '0';
@@ -1633,35 +1585,41 @@
       }
     }
 
+    // PERBAIKAN: Fungsi untuk menghitung amount token kedua berdasarkan input pertama
     function calculateOptimalAmountB() {
       const val = $('fromAmount').value;
       if (!val) return;
       
       try {
+        // Untuk pool baru (isNewPool = true), biarkan user input manual
+        // Untuk pool yang sudah ada, hitung berdasarkan reserves
         if (!isNewPool && !cachedReserves.reserveA.isZero()) {
           const amountADesired = ethers.utils.parseUnits(val, selectedFrom.decimals);
           const amountBOptimal = amountADesired.mul(cachedReserves.reserveB).div(cachedReserves.reserveA);
           $('toAmount').value = ethers.utils.formatUnits(amountBOptimal, selectedTo.decimals);
         }
+        // Untuk pool baru, biarkan kolom kedua kosong atau user isi manual
         updateActionBtn();
-        updateUsdValues();
       } catch(e) {
         console.error('Error calculating optimal amount B:', e);
       }
     }
 
+    // PERBAIKAN: Fungsi untuk menghitung amount token pertama berdasarkan input kedua
     function calculateOptimalAmountA() {
       const val = $('toAmount').value;
       if (!val) return;
       
       try {
+        // Untuk pool baru (isNewPool = true), biarkan user input manual
+        // Untuk pool yang sudah ada, hitung berdasarkan reserves
         if (!isNewPool && !cachedReserves.reserveB.isZero()) {
           const amountBDesired = ethers.utils.parseUnits(val, selectedTo.decimals);
           const amountAOptimal = amountBDesired.mul(cachedReserves.reserveA).div(cachedReserves.reserveB);
           $('fromAmount').value = ethers.utils.formatUnits(amountAOptimal, selectedFrom.decimals);
         }
+        // Untuk pool baru, biarkan kolom pertama kosong atau user isi manual
         updateActionBtn();
-        updateUsdValues();
       } catch(e) {
         console.error('Error calculating optimal amount A:', e);
       }
@@ -1689,62 +1647,92 @@
     async function updateTVLStats() {
       if (!provider) return;
       if (FACTORY === '0x0000000000000000000000000000000000000000') return;
-      
       try {
+        let totalTVL = 0;
         const totalPairs = await factory.allPairsLength();
         $('totalPairs').textContent = totalPairs.toString();
         
-        // Calculate Global TVL by summing up USD value of top 100 pairs
-        // Note: For production, this should be done via indexer, but this works for client-side demo
-        let totalTVL = 0;
-        const scanCount = Math.min(totalPairs, 20); // Scan top 20 for performance
+        // Iterate only top 20 pairs to avoid timeout
+        const limit = Math.min(totalPairs, 20);
         
-        for (let i = 0; i < scanCount; i++) {
+        for (let i = 0; i < limit; i++) {
            try {
-             const pairAddress = await factory.allPairs(i);
-             const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
-             const [reserve0, reserve1] = await pairContract.getReserves();
-             const token0 = await pairContract.token0();
-             const token1 = await pairContract.token1();
+             const pairAddr = await factory.allPairs(i);
+             const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
+             const [r0, r1] = await pairContract.getReserves();
+             const t0 = await pairContract.token0();
+             const t1 = await pairContract.token1();
              
-             // Simple estimation: assume one side is valued, or fetch prices
-             // For accuracy, we fetch prices for both tokens
-             const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
-             const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
-             const [dec0, dec1] = await Promise.all([
-                token0Contract.decimals(), 
-                token1Contract.decimals()
-             ]);
+             const t0Contract = new ethers.Contract(t0, ERC20_ABI, provider);
+             const t1Contract = new ethers.Contract(t1, ERC20_ABI, provider);
+             const [d0, d1] = await Promise.all([t0Contract.decimals(), t1Contract.decimals()]);
              
-             const r0 = parseFloat(ethers.utils.formatUnits(reserve0, dec0));
-             const r1 = parseFloat(ethers.utils.formatUnits(reserve1, dec1));
+             const token0Amt = parseFloat(ethers.utils.formatUnits(r0, d0));
+             const token1Amt = parseFloat(ethers.utils.formatUnits(r1, d1));
              
-             const p0 = await getTokenUsdPrice({address: token0, decimals: dec0});
-             const p1 = await getTokenUsdPrice({address: token1, decimals: dec1});
+             const p0 = await getTokenPriceUSD(t0, d0);
+             const p1 = await getTokenPriceUSD(t1, d1);
              
-             // Use the one with valid price, or both
              let pairTVL = 0;
              if (p0 > 0 && p1 > 0) {
-                 pairTVL = (r0 * p0) + (r1 * p1);
+               pairTVL = (token0Amt * p0) + (token1Amt * p1);
              } else if (p0 > 0) {
-                 pairTVL = r0 * p0 * 2; // Approximate if only one price known
+               pairTVL = token0Amt * p0 * 2;
              } else if (p1 > 0) {
-                 pairTVL = r1 * p1 * 2;
+               pairTVL = token1Amt * p1 * 2;
              }
              
              totalTVL += pairTVL;
              
-           } catch (e) {
-               console.error("TVL scan error", e);
+           } catch(e) {
+             console.error('Error calc pair TVL', e);
            }
         }
         
         $('totalTVL').textContent = formatUSD(totalTVL);
-        
       } catch (error) {
         console.error('Error updating TVL stats:', error);
         $('totalTVL').textContent = '$---';
       }
+    }
+
+    function renderQuickAddButtons() {
+      const container = $('quickAddContainer');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      const net = networkManager.getCurrentNetwork();
+      
+      let pairs = [];
+      if (net === 'vana') {
+         pairs = [
+           ['VANA', 'USDC'],
+           ['VANA', 'VANS'],
+           ['VANS', 'USDC']
+         ];
+      } else if (net === 'zerog') {
+         pairs = [
+           ['0G', 'USDC'],
+           ['0G', 'wVANS'],
+           ['wVANS', 'USDC']
+         ];
+      } else if (net === 'berachain') {
+         pairs = [
+           ['BERA', 'USDC'],
+           ['BERA', 'ARTIO'],
+           ['ARTIO', 'USDC']
+         ];
+      }
+      
+      pairs.forEach(pair => {
+        const btn = document.createElement('button');
+        btn.className = 'pool-action pool-add';
+        btn.style.marginTop = '8px';
+        btn.style.width = '100%';
+        btn.textContent = `${pair[0]}-${pair[1]}`;
+        btn.onclick = () => quickAddLiquidity(pair[0], pair[1]);
+        container.appendChild(btn);
+      });
     }
 
     async function updateDropdownBalances() {
@@ -1796,7 +1784,7 @@
         const totalPairs = await factory.allPairsLength();
         $('totalPairs').textContent = totalPairs.toString();
 
-        for (let i = 0; i < Math.min(totalPairs, 50); i++) {
+        for (let i = 0; i < Math.min(totalPairs, 100); i++) {
           try {
             const pairAddress = await factory.allPairs(i);
             const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
@@ -1819,17 +1807,12 @@
                 token1Contract.decimals()
               ]);
 
-              const r0 = parseFloat(ethers.utils.formatUnits(reserve0, decimals0));
-              const r1 = parseFloat(ethers.utils.formatUnits(reserve1, decimals1));
-              
-              // Use real prices for value calculation
-              const p0 = await getTokenUsdPrice({address: token0, decimals: decimals0});
-              const p1 = await getTokenUsdPrice({address: token1, decimals: decimals1});
-              
-              let totalPoolValue = 0;
-              if (p0 > 0 && p1 > 0) totalPoolValue = (r0 * p0) + (r1 * p1);
-              else if (p0 > 0) totalPoolValue = r0 * p0 * 2;
-              else if (p1 > 0) totalPoolValue = r1 * p1 * 2;
+              const reserve0Formatted = parseFloat(ethers.utils.formatUnits(reserve0, decimals0));
+              const reserve1Formatted = parseFloat(ethers.utils.formatUnits(reserve1, decimals1));
+
+              const reserve0Value = reserve0Formatted * 0.5;
+              const reserve1Value = reserve1Formatted * 0.5;
+              const totalPoolValue = reserve0Value + reserve1Value;
 
               const userShare = (parseFloat(ethers.utils.formatEther(userBalance)) / parseFloat(ethers.utils.formatEther(totalSupply))) * 100;
               const userValue = totalPoolValue * (userShare / 100);
@@ -1951,8 +1934,41 @@
         const factoryWithSigner = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
 
         const pairAddr = await factoryWithSigner.getPair(addressA, addressB);
+        if (pairAddr && pairAddr !== ethers.constants.AddressZero && pairAddr !== '0x0000000000000000000000000000000000000000') {
+          try {
+            const pairContract = new ethers.Contract(pairAddr, PAIR_ABI, provider);
+            const [reserve0, reserve1] = await pairContract.getReserves();
+            const token0 = await pairContract.token0();
+
+            let reserveA, reserveB;
+            if (token0.toLowerCase() === addressA.toLowerCase()) {
+              reserveA = reserve0;
+              reserveB = reserve1;
+            } else {
+              reserveA = reserve1;
+              reserveB = reserve0;
+            }
+
+            // Hanya validasi ratio jika pool sudah ada dan memiliki liquidity
+            if (!reserveA.isZero() && !reserveB.isZero()) {
+              const expectedAmountB = amountADesired.mul(reserveB).div(reserveA);
+              const ratioDifference = amountBDesired.mul(10000).div(expectedAmountB);
+
+              if (ratioDifference.lt(9500) || ratioDifference.gt(10500)) {
+                const confirmRemove = confirm('Warning: Amount ratio differs significantly from pool ratio (>5%). This may result in impermanent loss. Continue anyway?');
+                if (!confirmRemove) {
+                  btn.disabled = false;
+                  btn.textContent = 'Add Liquidity';
+                  return;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error validating ratio:', error);
+          }
+        }
+
         let finalPairAddr = pairAddr;
-        
         if (!finalPairAddr || finalPairAddr === ethers.constants.AddressZero || finalPairAddr === '0x0000000000000000000000000000000000000000') {
           showToast('Creating new pool...');
           setStatus('Creating new pool...');
@@ -2035,11 +2051,9 @@
         await updateDropdownBalances();
         await updateLiquidityInfo();
         await loadUserPools();
-        updateTVLStats();
 
         $('fromAmount').value = '';
         $('toAmount').value = '';
-        updateUsdValues();
 
       } catch (err) {
         console.error('addLiquidity error:', err);
@@ -2067,7 +2081,6 @@
 
         switchToAddView();
         updateLiquidityInfo();
-        updateUsdValues();
         showToast(`Ready to add more ${tokenA}-${tokenB} liquidity`);
       }
     }
@@ -2087,7 +2100,6 @@
 
         switchToAddView();
         updateLiquidityInfo();
-        updateUsdValues();
         showToast(`Ready to add ${tokenASymbol}-${tokenBSymbol} liquidity`);
       }
     }
@@ -2297,9 +2309,20 @@
 
       } catch (error) {
         console.error('Error removing liquidity:', error);
-        // ... error handling
-        showToast('Failed to remove liquidity: ' + (error.message || error));
-        setStatus('Remove liquidity failed');
+
+        if (error.message && error.message.includes('INSUFFICIENT_A_AMOUNT')) {
+          showToast('Failed: Insufficient amount. Try with higher slippage tolerance.');
+          setStatus('Failed: Increase slippage tolerance');
+        } else if (error.message && error.message.includes('INSUFFICIENT_B_AMOUNT')) {
+          showToast('Failed: Insufficient amount. Try with higher slippage tolerance.');
+          setStatus('Failed: Increase slippage tolerance');
+        } else if (error.message && error.message.includes('user rejected')) {
+          showToast('Transaction rejected by user');
+          setStatus('Transaction rejected');
+        } else {
+          showToast('Failed to remove liquidity: ' + (error.message || error));
+          setStatus('Remove liquidity failed');
+        }
       } finally {
         const btn = $('confirmRemoveBtn');
         btn.disabled = false;
@@ -2338,7 +2361,6 @@
     }
 
     async function importPool() {
-      // ... import pool implementation (unchanged logic, just added for completeness)
       const tokenAInput = $('tokenAInput').value.trim();
       const tokenBInput = $('tokenBInput').value.trim();
 
@@ -2346,11 +2368,75 @@
         showToast('Please enter both token addresses');
         return;
       }
-      // ... verification logic ...
+
       try {
-         const pairAddress = await factory.getPair(tokenAInput, tokenBInput);
-         // ... rest of import logic
-      } catch (e) { console.error(e); }
+        setStatus('Importing pool...');
+
+        if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAInput) || !/^0x[a-fA-F0-9]{40}$/.test(tokenBInput)) {
+          showToast('Invalid token address format');
+          return;
+        }
+
+        const pairAddress = await factory.getPair(tokenAInput, tokenBInput);
+        if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+          showToast('Pool does not exist for these tokens');
+          return;
+        }
+
+        const tokenAContract = new ethers.Contract(tokenAInput, ERC20_ABI, provider);
+        const tokenBContract = new ethers.Contract(tokenBInput, ERC20_ABI, provider);
+
+        const [symbolA, symbolB, decimalsA, decimalsB] = await Promise.all([
+          tokenAContract.symbol(),
+          tokenBContract.symbol(),
+          tokenAContract.decimals(),
+          tokenBContract.decimals()
+        ]);
+
+        const tokenAObj = {
+          symbol: symbolA,
+          address: tokenAInput,
+          decimals: decimalsA,
+          logo: `https://vanswap.xyz/assets/${symbolA.toLowerCase()}.png`,
+          custom: true,
+          verified: false,
+          network: networkManager.getCurrentNetwork()
+        };
+
+        const tokenBObj = {
+          symbol: symbolB,
+          address: tokenBInput,
+          decimals: decimalsB,
+          logo: `https://vanswap.xyz/assets/${symbolB.toLowerCase()}.png`,
+          custom: true,
+          verified: false,
+          network: networkManager.getCurrentNetwork()
+        };
+
+        customTokenManager.addToken(tokenAObj);
+        customTokenManager.addToken(tokenBObj);
+
+        initNetworkConfig();
+
+        selectedFrom = tokenAObj;
+        selectedTo = tokenBObj;
+
+        $('fromLogo').src = selectedFrom.logo || 'https://vanswap.xyz/assets/token.png';
+        $('fromSymbol').textContent = selectedFrom.symbol;
+        $('toLogo').src = selectedTo.logo || 'https://vanswap.xyz/assets/token.png';
+        $('toSymbol').textContent = selectedTo.symbol;
+
+        switchToAddView();
+        updateLiquidityInfo();
+
+        showToast(`Pool ${symbolA}-${symbolB} imported successfully!`);
+        setStatus('Pool imported');
+
+      } catch (error) {
+        console.error('Error importing pool:', error);
+        showToast('Failed to import pool: ' + (error.message || error));
+        setStatus('Import failed');
+      }
     }
 
     async function ensureApproved(tokenAddress, neededAmount) {
@@ -2380,11 +2466,13 @@
         const balance = parseFloat(balanceText);
         if (balance > 0) {
           $('fromAmount').value = balance.toString();
+          
+          // PERBAIKAN: Untuk pool yang sudah ada, hitung amount token kedua
+          // Untuk pool baru, biarkan user input manual
           if (!isNewPool && !cachedReserves.reserveA.isZero()) {
             calculateOptimalAmountB();
           }
           updateActionBtn();
-          updateUsdValues();
         }
       } catch (e) {
         console.error('Error setting max:', e);
@@ -2392,8 +2480,10 @@
     }
 
     function showAddTokenForm(type, listEl) {
+      // Hide the token list
       listEl.style.display = 'none';
       
+      // Create and show add token form
       const formHtml = `
         <div class="add-token-form" id="addTokenForm">
           <div class="form-group">
@@ -2427,13 +2517,17 @@
       
       const formContainer = document.createElement('div');
       formContainer.innerHTML = formHtml;
+      
+      // Insert after the token list
       listEl.parentNode.insertBefore(formContainer, listEl.nextSibling);
     }
 
     function cancelAddToken(type) {
+      // Remove the form
       const form = document.getElementById('addTokenForm');
       if (form) form.remove();
       
+      // Show the token list again
       const listEl = type === 'from' ? $('fromList') : $('toList');
       if (listEl) listEl.style.display = 'block';
     }
@@ -2458,6 +2552,7 @@
         
         const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
         
+        // Fetch token details
         const [fetchedSymbol, fetchedDecimals, fetchedName] = await Promise.all([
           tokenContract.symbol().catch(() => symbol || 'UNKNOWN'),
           tokenContract.decimals().catch(() => parseInt(decimals) || 18),
@@ -2481,8 +2576,10 @@
           return;
         }
         
+        // Refresh token lists
         initNetworkConfig();
         
+        // Select the newly added token
         if (type === 'from') {
           selectedFrom = tokenObj;
           $('fromLogo').src = tokenObj.logo;
@@ -2493,14 +2590,15 @@
           $('toSymbol').textContent = tokenObj.symbol;
         }
         
+        // Remove form
         cancelAddToken(type);
         
         showToast(`${tokenObj.symbol} token added successfully!`);
         setStatus('Token added');
         
+        // Update balances
         await updateBalances();
         await updateLiquidityInfo();
-        updateUsdValues();
         
       } catch (error) {
         console.error('Error adding custom token:', error);
@@ -2515,11 +2613,113 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Initialize network config
       initNetworkConfig();
+      renderQuickAddButtons();
       updateTokenDisplay();
       
-      // ... event listeners setup ...
+      // Setup menu button
+      const menuBtn = document.getElementById('menuBtn');
+      const menuDropdown = document.getElementById('menuDropdown');
       
-      // Setup input events
+      if (menuBtn && menuDropdown) {
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isVisible = menuDropdown.classList.contains('show');
+          if (isVisible) {
+            menuDropdown.classList.remove('show');
+          } else {
+            menuDropdown.classList.add('show');
+          }
+        });
+        
+        // Close menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.menu-dot-btn') && !e.target.closest('.menu-dropdown')) {
+            menuDropdown.classList.remove('show');
+          }
+        });
+        
+        // Menu item click handlers
+        menuDropdown.querySelectorAll('.menu-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const href = item.getAttribute('data-href');
+            if (href) {
+              window.location.href = href;
+            }
+            menuDropdown.classList.remove('show');
+          });
+        });
+      }
+      
+      // Setup token select dropdowns
+      const fromSelect = document.getElementById('fromSelect');
+      const toSelect = document.getElementById('toSelect');
+      
+      if (fromSelect) {
+        fromSelect.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          
+          if (fromList.style.display === 'block') {
+            fromList.style.display = 'none';
+          } else {
+            fromList.style.display = 'block';
+            toList.style.display = 'none';
+            buildTokenListHtml('from');
+          }
+        });
+      }
+      
+      if (toSelect) {
+        toSelect.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          
+          if (toList.style.display === 'block') {
+            toList.style.display = 'none';
+          } else {
+            toList.style.display = 'block';
+            fromList.style.display = 'none';
+            buildTokenListHtml('to');
+          }
+        });
+      }
+      
+      // Close dropdowns when clicking elsewhere
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.select-wrap')) {
+          const fromList = document.getElementById('fromList');
+          const toList = document.getElementById('toList');
+          if (fromList) fromList.style.display = 'none';
+          if (toList) toList.style.display = 'none';
+        }
+      });
+      
+      // Setup tab switching
+      const myPoolsTab = document.getElementById('myPoolsTab');
+      const addTab = document.getElementById('addTab');
+      const importTab = document.getElementById('importTab');
+      
+      if (myPoolsTab) {
+        myPoolsTab.addEventListener('click', () => {
+          switchToMyPoolsView();
+        });
+      }
+      
+      if (addTab) {
+        addTab.addEventListener('click', () => {
+          switchToAddView();
+        });
+      }
+      
+      if (importTab) {
+        importTab.addEventListener('click', () => {
+          switchToImportView();
+        });
+      }
+      
+      // PERBAIKAN: Setup input events dengan logika yang benar
       const fromAmount = document.getElementById('fromAmount');
       const toAmount = document.getElementById('toAmount');
       
@@ -2527,13 +2727,14 @@
         fromAmount.addEventListener('input', (e) => {
           const value = e.target.value;
           if (value && !isNaN(parseFloat(value)) && parseFloat(value) > 0) {
-            if (!isNewPool) calculateOptimalAmountB();
+            // Hanya hitung otomatis jika pool sudah ada
+            if (!isNewPool) {
+              calculateOptimalAmountB();
+            }
             updateActionBtn();
-            updateUsdValues();
           } else {
             toAmount.value = '';
             updateActionBtn();
-            updateUsdValues();
           }
         });
       }
@@ -2542,17 +2743,30 @@
         toAmount.addEventListener('input', (e) => {
           const value = e.target.value;
           if (value && !isNaN(parseFloat(value)) && parseFloat(value) > 0) {
-            if (!isNewPool) calculateOptimalAmountA();
+            // Hanya hitung otomatis jika pool sudah ada
+            if (!isNewPool) {
+              calculateOptimalAmountA();
+            }
             updateActionBtn();
-            updateUsdValues();
           } else {
             fromAmount.value = '';
             updateActionBtn();
-            updateUsdValues();
           }
         });
       }
-
+      
+      // Setup MAX button
+      const btnMax = document.getElementById('btnMax');
+      if (btnMax) {
+        btnMax.addEventListener('click', setMax);
+      }
+      
+      // Setup action button
+      const actionBtn = document.getElementById('actionBtn');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', addLiquidity);
+      }
+      
       // Initialize network selector
       initNetworkSelector();
       
@@ -2562,10 +2776,51 @@
       updateLiquidityInfo();
       updateActionBtn();
       
-      // ... check existing wallet ...
+      // Handle wallet changes
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            disconnectWallet();
+          } else {
+            account = accounts[0];
+            updateWalletDisplay();
+            updateBalances();
+            loadUserPools();
+            updateLiquidityInfo();
+          }
+        });
+        
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+      }
+      
+      // Check for existing wallet connection
+      if (window.ethereum && window.ethereum.selectedAddress) {
+        account = window.ethereum.selectedAddress;
+        updateWalletDisplay();
+        
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        
+        if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+          router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+        }
+        if (FACTORY !== '0x0000000000000000000000000000000000000000') {
+          factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+        }
+        
+        updateBalances();
+        updateDropdownBalances();
+        updateLiquidityInfo();
+        loadUserPools();
+        updateTVLStats();
+      }
     });
 
-    // Window exports
+    // ==============================
+    // EXPORT FUNCTIONS TO WINDOW
+    // ==============================
     window.filterTokens = filterTokens;
     window.switchToMyPoolsView = switchToMyPoolsView;
     window.switchToAddView = switchToAddView;
