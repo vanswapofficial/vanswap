@@ -1546,6 +1546,145 @@
     };
 
     // ==============================
+    // USD PRICE FUNCTIONS
+    // ==============================
+    async function getTokenUsdPrice(token) {
+      if (!token || !provider) return 0;
+      
+      const config = networkManager.getCurrentConfig();
+      const usdcAddress = config.contracts.usdc;
+      
+      let tokenAddress = token.address;
+      // Resolve native/wrapped address
+      let wrappedNative = config.contracts.wvana;
+      if (networkManager.getCurrentNetwork() === 'zerog') wrappedNative = config.contracts.w0g;
+      if (networkManager.getCurrentNetwork() === 'berachain') wrappedNative = config.contracts.wbera;
+
+      if (token.address.endsWith('NATIVE')) {
+         tokenAddress = wrappedNative;
+      }
+      
+      // If token is USDC, return 1
+      if (tokenAddress.toLowerCase() === usdcAddress.toLowerCase()) return 1;
+
+      try {
+        // 1. Try Direct Pair [Token, USDC]
+        const pairAddress = await factory.getPair(tokenAddress, usdcAddress);
+        
+        if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
+           const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+           const [reserves, token0] = await Promise.all([
+             pairContract.getReserves(),
+             pairContract.token0()
+           ]);
+           
+           const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
+           const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
+           
+           let reserveToken, reserveUsdc;
+           if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
+             reserveToken = r0;
+             reserveUsdc = r1;
+           } else {
+             reserveToken = r1;
+             reserveUsdc = r0;
+           }
+           
+           // USDC is 6 decimals
+           if (reserveToken > 0) {
+              // Price = (ReserveUSDC / 10^6) / (ReserveToken / 10^TokenDecimals)
+              return (reserveUsdc / 1e6) / (reserveToken / Math.pow(10, token.decimals));
+           }
+        }
+        
+        // 2. Try Indirect via Native [Token, Native] -> [Native, USDC]
+        // If the current token is NOT the wrapped native token
+        if (tokenAddress.toLowerCase() !== wrappedNative.toLowerCase()) {
+            
+            // First get price of Native in USDC
+            const nativeToken = {
+                 address: wrappedNative,
+                 decimals: 18, 
+                 symbol: 'Native'
+            };
+            const nativePrice = await getTokenUsdPrice(nativeToken);
+            
+            if (nativePrice > 0) {
+                // Get Token-Native Pair
+                const pairNative = await factory.getPair(tokenAddress, wrappedNative);
+                
+                if (pairNative && pairNative !== '0x0000000000000000000000000000000000000000') {
+                    const pairContract = new ethers.Contract(pairNative, PAIR_ABI, provider);
+                    const [reserves, token0] = await Promise.all([
+                        pairContract.getReserves(),
+                        pairContract.token0()
+                    ]);
+                    
+                    const r0 = parseFloat(ethers.utils.formatUnits(reserves[0], 0));
+                    const r1 = parseFloat(ethers.utils.formatUnits(reserves[1], 0));
+                    
+                    let reserveToken, reserveNative;
+                    if (token0.toLowerCase() === tokenAddress.toLowerCase()) {
+                        reserveToken = r0;
+                        reserveNative = r1;
+                    } else {
+                        reserveToken = r1;
+                        reserveNative = r0;
+                    }
+                    
+                    if (reserveToken > 0) {
+                        // Price in Native = (ReserveNative / 10^18) / (ReserveToken / 10^TokenDecimals)
+                        const priceInNative = (reserveNative / 1e18) / (reserveToken / Math.pow(10, token.decimals));
+                        return priceInNative * nativePrice;
+                    }
+                }
+            }
+        }
+        
+        return 0;
+      } catch (error) {
+        console.error("getTokenUsdPrice error", error);
+        return 0;
+      }
+    }
+
+    async function updateUsdValues() {
+      const fromUsdEl = $('fromUsd');
+      const toUsdEl = $('toUsd');
+      
+      // Calculate From USD
+      const fromPrice = await getTokenUsdPrice(selectedFrom);
+      const fromAmount = parseFloat($('fromAmount').value || '0');
+      
+      if (fromPrice > 0) {
+        if (fromAmount > 0) {
+          const total = fromAmount * fromPrice;
+          fromUsdEl.textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        } else {
+           // Show unit price if no amount
+           fromUsdEl.textContent = `$${fromPrice.toFixed(4)}`;
+        }
+      } else {
+        fromUsdEl.textContent = '—';
+      }
+      
+      // Calculate To USD
+      const toPrice = await getTokenUsdPrice(selectedTo);
+      const toAmount = parseFloat($('toAmount').value || '0');
+      
+      if (toPrice > 0) {
+        if (toAmount > 0) {
+           const total = toAmount * toPrice;
+           toUsdEl.textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        } else {
+           toUsdEl.textContent = `$${toPrice.toFixed(4)}`;
+        }
+      } else {
+        toUsdEl.textContent = '—';
+      }
+    }
+
+    // ==============================
     // PRICE CALCULATION
     // ==============================
     async function updatePriceInfo() {
@@ -1559,6 +1698,7 @@
         $('minReceived').textContent = '—';
         $('priceImpact').textContent = '—';
         $('routeInfo').textContent = '—';
+        updateUsdValues();
         return;
       }
       
@@ -1630,6 +1770,8 @@
         needsApproval = false;
         updateSwapBtn();
       }
+      
+      updateUsdValues();
     }
 
     // ==============================
