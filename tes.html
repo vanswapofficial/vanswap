@@ -2790,8 +2790,44 @@
           }
         });
         
-        window.ethereum.on('chainChanged', () => {
-          window.location.reload();
+        window.ethereum.on('chainChanged', async (chainIdHex) => {
+          console.log('Chain changed to:', chainIdHex);
+          
+          // Re-instantiate provider
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          
+          if (ROUTER !== '0x0000000000000000000000000000000000000000') {
+             router = new ethers.Contract(ROUTER, ROUTER_ABI, signer);
+          }
+          
+          // Check if this matches our current network state
+          let foundNetwork = null;
+          for(const [key, config] of Object.entries(NETWORK_CONFIG)) {
+             if(config.chainIdHex.toLowerCase() === chainIdHex.toLowerCase()) {
+                foundNetwork = key;
+                break;
+             }
+          }
+          
+          if (foundNetwork && networkManager.getCurrentNetwork() !== foundNetwork) {
+             console.log('External chain switch detected to', foundNetwork);
+             networkManager.currentNetwork = foundNetwork;
+             localStorage.setItem('vanswap-network', foundNetwork);
+             networkManager.updateNetworkUI();
+             networkManager.notifyAllListeners();
+             initNetworkConfig(); 
+             renderQuickAddButtons();
+             updateTokenDisplay();
+          }
+          
+          // Reload data
+          updateWalletDisplay();
+          await updateBalances();
+          await updateDropdownBalances();
+          await updateLiquidityInfo();
+          loadUserPools();
+          updateTVLStats();
         });
       }
       
