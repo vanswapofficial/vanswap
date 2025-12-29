@@ -13,7 +13,7 @@
                style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
                font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
                img-src 'self' data: https: blob:;
-               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://bartio.rpc.berachain.com https://rpc.berachain.com https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
+               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://rpc.berachain.com https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
                frame-src 'self' https:;
                frame-ancestors 'none'; 
                base-uri 'self'">
@@ -24,8 +24,8 @@
   <!-- ==================== -->
   <!-- SEO PRIMARY TAGS -->
   <!-- ==================== -->
-  <title>VanSwap - Batch Transfer Tool for Vana & 0G Network</title>
-  <meta name="description" content="Batch transfer tokens to multiple addresses at once on Vana Chain, 0G Network, and Berachain. Save time and gas fees with VanSwap Bulk Token Sender.">
+  <title>VanSwap - Batch Transfer Tool for Vana, 0G & Berachain</title>
+  <meta name="description" content="Batch transfer tokens to multiple addresses at once on Vana Chain, 0G Network and Berachain. Save time and gas fees with VanSwap Bulk Token Sender.">
   <meta name="keywords" content="vanswap batch transfer, vana network bulk sender, 0g network token distribution, berachain batch transfer, multiple token transfer, bulk airdrop tool, vanaswap.xyz">
   <meta name="author" content="VanSwap">
   
@@ -850,7 +850,7 @@
     <!-- Page Header -->
     <div class="page-header">
       <h1>Batch Transfer Tool</h1>
-      <p>Send tokens to multiple addresses at once on Vana, 0G Network & Berachain. Save time and reduce gas fees.</p>
+      <p>Send tokens to multiple addresses at once on Vana, 0G & Berachain. Save time and reduce gas fees.</p>
     </div>
 
     <!-- Network Stats -->
@@ -1095,11 +1095,11 @@
         explorer: "https://chainscan.0g.ai"
       },
       berachain: {
-        name: "Berachain bArtio",
-        rpc: "https://bartio.rpc.berachain.com",
-        chainId: 80084,
+        name: "Berachain",
+        rpc: "https://rpc.berachain.com",
+        chainId: 80094,
         nativeToken: "BERA",
-        explorer: "https://bartio.beratrail.io"
+        explorer: "https://artio.beratrail.io"
       }
     };
 
@@ -1164,7 +1164,6 @@
       loadExampleData();
       updateRecipientsTable();
       updateSummary();
-      setupPasteHandlers();
       
       // Check if wallet is already connected
       checkExistingWalletConnection();
@@ -1232,45 +1231,6 @@
           showStatus(`Failed to switch network: ${switchError.message}`, 'error');
         }
       }
-    }
-
-    async function handleChainChanged(chainId) {
-       // Convert hex chainId to decimal
-       const decimalChainId = parseInt(chainId, 16);
-       
-       // Find matching network
-       let foundNetwork = null;
-       for (const [key, network] of Object.entries(NETWORKS)) {
-         if (network.chainId === decimalChainId) {
-           foundNetwork = key;
-           break;
-         }
-       }
-
-       if (foundNetwork) {
-         currentNetwork = foundNetwork;
-         // Update UI buttons
-         document.querySelectorAll('.network-btn').forEach(btn => {
-           if (btn.dataset.network === foundNetwork) {
-             btn.classList.add('active');
-           } else {
-             btn.classList.remove('active');
-           }
-         });
-         
-         // Re-initialize provider and contract
-         if (userAddress) {
-             // We need to refresh the provider because the underlying network changed
-             web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-             const signer = web3Provider.getSigner();
-             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-             
-             showStatus(`Switched to ${NETWORKS[foundNetwork].name}`, 'success');
-             await updateContractInfo();
-         }
-       } else {
-         // Optionally warn user if on unsupported network, but keep logic simple for now
-       }
     }
 
     function updateContractInfoDisplay() {
@@ -1356,10 +1316,6 @@
       
       showStatus('Wallet connected successfully', 'success');
       
-      // Check network and sync UI
-      const network = await web3Provider.getNetwork();
-      await handleChainChanged('0x' + network.chainId.toString(16));
-      
       // Load contract info
       await updateContractInfo();
       
@@ -1397,8 +1353,8 @@
         }
       });
       
-      window.ethereum.on('chainChanged', (chainId) => {
-        handleChainChanged(chainId);
+      window.ethereum.on('chainChanged', () => {
+        window.location.reload();
       });
     }
 
@@ -1419,7 +1375,8 @@
         
       } catch (error) {
         console.error('Contract info fetch error:', error);
-        showStatus('Failed to fetch contract info. Contract may not be deployed on this network.', 'warning');
+        // Do not show warning as contract might not be deployed on new chains yet
+        // showStatus('Failed to fetch contract info. Contract may not be deployed on this network.', 'warning');
       }
     }
 
@@ -1592,7 +1549,7 @@
         return;
       }
       
-      if (!contract || !isWalletConnected) {
+      if (!web3Provider || !isWalletConnected) {
         showStatus('Please connect wallet first', 'error');
         return;
       }
@@ -1600,88 +1557,56 @@
       try {
         showStatus('Detecting token...', 'info');
         
-        let found = false;
-        
-        // 1. Try to use contract's getTokenInfo first
-        // This is the most efficient if the contract supports it and is deployed
-        try {
-          const info = await contract.getTokenInfo(address);
-          
-          tokenInfo = {
-            address: address,
-            name: info.name,
-            symbol: info.symbol,
-            decimals: info.decimals,
-            balance: ethers.utils.formatUnits(info.yourBalance, info.decimals)
-          };
-          found = true;
-          
-        } catch (error) {
-          console.warn("Contract getTokenInfo failed, falling back to direct calls:", error);
-        }
-        
-        // 2. Fallback to direct ERC20 calls if contract call failed
-        if (!found) {
-          // Check if address is a contract
-          const code = await web3Provider.getCode(address);
-          if (code === '0x') {
-            throw new Error("Address is not a contract");
-          }
+        let detectedInfo = null;
 
-          const erc20Abi = [
-            "function name() view returns (string)",
-            "function symbol() view returns (string)",
-            "function decimals() view returns (uint8)",
-            "function balanceOf(address) view returns (uint256)"
-          ];
-          
-          // Use provider for read-only calls
-          const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider);
-          
-          let name = "Unknown Token";
-          let symbol = "???";
-          let decimals = 18;
-          let balance = ethers.BigNumber.from(0);
-          
-          // Fetch properties independently to be robust against missing optional fields
-          
-          // Decimals (usually present, defaults to 18)
-          try {
-            decimals = await tokenContract.decimals();
-          } catch (e) {
-            console.warn("Failed to get decimals, defaulting to 18", e);
-          }
-          
-          // Name (optional)
-          try {
-            name = await tokenContract.name();
-          } catch (e) {
-            console.warn("Failed to get name", e);
-          }
-          
-          // Symbol (optional)
-          try {
-            symbol = await tokenContract.symbol();
-          } catch (e) {
-            console.warn("Failed to get symbol", e);
-          }
-          
-          // Balance (Critical)
-          try {
-            balance = await tokenContract.balanceOf(userAddress);
-          } catch (e) {
-            console.error("Failed to get balance", e);
-            throw new Error("Could not fetch token balance. Is this a valid ERC20 token?");
-          }
-          
-          tokenInfo = {
-            address: address,
-            name: name,
-            symbol: symbol,
-            decimals: decimals,
-            balance: ethers.utils.formatUnits(balance, decimals)
-          };
+        // 1. Try Contract's helper first (if available on this chain)
+        if (contract) {
+            try {
+                const info = await contract.getTokenInfo(address);
+                detectedInfo = {
+                    address: address,
+                    name: info.name,
+                    symbol: info.symbol,
+                    decimals: info.decimals,
+                    balance: ethers.utils.formatUnits(info.yourBalance, info.decimals)
+                };
+                console.log("Detected via helper contract");
+            } catch (error) {
+                console.log("Contract helper failed, trying standard ERC20...", error);
+            }
         }
+        
+        // 2. Fallback to standard ERC20 if helper failed or not available
+        if (!detectedInfo) {
+            const erc20Abi = [
+                "function name() view returns (string)",
+                "function symbol() view returns (string)",
+                "function decimals() view returns (uint8)",
+                "function balanceOf(address) view returns (uint256)"
+            ];
+            
+            const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider.getSigner());
+            
+            // Helper for safe calls
+            const safeCall = async (promise, fallback) => {
+                try { return await promise; } catch (e) { return fallback; }
+            };
+            
+            const name = await safeCall(tokenContract.name(), "Unknown Token");
+            const symbol = await safeCall(tokenContract.symbol(), "???");
+            const decimals = await safeCall(tokenContract.decimals(), 18); // Default to 18
+            const balance = await safeCall(tokenContract.balanceOf(userAddress), ethers.BigNumber.from(0));
+            
+            detectedInfo = {
+                address: address,
+                name: name,
+                symbol: symbol,
+                decimals: decimals,
+                balance: ethers.utils.formatUnits(balance, decimals)
+            };
+        }
+        
+        tokenInfo = detectedInfo;
         
         // Update UI
         tokenName.textContent = tokenInfo.name;
@@ -1692,19 +1617,10 @@
         showStatus('Token detected successfully!', 'success');
         updateSummary();
         
-        // Check if token is compatible with batch transfer
-        try {
-          const canHandle = await contract.canHandleToken(address);
-          if (!canHandle) {
-            showStatus('Warning: Token may not be fully compatible with batch transfer', 'warning');
-          }
-        } catch (error) {
-          // Ignore compatibility check error
-        }
-        
+    
       } catch (error) {
         console.error('Token detection error:', error);
-        showStatus(`Failed to detect token: ${error.message}`, 'error');
+        showStatus('Failed to detect token. Make sure it\'s a valid ERC20 token.', 'error');
       }
     }
 
@@ -1733,10 +1649,33 @@
         if (isValid) {
           const amount = parseFloat(recipient.amount);
           if (transferMode === 'raw') {
-            const amountWithDecimals = ethers.utils.parseUnits(amount.toString(), tokenInfo.decimals);
-            totalAmount = totalAmount.add(amountWithDecimals);
+             try {
+               const amountWithDecimals = ethers.utils.parseUnits(recipient.amount.toString(), tokenInfo.decimals);
+               totalAmount = totalAmount.add(amountWithDecimals);
+             } catch(e) {
+               allValid = false;
+             }
           } else {
-            totalAmount = totalAmount.add(ethers.BigNumber.from(Math.floor(amount).toString()));
+             // Exact mode implies the amount entered is already in Wei? 
+             // "Exact Amounts (with decimals)" usually implies entering "1000000000000000000" for 1 token.
+             // But let's check the HTML label: "Exact Amounts (with decimals)"
+             // vs "Raw Amounts (auto-decimals)" -> this naming is confusing in the original code.
+             // Usually:
+             // "Raw" = user enters 10.5, script converts to 10500...00
+             // "Exact" = user enters 10500...00, script sends 10500...00
+             // In the original code: 
+             // 'raw': parseUnits(amount, decimals) -> This matches "User enters 10.5"
+             // 'exact': BigNumber.from(amount) -> This matches "User enters 1050000..."
+             
+             // I will assume "Raw" means "Human Readable" (User types 10.5)
+             // I will assume "Exact" means "Wei" (User types 10500000000000000000)
+             try {
+                // If amount is "10.5" and mode is Exact, parseFloat is 10.5, BigNumber might fail if not integer.
+                // We should use the string directly.
+                totalAmount = totalAmount.add(ethers.BigNumber.from(recipient.amount.toString().split('.')[0])); 
+             } catch(e) {
+                allValid = false;
+             }
           }
         }
       });
@@ -1791,24 +1730,33 @@
         progressContainer.classList.add('active');
         updateProgress(1, 4);
         
-        // Prepare data
+        // Prepare data - ALWAYS calculate decimals in frontend to avoid contract ambiguity/errors
         const recipientsArray = recipients.map(r => r.address);
         let amountsArray;
         
         if (transferMode === 'raw') {
+          // Human readable -> Wei
           amountsArray = recipients.map(r => 
-            ethers.utils.parseUnits(r.amount, tokenInfo.decimals)
+            ethers.utils.parseUnits(r.amount.toString(), tokenInfo.decimals)
           );
         } else {
+          // Exact Wei
           amountsArray = recipients.map(r => 
-            ethers.BigNumber.from(Math.floor(parseFloat(r.amount)).toString())
+            ethers.BigNumber.from(r.amount.toString().split('.')[0])
           );
         }
         
         // Get fee
         updateProgress(2, 4);
-        const fee = await contract.getEstimatedFee();
         showStatus('Getting fee estimate...', 'info');
+        // If contract not deployed on this network, this might fail.
+        let fee = ethers.BigNumber.from(0);
+        try {
+            fee = await contract.getEstimatedFee();
+        } catch(e) {
+            console.log("Could not get fee, assuming 0 or contract issue", e);
+        }
+        
         
         // Check and approve token allowance
         updateProgress(3, 4);
@@ -1832,23 +1780,14 @@
         updateProgress(4, 4);
         showStatus('Executing batch transfer...', 'info');
         
-        let tx;
-        if (transferMode === 'raw') {
-          const rawAmounts = recipients.map(r => r.amount);
-          tx = await contract.batchTransferAutoDecimals(
-            tokenInfo.address,
-            recipientsArray,
-            rawAmounts,
-            { value: fee }
-          );
-        } else {
-          tx = await contract.batchTransfer(
+        // Always use standard batchTransfer with pre-calculated amounts
+        // This avoids the 'batchTransferAutoDecimals' bug where passing strings fails encoding
+        const tx = await contract.batchTransfer(
             tokenInfo.address,
             recipientsArray,
             amountsArray,
             { value: fee }
-          );
-        }
+        );
         
         showStatus('Transaction sent. Waiting for confirmation...', 'info');
         const receipt = await tx.wait();
@@ -1883,51 +1822,8 @@
     }
 
     // ============================================
-    // PASTE & CSV FUNCTIONS
+    // CSV FUNCTIONS
     // ============================================
-    function setupPasteHandlers() {
-      recipientsTableBody.addEventListener('paste', (e) => {
-        if (!e.target.classList.contains('address-input')) return;
-        
-        const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
-        if (!clipboardData) return;
-        
-        // Split by newlines, commas, or spaces
-        const items = clipboardData.split(/[\s,]+/).filter(item => item.trim().length > 0);
-        
-        if (items.length <= 1) return; // Default behavior for single item
-        
-        e.preventDefault();
-        
-        // Find the index of the row where paste happened
-        const targetRow = e.target.closest('tr');
-        const rows = Array.from(recipientsTableBody.children);
-        let startIndex = rows.indexOf(targetRow);
-        
-        if (startIndex === -1) startIndex = 0;
-        
-        // Fill data
-        items.forEach((item, i) => {
-          const currentIndex = startIndex + i;
-          
-          // Add new row if needed
-          while (recipients.length <= currentIndex) {
-            recipients.push({ address: '', amount: '', valid: true, error: '' });
-          }
-          
-          // Update the recipient data
-          if (currentIndex < recipients.length) {
-             recipients[currentIndex].address = item.trim();
-             validateRecipient(currentIndex);
-          }
-        });
-        
-        updateRecipientsTable();
-        updateSummary();
-        showStatus(`Pasted ${items.length} addresses`, 'success');
-      });
-    }
-
     function initializeEventListeners() {
       // CSV Upload
       const csvUploadArea = document.getElementById('csvUploadArea');
