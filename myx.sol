@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 contract Mysterious {
     // Basic token information
-    string public constant name = "Mysteroius";
+    string public constant name = "Mysterious";
     string public constant symbol = "MYX";
     uint8 public constant decimals = 18;
     uint256 public constant totalSupply = 200_000_000 * 10**18;
