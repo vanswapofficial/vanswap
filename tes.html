@@ -1578,6 +1578,12 @@
         
         // 2. Fallback to direct ERC20 calls if contract call failed
         if (!found) {
+          // Check if address is a contract
+          const code = await web3Provider.getCode(address);
+          if (code === '0x') {
+            throw new Error("Address is not a contract");
+          }
+
           const erc20Abi = [
             "function name() view returns (string)",
             "function symbol() view returns (string)",
@@ -1585,7 +1591,8 @@
             "function balanceOf(address) view returns (uint256)"
           ];
           
-          const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider.getSigner());
+          // Use provider for read-only calls
+          const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider);
           
           let name = "Unknown Token";
           let symbol = "???";
