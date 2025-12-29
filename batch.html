@@ -1104,16 +1104,6 @@
   }
 };
 
-// Fungsi untuk mendapatkan contract address berdasarkan chainId
-function getContractAddress(chainId) {
-  const network = Object.values(NETWORKS).find(net => net.chainId === chainId);
-  return network ? network.contractAddress : null;
-}
-
-// Fungsi tambahan untuk mendapatkan info lengkap jaringan
-function getNetworkInfo(chainId) {
-  return Object.values(NETWORKS).find(net => net.chainId === chainId);
-}
 
     const CONTRACT_ABI = [
       "function batchTransfer(address tokenAddress, address[] recipients, uint256[] amounts) payable returns (bool)",
