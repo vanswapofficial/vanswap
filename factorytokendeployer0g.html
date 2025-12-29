@@ -184,7 +184,7 @@
 
     .network-buttons {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
       margin-bottom: 15px;
     }
@@ -462,6 +462,12 @@
               <span>0G Network</span>
             </div>
           </button>
+          <button id="berachainBtn" class="network-btn" data-network="berachain">
+            <div class="network-info">
+              <img src="https://vanswap.xyz/assets/bera.png" alt="Berachain">
+              <span>Berachain</span>
+            </div>
+          </button>
         </div>
         <div class="fee-notice" id="feeNotice">
           *Fee 1 VANA will be charged for token creation
@@ -557,6 +563,21 @@
         factoryAddress: "0x0992704B06971660abD06f36d67193e835444ab8", // 0G factory - REAL ADDRESS
         fee: "3", // 3 0G
         feeSymbol: "0G"
+      },
+      berachain: {
+        chainId: '0x138de', 
+        chainIdDecimal: 80094,
+        chainName: 'Berachain',
+        rpcUrls: ['https://rpc.berachain.com'],
+        nativeCurrency: {
+          name: 'BERA',
+          symbol: 'BERA',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://berascan.com'],
+        factoryAddress: "0x46f6116c410599b5635306675c15623D62c036B4",
+        fee: "1", 
+        feeSymbol: "BERA"
       }
     };
 
@@ -602,6 +623,7 @@
         // Network selector event listeners
         document.getElementById('vanaBtn').addEventListener('click', () => switchNetwork('vana'));
         document.getElementById('zerogBtn').addEventListener('click', () => switchNetwork('zerog'));
+        document.getElementById('berachainBtn').addEventListener('click', () => switchNetwork('berachain'));
 
       } else {
         showError('Please install MetaMask to use this dApp!');
