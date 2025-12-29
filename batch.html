@@ -1118,6 +1118,7 @@
     // STATE VARIABLES
     // ============================================
     let currentNetwork = 'vana';
+    let CONTRACT_ADDRESS = NETWORKS[currentNetwork].contractAddress;
     let web3Provider = null;
     let contract = null;
     let userAddress = null;
@@ -1186,6 +1187,7 @@
           
           // Update network
           currentNetwork = btn.dataset.network;
+          CONTRACT_ADDRESS = NETWORKS[currentNetwork].contractAddress;
           
           // Update contract info display
           updateContractInfoDisplay();
@@ -1251,6 +1253,8 @@
 
        if (foundNetwork) {
          currentNetwork = foundNetwork;
+         CONTRACT_ADDRESS = NETWORKS[currentNetwork].contractAddress;
+         
          // Update UI buttons
          document.querySelectorAll('.network-btn').forEach(btn => {
            if (btn.dataset.network === foundNetwork) {
@@ -1270,6 +1274,8 @@
              showStatus(`Switched to ${NETWORKS[foundNetwork].name}`, 'success');
              await updateContractInfo();
          }
+         
+         updateContractInfoDisplay();
        } else {
          // Optionally warn user if on unsupported network, but keep logic simple for now
        }
@@ -1278,6 +1284,7 @@
     function updateContractInfoDisplay() {
       const network = NETWORKS[currentNetwork];
       document.getElementById('currentFee').textContent = `0 ${network.nativeToken}`;
+      document.getElementById('contractAddress').textContent = CONTRACT_ADDRESS;
     }
 
     // ============================================
@@ -1431,7 +1438,7 @@
     function loadExampleData() {
       recipients = [
         { address: '0x742d35Cc6634C0532925a3b844Bc9e97e4f7d9b9', amount: '10.5', valid: true, error: '' },
-        { address: '0x8a2C2fF4c2B8E2F2C2D8e2F2C2D8e2F2C2fF4c2B8E2F2C2D8', amount: '25.0', valid: true, error: '' },
+        { address: '0x8a2C2fF4c2B8E2F2C2D8e2F2C2D8e2F2C2D8e2F2C2fF4c2B8E2F2C2D8', amount: '25.0', valid: true, error: '' },
         { address: '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2', amount: '5.75', valid: true, error: '' }
       ];
       
