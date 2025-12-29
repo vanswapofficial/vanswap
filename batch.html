@@ -13,7 +13,7 @@
                style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
                font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
                img-src 'self' data: https: blob:;
-               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
+               connect-src 'self' https://rpc.vana.org https://evmrpc.0g.ai https://bartio.rpc.berachain.com https://rpc.berachain.com https://cdnjs.cloudflare.com https://relay.walletconnect.com https://*.walletconnect.com wss://*.walletconnect.com;
                frame-src 'self' https:;
                frame-ancestors 'none'; 
                base-uri 'self'">
@@ -25,8 +25,8 @@
   <!-- SEO PRIMARY TAGS -->
   <!-- ==================== -->
   <title>VanSwap - Batch Transfer Tool for Vana & 0G Network</title>
-  <meta name="description" content="Batch transfer tokens to multiple addresses at once on Vana Chain and 0G Network. Save time and gas fees with VanSwap Bulk Token Sender.">
-  <meta name="keywords" content="vanswap batch transfer, vana network bulk sender, 0g network token distribution, multiple token transfer, bulk airdrop tool, vanaswap.xyz">
+  <meta name="description" content="Batch transfer tokens to multiple addresses at once on Vana Chain, 0G Network, and Berachain. Save time and gas fees with VanSwap Bulk Token Sender.">
+  <meta name="keywords" content="vanswap batch transfer, vana network bulk sender, 0g network token distribution, berachain batch transfer, multiple token transfer, bulk airdrop tool, vanaswap.xyz">
   <meta name="author" content="VanSwap">
   
   <!-- ==================== -->
@@ -850,7 +850,7 @@
     <!-- Page Header -->
     <div class="page-header">
       <h1>Batch Transfer Tool</h1>
-      <p>Send tokens to multiple addresses at once on Vana & 0G Network. Save time and reduce gas fees.</p>
+      <p>Send tokens to multiple addresses at once on Vana, 0G Network & Berachain. Save time and reduce gas fees.</p>
     </div>
 
     <!-- Network Stats -->
@@ -878,6 +878,10 @@
       <button class="network-btn" data-network="zerog">
         <span>⚡</span>
         0G Network
+      </button>
+      <button class="network-btn" data-network="berachain">
+        <span>🐻</span>
+        Berachain
       </button>
     </div>
 
@@ -1057,7 +1061,7 @@
     <div class="instructions">
       <h3>📋 How to Use Batch Transfer</h3>
       <ol>
-        <li><strong>Select Network:</strong> Choose between VANA Network or 0G Network</li>
+        <li><strong>Select Network:</strong> Choose between VANA Network, 0G Network or Berachain</li>
         <li><strong>Connect Wallet:</strong> Connect your Web3 wallet (MetaMask, Trust Wallet, etc.)</li>
         <li><strong>Enter Token Address:</strong> Paste your ERC20 token contract address</li>
         <li><strong>Add Recipients:</strong> Manually add addresses or upload CSV file</li>
@@ -1089,6 +1093,13 @@
         chainId: 16661,
         nativeToken: "0G",
         explorer: "https://chainscan.0g.ai"
+      },
+      berachain: {
+        name: "Berachain",
+        rpc: "https://rpc.berachain.com",
+        chainId: 80094,
+        nativeToken: "BERA",
+        explorer: "https://berascan.com"
       }
     };
 
@@ -1153,6 +1164,7 @@
       loadExampleData();
       updateRecipientsTable();
       updateSummary();
+      setupPasteHandlers();
       
       // Check if wallet is already connected
       checkExistingWalletConnection();
@@ -1220,6 +1232,45 @@
           showStatus(`Failed to switch network: ${switchError.message}`, 'error');
         }
       }
+    }
+
+    async function handleChainChanged(chainId) {
+       // Convert hex chainId to decimal
+       const decimalChainId = parseInt(chainId, 16);
+       
+       // Find matching network
+       let foundNetwork = null;
+       for (const [key, network] of Object.entries(NETWORKS)) {
+         if (network.chainId === decimalChainId) {
+           foundNetwork = key;
+           break;
+         }
+       }
+
+       if (foundNetwork) {
+         currentNetwork = foundNetwork;
+         // Update UI buttons
+         document.querySelectorAll('.network-btn').forEach(btn => {
+           if (btn.dataset.network === foundNetwork) {
+             btn.classList.add('active');
+           } else {
+             btn.classList.remove('active');
+           }
+         });
+         
+         // Re-initialize provider and contract
+         if (userAddress) {
+             // We need to refresh the provider because the underlying network changed
+             web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+             const signer = web3Provider.getSigner();
+             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+             
+             showStatus(`Switched to ${NETWORKS[foundNetwork].name}`, 'success');
+             await updateContractInfo();
+         }
+       } else {
+         // Optionally warn user if on unsupported network, but keep logic simple for now
+       }
     }
 
     function updateContractInfoDisplay() {
@@ -1305,6 +1356,10 @@
       
       showStatus('Wallet connected successfully', 'success');
       
+      // Check network and sync UI
+      const network = await web3Provider.getNetwork();
+      await handleChainChanged('0x' + network.chainId.toString(16));
+      
       // Load contract info
       await updateContractInfo();
       
@@ -1342,8 +1397,8 @@
         }
       });
       
-      window.ethereum.on('chainChanged', () => {
-        window.location.reload();
+      window.ethereum.on('chainChanged', (chainId) => {
+        handleChainChanged(chainId);
       });
     }
 
@@ -1374,7 +1429,7 @@
     function loadExampleData() {
       recipients = [
         { address: '0x742d35Cc6634C0532925a3b844Bc9e97e4f7d9b9', amount: '10.5', valid: true, error: '' },
-        { address: '0x8a2C2fF4c2B8E2F2C2D8e2F2C2fF4c2B8E2F2C2D8', amount: '25.0', valid: true, error: '' },
+        { address: '0x8a2C2fF4c2B8E2F2C2D8e2F2C2D8e2F2C2fF4c2B8E2F2C2D8', amount: '25.0', valid: true, error: '' },
         { address: '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2', amount: '5.75', valid: true, error: '' }
       ];
       
@@ -1545,7 +1600,10 @@
       try {
         showStatus('Detecting token...', 'info');
         
-        // Try to use contract's getTokenInfo first
+        let found = false;
+        
+        // 1. Try to use contract's getTokenInfo first
+        // This is the most efficient if the contract supports it and is deployed
         try {
           const info = await contract.getTokenInfo(address);
           
@@ -1556,9 +1614,20 @@
             decimals: info.decimals,
             balance: ethers.utils.formatUnits(info.yourBalance, info.decimals)
           };
+          found = true;
           
         } catch (error) {
-          // Fallback to standard ERC20 ABI
+          console.warn("Contract getTokenInfo failed, falling back to direct calls:", error);
+        }
+        
+        // 2. Fallback to direct ERC20 calls if contract call failed
+        if (!found) {
+          // Check if address is a contract
+          const code = await web3Provider.getCode(address);
+          if (code === '0x') {
+            throw new Error("Address is not a contract");
+          }
+
           const erc20Abi = [
             "function name() view returns (string)",
             "function symbol() view returns (string)",
@@ -1566,14 +1635,44 @@
             "function balanceOf(address) view returns (uint256)"
           ];
           
-          const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider.getSigner());
+          // Use provider for read-only calls
+          const tokenContract = new ethers.Contract(address, erc20Abi, web3Provider);
           
-          const [name, symbol, decimals, balance] = await Promise.all([
-            tokenContract.name(),
-            tokenContract.symbol(),
-            tokenContract.decimals(),
-            tokenContract.balanceOf(userAddress)
-          ]);
+          let name = "Unknown Token";
+          let symbol = "???";
+          let decimals = 18;
+          let balance = ethers.BigNumber.from(0);
+          
+          // Fetch properties independently to be robust against missing optional fields
+          
+          // Decimals (usually present, defaults to 18)
+          try {
+            decimals = await tokenContract.decimals();
+          } catch (e) {
+            console.warn("Failed to get decimals, defaulting to 18", e);
+          }
+          
+          // Name (optional)
+          try {
+            name = await tokenContract.name();
+          } catch (e) {
+            console.warn("Failed to get name", e);
+          }
+          
+          // Symbol (optional)
+          try {
+            symbol = await tokenContract.symbol();
+          } catch (e) {
+            console.warn("Failed to get symbol", e);
+          }
+          
+          // Balance (Critical)
+          try {
+            balance = await tokenContract.balanceOf(userAddress);
+          } catch (e) {
+            console.error("Failed to get balance", e);
+            throw new Error("Could not fetch token balance. Is this a valid ERC20 token?");
+          }
           
           tokenInfo = {
             address: address,
@@ -1605,7 +1704,7 @@
         
       } catch (error) {
         console.error('Token detection error:', error);
-        showStatus('Failed to detect token. Make sure it\'s a valid ERC20 token.', 'error');
+        showStatus(`Failed to detect token: ${error.message}`, 'error');
       }
     }
 
@@ -1784,8 +1883,51 @@
     }
 
     // ============================================
-    // CSV FUNCTIONS
+    // PASTE & CSV FUNCTIONS
     // ============================================
+    function setupPasteHandlers() {
+      recipientsTableBody.addEventListener('paste', (e) => {
+        if (!e.target.classList.contains('address-input')) return;
+        
+        const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+        if (!clipboardData) return;
+        
+        // Split by newlines, commas, or spaces
+        const items = clipboardData.split(/[\s,]+/).filter(item => item.trim().length > 0);
+        
+        if (items.length <= 1) return; // Default behavior for single item
+        
+        e.preventDefault();
+        
+        // Find the index of the row where paste happened
+        const targetRow = e.target.closest('tr');
+        const rows = Array.from(recipientsTableBody.children);
+        let startIndex = rows.indexOf(targetRow);
+        
+        if (startIndex === -1) startIndex = 0;
+        
+        // Fill data
+        items.forEach((item, i) => {
+          const currentIndex = startIndex + i;
+          
+          // Add new row if needed
+          while (recipients.length <= currentIndex) {
+            recipients.push({ address: '', amount: '', valid: true, error: '' });
+          }
+          
+          // Update the recipient data
+          if (currentIndex < recipients.length) {
+             recipients[currentIndex].address = item.trim();
+             validateRecipient(currentIndex);
+          }
+        });
+        
+        updateRecipientsTable();
+        updateSummary();
+        showStatus(`Pasted ${items.length} addresses`, 'success');
+      });
+    }
+
     function initializeEventListeners() {
       // CSV Upload
       const csvUploadArea = document.getElementById('csvUploadArea');
