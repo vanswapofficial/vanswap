@@ -1077,31 +1077,43 @@
     // ============================================
     // CONFIGURATION
     // ============================================
-    const CONTRACT_ADDRESS = "0x972C180541A901c8bd37dEB39579B5D1D42dA54D";
-    
     const NETWORKS = {
-      vana: {
-        name: "VANA Network",
-        rpc: "https://rpc.vana.org",
-        chainId: 1480,
-        nativeToken: "VANA",
-        explorer: "https://vanascan.io"
-      },
-      zerog: {
-        name: "0G Network",
-        rpc: "https://evmrpc.0g.ai",
-        chainId: 16661,
-        nativeToken: "0G",
-        explorer: "https://chainscan.0g.ai"
-      },
-      berachain: {
-        name: "Berachain",
-        rpc: "https://rpc.berachain.com",
-        chainId: 80094,
-        nativeToken: "BERA",
-        explorer: "https://berascan.com"
-      }
-    };
+  vana: {
+    name: "VANA Network",
+    rpc: "https://rpc.vana.org",
+    chainId: 1480,
+    nativeToken: "VANA",
+    explorer: "https://vanascan.io",
+    contractAddress: "0x972C180541A901c8bd37dEB39579B5D1D42dA54D"
+  },
+  zerog: {
+    name: "0G Network",
+    rpc: "https://evmrpc.0g.ai",
+    chainId: 16661,
+    nativeToken: "0G",
+    explorer: "https://chainscan.0g.ai",
+    contractAddress: "0x972C180541A901c8bd37dEB39579B5D1D42dA54D"
+  },
+  berachain: {
+    name: "Berachain",
+    rpc: "https://rpc.berachain.com",
+    chainId: 80094,
+    nativeToken: "BERA",
+    explorer: "https://berascan.com",
+    contractAddress: "0x46f6116c410599b5635306675c15623D62c036B4"
+  }
+};
+
+// Fungsi untuk mendapatkan contract address berdasarkan chainId
+function getContractAddress(chainId) {
+  const network = Object.values(NETWORKS).find(net => net.chainId === chainId);
+  return network ? network.contractAddress : null;
+}
+
+// Fungsi tambahan untuk mendapatkan info lengkap jaringan
+function getNetworkInfo(chainId) {
+  return Object.values(NETWORKS).find(net => net.chainId === chainId);
+}
 
     const CONTRACT_ABI = [
       "function batchTransfer(address tokenAddress, address[] recipients, uint256[] amounts) payable returns (bool)",
