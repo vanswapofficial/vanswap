@@ -252,11 +252,6 @@
       let elapsed = 0;
       let btn = document.getElementById('claimBtn');
       
-      // LOGIC: 
-      // lastClaimTime == 0 -> Not Started -> "START MINING"
-      // elapsed < 6h -> Mining -> "MINING... (Timer)"
-      // elapsed >= 6h -> Finished -> "CLAIM"
-      
       if (state.lastClaimTime === 0) {
         // Not started
         document.getElementById('miningCounter').textContent = "0.000000";
@@ -345,8 +340,7 @@
         state.contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
         
         // --- Mock Data Init ---
-        // state.lastClaimTime = 0; // Simulate new user
-        // state.myCode = ""; // Simulate no code
+        state.lastClaimTime = 0; // Force New User state for "START MINING" testing
         // In real app, we read: await state.contract.miners(addr)...
         
         // Auto Register Check
@@ -361,8 +355,6 @@
         if (state.myCode) {
           document.getElementById('linkSection').style.display = 'block';
           // User requested: https://vanswap.xyz/stlrmining/(kode)
-          // We assume this file is served correctly or we use ?ref= fallback
-          // Displaying the nice URL format requested:
           document.getElementById('refLink').textContent = `https://vanswap.xyz/stlrmining/${state.myCode}`;
         }
 
@@ -408,7 +400,7 @@
         alert("Referrer set! You received 10 STLR Bonus.");
         document.getElementById('bindBtn').disabled = true;
         document.getElementById('bindBtn').textContent = "Linked";
-      } catch(e) { console.error(e); alert("Failed"); }
+      } catch(e) { console.error(e); alert("Failed: " + e.message); }
     };
 
     document.getElementById('stakeBtn').onclick = async () => {
@@ -429,7 +421,7 @@
         row.innerHTML = `<span>${amt} STLR (${state.selectedDuration}m)</span> <button class="ref-btn" style="font-size:12px;padding:4px 8px;">Wait</button>`;
         list.appendChild(row);
         
-      } catch(e) { console.error(e); alert("Staking failed"); }
+      } catch(e) { console.error(e); alert("Staking failed: " + e.message); }
     };
 
     document.getElementById('claimBtn').onclick = async () => {
@@ -442,7 +434,7 @@
          if (state.lastClaimTime === 0) {
             // Start Mining
             state.lastClaimTime = now;
-            alert("Mining Started!");
+            // updateMiningCounter will auto-switch to "MINING..."
          } else {
             // Claim Logic
             const elapsed = Math.min(now - state.lastClaimTime, MAX_SESSION);
@@ -453,7 +445,7 @@
             state.lastClaimTime = now; // Restart
             alert("Claimed! Mining restarted.");
          }
-       } catch(e) { console.error(e); alert("Action failed"); }
+       } catch(e) { console.error(e); alert("Action failed: " + e.message); }
     };
 
     document.getElementById('withdrawBtn').onclick = async () => {
@@ -463,7 +455,7 @@
          // await state.contract.withdrawMining(wei);
          alert("Withdrawal successful! Check your wallet.");
          state.withdrawableBalance = 0;
-       } catch(e) { console.error(e); alert("Withdraw failed"); }
+       } catch(e) { console.error(e); alert("Withdraw failed: " + e.message); }
     };
 
   </script>
