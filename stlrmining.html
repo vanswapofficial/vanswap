@@ -148,9 +148,13 @@
         <!-- Registration (Auto handled, but shown if needed) -->
         <div id="linkSection" style="display:none;">
           <p style="color:var(--muted);font-size:13px;margin:8px 0;">Share your link to boost mining speed.</p>
-          <div class="ref-link-box">
-            <span id="refLink">Loading...</span>
-            <span class="copy-icon" onclick="copyRef()">📋</span>
+          
+          <div style="margin-top:12px;">
+            <p style="color:var(--muted);font-size:12px;margin-bottom:4px;">Your Referral Link</p>
+            <div class="ref-input-group" style="margin-top:0;">
+                <input type="text" id="refLink" class="ref-input" readonly style="color:var(--accent); font-weight:bold;">
+                <button class="ref-btn" onclick="copyRef()">Copy</button>
+            </div>
           </div>
         </div>
 
@@ -225,6 +229,17 @@
     const BASE_RATE = 0.0001;
     const REF_BOOST = 0.00005;
     const MAX_SESSION = 6 * 3600; // 6 hours in seconds
+    const BERACHAIN_CONFIG = {
+        chainId: '0x138de', 
+        chainName: 'Berachain',
+        rpcUrls: ['https://rpc.berachain.com'],
+        nativeCurrency: {
+          name: 'BERA',
+          symbol: 'BERA',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://berascan.com']
+    };
     
     let state = {
       miningBalance: 0.0,
@@ -239,6 +254,56 @@
       provider: null,
       contract: null
     };
+
+    function generateDeterministicCode(walletAddress) {
+        if (!walletAddress || walletAddress === "default") {
+            return "VAN" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        let hash = 0;
+        for (let i = 0; i < walletAddress.length; i++) {
+            hash = ((hash << 5) - hash) + walletAddress.charCodeAt(i);
+            hash |= 0;
+        }
+
+        const base36 = Math.abs(hash).toString(36).toUpperCase();
+        let code = "VAN" + base36.substring(0, 6);
+
+        if (code.length < 9) {
+            code += "0".repeat(9 - code.length);
+        } else if (code.length > 9) {
+            code = code.substring(0, 9);
+        }
+
+        return code;
+    }
+
+    async function switchNetwork() {
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: BERACHAIN_CONFIG.chainId }],
+            });
+        } catch (switchError) {
+            // This error code indicates that the chain has not been added to MetaMask.
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [BERACHAIN_CONFIG],
+                    });
+                } catch (addError) {
+                    console.error("Failed to add Berachain:", addError);
+                    alert("Failed to add Berachain. Please add it manually.");
+                }
+            } else {
+                console.error("Failed to switch to Berachain:", switchError);
+                // Allow proceeding if user is stubborn, or alert? 
+                // Better to alert
+                alert("Please switch to Berachain to interact.");
+            }
+        }
+    }
 
     // UI Updates Loop
     function updateMiningCounter() {
@@ -340,6 +405,11 @@
       try {
         state.provider = new ethers.providers.Web3Provider(window.ethereum);
         await state.provider.send("eth_requestAccounts", []);
+        
+        // Switch to Berachain
+        await switchNetwork();
+        
+        // Re-init provider after switch? Usually not needed but safe to get signer again
         const signer = state.provider.getSigner();
         const addr = await signer.getAddress();
         
@@ -357,32 +427,31 @@
             state.withdrawableBalance = parseFloat(ethers.utils.formatEther(minerData.balance));
 
             // Fetch My Referral Code
-            const code = await state.contract.userToReferralCode(addr);
-            if (code && code !== "") {
-                state.myCode = code;
-            } else {
-                // Try auto register if not registered
-                try {
-                    // This might be a transaction, usually view function doesn't change state. 
-                    // If autoRegister is a transaction, we shouldn't call it automatically on connect 
-                    // unless we are sure. But the mock had "Auto Register Check".
-                    // Let's just set myCode to null if not found.
-                    state.myCode = null; 
-                } catch(e) {}
+            let code = "";
+            try {
+                 code = await state.contract.userToReferralCode(addr);
+            } catch(e) {}
+            
+            if (!code || code === "") {
+                 // Fallback: Generate deterministic code from wallet address
+                 code = generateDeterministicCode(addr);
             }
+            state.myCode = code;
+
         } catch (e) {
             console.error("Error fetching contract data", e);
-            // Fallback to local state if contract read fails (optional, or just alert)
+            // Fallback for critical errors, still try to set deterministic code
+             if (!state.myCode) {
+                 state.myCode = generateDeterministicCode(addr);
+             }
         }
         
         // Show Referral Link
         if (state.myCode) {
           document.getElementById('linkSection').style.display = 'block';
-          document.getElementById('refLink').textContent = `https://vanswap.xyz/stlrmining/${state.myCode}`;
+          const link = `https://vanswap.xyz/stlrmining?ref=${state.myCode}`;
+          document.getElementById('refLink').value = link;
         } else {
-            // Option to register? 
-            // The original mock auto-generated a code. 
-            // Real contract might require a transaction to register or it happens on first interaction.
             document.getElementById('linkSection').style.display = 'none';
         }
 
@@ -414,7 +483,7 @@
     }
 
     function copyRef() {
-      const text = document.getElementById('refLink').textContent;
+      const text = document.getElementById('refLink').value;
       navigator.clipboard.writeText(text);
       alert("Link copied!");
     }
