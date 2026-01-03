@@ -400,6 +400,15 @@
       <!-- Stake Button -->
       <button class="btn btn-primary" id="stakeBtn">Stake STLR</button>
     </div>
+    
+    <!-- STLR Contract Address -->
+    <div class="card">
+      <div class="card-title">STLR Contract Address</div>
+      <div class="ref-link-box">
+        <span class="ref-link" id="contractAddress" style="font-size: 14px;">0xDaF91D7F48E52FB79A0413Fd44b9965110664BD0</span>
+        <button class="copy-btn" onclick="copyContractAddress()">Copy Address</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
@@ -912,6 +921,12 @@
     document.getElementById('stakeBtn').onclick = stakeTokens;
     document.getElementById('stakeAmount').addEventListener('input', updateEstimatedReward);
 
+    function copyContractAddress() {
+      const address = document.getElementById('contractAddress').textContent;
+      navigator.clipboard.writeText(address)
+        .then(() => alert('Contract address copied!'))
+        .catch(err => console.error('Copy failed:', err));
+    }
   </script>
 </body>
 </html>
