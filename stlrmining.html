@@ -287,6 +287,43 @@
     @keyframes spin{
       100%{transform:rotate(360deg);}
     }
+    
+    /* My Stakes Styles */
+    .stake-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .stake-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .stake-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .stake-value {
+      color: var(--text);
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .stake-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(49,208,170,0.1);
+      color: var(--accent);
+    }
+    .stake-status.locked {
+      background: rgba(255, 193, 7, 0.1);
+      color: #ffc107;
+    }
+    .stake-status.withdrawn {
+      background: rgba(255,255,255,0.1);
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -399,6 +436,14 @@
       
       <!-- Stake Button -->
       <button class="btn btn-primary" id="stakeBtn">Stake STLR</button>
+
+      <!-- My Stakes Section -->
+      <div style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+        <div class="card-title" style="font-size: 18px;">My Stakes</div>
+        <div id="stakesList" style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="color: var(--muted); text-align: center; font-size: 14px;">Connect wallet to view stakes</div>
+        </div>
+      </div>
     </div>
     
     <!-- STLR Contract Address -->
@@ -566,8 +611,109 @@
           document.getElementById('refLink').textContent = link;
         }
 
+        // Load user stakes
+        await loadUserStakes();
+
       } catch (error) {
         console.error('Error loading user data:', error);
+      }
+    }
+
+    // Load User Stakes
+    async function loadUserStakes() {
+      if (!state.isConnected) return;
+      
+      try {
+        const stakes = await state.miningContract.getUserStakes(state.address);
+        const container = document.getElementById('stakesList');
+        
+        if (stakes.length === 0) {
+          container.innerHTML = '<div style="color: var(--muted); text-align: center; font-size: 14px;">No active stakes</div>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        
+        stakes.forEach((stake, index) => {
+          const amount = parseFloat(ethers.utils.formatUnits(stake.amount, DECIMALS));
+          const startTime = stake.startTime.toNumber();
+          const duration = stake.duration.toNumber(); // seconds
+          const endTime = startTime + duration;
+          const now = Math.floor(Date.now() / 1000);
+          const apy = stake.apy.toNumber();
+          const isWithdrawn = stake.withdrawn;
+          
+          // Calculate reward based on contract formula: (amount * apy * duration) / (100 * 365 days)
+          // duration is in seconds
+          const rewardVal = (amount * apy * duration) / (100 * 365 * 24 * 3600);
+          const totalReturn = amount + rewardVal;
+          
+          const endDate = new Date(endTime * 1000).toLocaleDateString();
+          
+          let statusHtml = '';
+          let actionHtml = '';
+          
+          if (isWithdrawn) {
+            statusHtml = '<span class="stake-status withdrawn">Withdrawn</span>';
+          } else if (now < endTime) {
+            statusHtml = `<span class="stake-status locked">Locked until ${endDate}</span>`;
+          } else {
+            statusHtml = '<span class="stake-status">Ready to Withdraw</span>';
+            actionHtml = `<button class="btn btn-primary" style="padding: 8px; font-size: 14px; margin-top: 8px;" onclick="withdrawStake(${index})">Withdraw ${totalReturn.toFixed(2)} STLR</button>`;
+          }
+          
+          const html = `
+            <div class="stake-item">
+              <div class="stake-row">
+                <div class="stake-label">Amount</div>
+                <div class="stake-value">${amount.toFixed(2)} STLR</div>
+              </div>
+              <div class="stake-row">
+                <div class="stake-label">APY / Duration</div>
+                <div class="stake-value">${apy}% / ${(duration / (30 * 24 * 3600)).toFixed(0)} Months</div>
+              </div>
+              <div class="stake-row">
+                <div class="stake-label">Reward</div>
+                <div class="stake-value" style="color: var(--accent);">+${rewardVal.toFixed(2)} STLR</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                ${statusHtml}
+              </div>
+              ${actionHtml}
+            </div>
+          `;
+          
+          container.insertAdjacentHTML('beforeend', html);
+        });
+        
+      } catch (error) {
+        console.error('Load stakes error:', error);
+      }
+    }
+
+    // Withdraw Stake
+    async function withdrawStake(index) {
+      if (!state.isConnected) return;
+      
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.innerHTML = '<span class="loading"></span>';
+      btn.disabled = true;
+      
+      try {
+        const tx = await state.miningContract.withdrawStake(index);
+        await tx.wait();
+        
+        await loadUserStakes();
+        await loadUserData(); // Refresh balance
+        
+        alert('Stake withdrawn successfully!');
+        
+      } catch (error) {
+        console.error('Withdraw stake error:', error);
+        alert('Failed: ' + (error.reason || error.message));
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     }
 
@@ -880,6 +1026,9 @@
         alert('Staked successfully!');
         btn.textContent = originalText;
         btn.disabled = false;
+        
+        // Refresh stakes list
+        await loadUserStakes();
         
       } catch (error) {
         console.error('Staking error:', error);
