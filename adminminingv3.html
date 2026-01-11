@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Panel | VanSwap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --primary: #1a7f5e;
+      --primary-dark: #146c4d;
+      --accent: #31d0aa;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.4);
+      --card-bg: #052017;
+      --bg-dark: #010a07;
+      --danger: #ff4d4f;
+      --success: #31d0aa;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:var(--bg-dark);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .header{
+      display:flex;justify-content:space-between;align-items:center;padding:16px 32px;
+      background:var(--primary-dark);
+    }
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:24px;}
+    .connect-btn{
+      background:var(--accent);color:#000;border:none;padding:10px 20px;
+      border-radius:8px;font-weight:700;cursor:pointer;
+    }
+    
+    .container{max-width:800px;margin:40px auto;padding:0 20px;display:flex;flex-direction:column;gap:32px;}
+
+    .card{background:var(--card-bg);border-radius:24px;padding:32px;border:1px solid rgba(255,255,255,0.05);}
+    .card h2{font-size:24px;margin-bottom:24px; border-bottom: 1px solid var(--muted); padding-bottom: 16px;}
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+    .stat-box {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 16px;
+        text-align: center;
+    }
+    .stat-label { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+
+    .action-btn{
+      width:100%;background:var(--primary);border:none;padding:16px;
+      border-radius:12px;color:#fff;font-weight:700;font-size:18px;cursor:pointer;
+      margin-top:12px;
+    }
+    .action-btn:hover{background:var(--primary-dark);}
+    .action-btn:disabled{background:#333; opacity:0.5; cursor:not-allowed;}
+    
+    .error-box {
+        background: rgba(255, 77, 79, 0.1);
+        border: 1px solid var(--danger);
+        color: var(--danger);
+        padding: 16px;
+        border-radius: 12px;
+        text-align: center;
+        display: none;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--muted);
+      padding: 16px;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <img src="https://vanswap.xyz/assets/vans.png" width="32" height="32">
+      VanSwap Admin
+    </div>
+    <button class="connect-btn" id="connectBtn">Connect Wallet</button>
+  </div>
+
+  <div class="container">
+    
+    <div id="accessDenied" class="error-box">
+        Access Denied. You are not the owner of this contract.
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+        <!-- Overview Card -->
+        <div class="card">
+          <h2>Contract Overview</h2>
+          
+          <div class="stats-grid">
+             <div class="stat-box">
+                 <div class="stat-label">Total Users</div>
+                 <div class="stat-value" id="totalUsers">0</div>
+             </div>
+             <div class="stat-box">
+                <div class="stat-label">Total Mined</div>
+                <div class="stat-value" id="totalMined">0 STLR</div>
+            </div>
+             <div class="stat-box">
+                 <div class="stat-label">Owner</div>
+                 <div class="stat-value" id="ownerAddress" style="font-size:14px; word-break:break-all;">Loading...</div>
+             </div>
+             <div class="stat-box">
+                <div class="stat-label">Paused?</div>
+                <div class="stat-value" id="isPaused">...</div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Contract STLR Balance</div>
+                <div class="stat-value" id="stlrBalance">0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Contract Native (BERA)</div>
+                <div class="stat-value" id="nativeBalance">0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Staked</div>
+                <div class="stat-value" id="totalStaked">0 STLR</div>
+            </div>
+         </div>
+        </div>
+
+        <!-- Settings Card (Read Only for now based on ABI) -->
+        <div class="card">
+            <h2>Configuration</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Min Stake</div>
+                    <div class="stat-value" id="minStake">0 STLR</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Max Stake</div>
+                    <div class="stat-value" id="maxStake">0 STLR</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Min Withdraw</div>
+                    <div class="stat-value" id="minWithdraw">0 STLR</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card">
+            <h2>Admin Actions</h2>
+            <div class="action-group">
+                <p>Pause or unpause all mining and withdrawals.</p>
+                <button class="action-btn" id="pauseBtn">Toggle Pause</button>
+            </div>
+            <div class="action-group" style="margin-top: 24px;">
+                <p>Set the minimum STLR amount for a user to withdraw.</p>
+                <input type="text" id="minWithdrawInput" placeholder="Enter new minimum withdraw value">
+                <button class="action-btn" id="setMinWithdrawBtn">Set Min Withdraw</button>
+            </div>
+            <div class="action-group" style="margin-top: 24px;">
+                <p>Withdraw accumulated native coins (BERA) from the contract.</p>
+                <button class="action-btn" id="withdrawNativeBtn">Withdraw Native BERA</button>
+            </div>
+        </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+  <script>
+    // Config
+    const CONTRACT_ADDRESS = "0x603fcF9aCEDAB68007fd82d86913A88c1d41A6b2"; 
+    const ABI = [
+        "function owner() view returns (address)",
+        "function totalUsers() view returns (uint256)",
+        "function getContractTokenBalance() view returns (uint256)",
+        "function minStake() view returns (uint256)",
+        "function maxStake() view returns (uint256)",
+        "function withdrawNative() external",
+        "function setPaused(bool _paused) external",
+        "function setMinWithdraw(uint256 _min) external",
+        "function paused() view returns (bool)",
+        "function minWithdraw() view returns (uint256)",
+        "function totalMined() view returns (uint256)",
+        "function totalStaked() view returns (uint256)"
+    ];
+
+    const BERACHAIN_CONFIG = {
+        chainId: '0x138de', 
+        chainName: 'Berachain',
+        rpcUrls: ['https://rpc.berachain.com'],
+        nativeCurrency: {
+          name: 'BERA',
+          symbol: 'BERA',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://berascan.com']
+    };
+    
+    let state = {
+      isConnected: false,
+      provider: null,
+      contract: null,
+      isOwner: false,
+      ownerAddress: null
+    };
+
+    async function switchNetwork() {
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: BERACHAIN_CONFIG.chainId }],
+            });
+        } catch (switchError) {
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [BERACHAIN_CONFIG],
+                    });
+                } catch (addError) {
+                    console.error("Failed to add Berachain:", addError);
+                    alert("Failed to add Berachain. Please add it manually.");
+                }
+            } else {
+                console.error("Failed to switch to Berachain:", switchError);
+                alert("Please switch to Berachain to interact.");
+            }
+        }
+    }
+
+    async function connect() {
+      if(!window.ethereum) return alert("Install MetaMask");
+      
+      try {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        await switchNetwork();
+        
+        state.provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        const signer = state.provider.getSigner();
+        const addr = await signer.getAddress();
+        
+        document.getElementById('connectBtn').textContent = addr.substring(0,6) + "...";
+        state.contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        await checkOwner(addr);
+
+        state.isConnected = true;
+      } catch (err) {
+        console.error(err);
+        alert("Connection Error: " + err.message);
+      }
+    }
+
+    async function checkOwner(userAddr) {
+        try {
+            const owner = await state.contract.owner();
+            state.ownerAddress = owner;
+            document.getElementById('ownerAddress').textContent = owner;
+
+            if (owner.toLowerCase() === userAddr.toLowerCase()) {
+                state.isOwner = true;
+                document.getElementById('adminPanel').style.display = 'block';
+                document.getElementById('accessDenied').style.display = 'none';
+                loadStats();
+            } else {
+                state.isOwner = false;
+                document.getElementById('adminPanel').style.display = 'none';
+                document.getElementById('accessDenied').style.display = 'block';
+            }
+        } catch(e) {
+            console.error("Error fetching owner", e);
+            alert("Failed to fetch contract owner info.");
+        }
+    }
+
+    async function loadStats() {
+        if (!state.contract) return;
+        try {
+            const [nativeBal, tokenBal, users, min, max, isPaused, minW, totalM, totalS] = await Promise.all([
+                state.provider.getBalance(CONTRACT_ADDRESS),
+                state.contract.getContractTokenBalance(),
+                state.contract.totalUsers(),
+                state.contract.minStake(),
+                state.contract.maxStake(),
+                state.contract.paused(),
+                state.contract.minWithdraw(),
+                state.contract.totalMined(),
+                state.contract.totalStaked()
+            ]);
+
+            document.getElementById('nativeBalance').textContent = parseFloat(ethers.utils.formatEther(nativeBal)).toFixed(4) + " BERA";
+            document.getElementById('stlrBalance').textContent = parseFloat(ethers.utils.formatUnits(tokenBal, 8)).toFixed(2) + " STLR";
+            document.getElementById('totalUsers').textContent = users.toString();
+            document.getElementById('minStake').textContent = ethers.utils.formatUnits(min, 8) + " STLR";
+            document.getElementById('maxStake').textContent = ethers.utils.formatUnits(max, 8) + " STLR";
+            document.getElementById('isPaused').textContent = isPaused ? "Yes" : "No";
+            document.getElementById('minWithdraw').textContent = ethers.utils.formatUnits(minW, 8) + " STLR";
+            document.getElementById('totalMined').textContent = parseFloat(ethers.utils.formatUnits(totalM, 8)).toFixed(2) + " STLR";
+            document.getElementById('totalStaked').textContent = parseFloat(ethers.utils.formatUnits(totalS, 8)).toFixed(2) + " STLR";
+
+        } catch(e) {
+            console.error("Error loading stats", e);
+        }
+    }
+
+    document.getElementById('connectBtn').onclick = connect;
+    
+    document.getElementById('pauseBtn').onclick = async () => {
+        if (!state.isConnected || !state.isOwner) return;
+        const btn = document.getElementById('pauseBtn');
+        const originalText = btn.textContent;
+        btn.textContent = "Processing...";
+        btn.disabled = true;
+
+        try {
+            const isPaused = await state.contract.paused();
+            const tx = await state.contract.setPaused(!isPaused);
+            await tx.wait();
+            alert(`Contract has been ${!isPaused ? 'paused' : 'unpaused'}.`);
+            loadStats();
+        } catch(e) {
+            console.error(e);
+            alert("Action Failed: " + (e.reason || e.message));
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    };
+
+    document.getElementById('setMinWithdrawBtn').onclick = async () => {
+        if (!state.isConnected || !state.isOwner) return;
+        const btn = document.getElementById('setMinWithdrawBtn');
+        const input = document.getElementById('minWithdrawInput');
+        const value = input.value;
+
+        if (!value) return alert("Please enter a value.");
+
+        const originalText = btn.textContent;
+        btn.textContent = "Processing...";
+        btn.disabled = true;
+
+        try {
+            const amount = ethers.utils.parseUnits(value, 8); // STLR has 8 decimals
+            const tx = await state.contract.setMinWithdraw(amount);
+            await tx.wait();
+            alert("Minimum withdraw amount updated successfully.");
+            loadStats();
+        } catch(e) {
+            console.error(e);
+            alert("Action Failed: " + (e.reason || e.message));
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    };
+
+    document.getElementById('withdrawNativeBtn').onclick = async () => {
+        if (!state.isConnected || !state.isOwner) return;
+        const btn = document.getElementById('withdrawNativeBtn');
+        const originalText = btn.textContent;
+        btn.textContent = "Processing...";
+        btn.disabled = true;
+
+        try {
+            const tx = await state.contract.withdrawNative();
+            await tx.wait();
+            alert("Withdrawal Successful!");
+            loadStats(); // Refresh balance
+        } catch(e) {
+            console.error(e);
+            alert("Withdraw Failed: " + (e.reason || e.message));
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    };
+
+    // Auto reload on chain change
+    if(window.ethereum) {
+        window.ethereum.on('chainChanged', () => {
+            window.location.reload();
+        });
+    }
+
+  </script>
+</body>
+</html>
