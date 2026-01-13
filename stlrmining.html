@@ -768,12 +768,12 @@
         
         // Update withdraw button
         const withdrawBtn = document.getElementById('withdrawBtn');
-        if (state.withdrawableBalance >= 50) {
+        if (state.withdrawableBalance >= 25) {
           withdrawBtn.disabled = false;
           withdrawBtn.textContent = `Withdraw (${state.withdrawableBalance.toFixed(2)} STLR)`;
         } else {
           withdrawBtn.disabled = true;
-          withdrawBtn.textContent = `Min 50 STLR`;
+          withdrawBtn.textContent = `Min 25 STLR`;
         }
 
       } catch (error) {
@@ -920,8 +920,8 @@
     async function withdrawMining() {
       if (!state.isConnected) return;
       
-      if (state.withdrawableBalance < 50) {
-        alert('Minimum 50 STLR required');
+      if (state.withdrawableBalance < 25) {
+        alert('Minimum 25 STLR required');
         return;
       }
       
