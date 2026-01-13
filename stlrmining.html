@@ -768,7 +768,7 @@
         
         // Update withdraw button
         const withdrawBtn = document.getElementById('withdrawBtn');
-        if (state.withdrawableBalance >= 100) {
+        if (state.withdrawableBalance >= 50) {
           withdrawBtn.disabled = false;
           withdrawBtn.textContent = `Withdraw (${state.withdrawableBalance.toFixed(2)} STLR)`;
         } else {
@@ -921,7 +921,7 @@
       if (!state.isConnected) return;
       
       if (state.withdrawableBalance < 100) {
-        alert('Minimum 100 STLR required');
+        alert('Minimum 50 STLR required');
         return;
       }
       
