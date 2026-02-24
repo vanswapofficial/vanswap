@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19; // Diturunkan ke versi yang lebih stabil
+
+contract SiduruToken {
+    // Basic token information
+    string public constant name = "Siduru";
+    string public constant symbol = "SDR";
+    uint8 public constant decimals = 8;
+    uint256 public constant totalSupply = 5000 * 10**8; // 5000 SDR - diubah penulisan underscore
+
+    // Balances and allowances
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+
+    // Events
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value); // Ditambahkan indexed
+    event NativeReceived(address indexed from, uint256 value);
+    event NativeSent(address indexed to, uint256 value);
+
+    // Owner address (deployer)
+    address public owner;
+
+    // ==================== REENTRANCY GUARD ====================
+    bool private _reentrancyLock;
+
+    modifier nonReentrant() {
+        require(!_reentrancyLock, "SDR: REENTRANCY_DETECTED");
+        _reentrancyLock = true;
+        _;
+        _reentrancyLock = false;
+    }
+
+    // Constructor - deploy dengan semua supply ke deployer
+    constructor() {
+        owner = msg.sender;
+        _balances[msg.sender] = totalSupply;
+        emit Transfer(address(0), msg.sender, totalSupply);
+    }
+
+    // Modifier untuk owner-only functions
+    modifier onlyOwner() {
+        require(msg.sender == owner, "SDR: NOT_OWNER");
+        _;
+    }
+
+    // === STANDARD ERC20 FUNCTIONS ===
+
+    function balanceOf(address account) public view returns (uint256) {
+        return _balances[account];
+    }
+
+    function transfer(address to, uint256 value) public returns (bool) {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) public returns (bool) {
+        address spender = msg.sender;
+        _spendAllowance(from, spender, value);
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function approve(address spender, uint256 value) public returns (bool) {
+        address owner_ = msg.sender;
+        _allowances[owner_][spender] = value;
+        emit Approval(owner_, spender, value);
+        return true;
+    }
+
+    function allowance(address owner_, address spender) public view returns (uint256) {
+        return _allowances[owner_][spender];
+    }
+
+    // === NATIVE TOKEN SUPPORT ===
+
+    // Receive native token (SIDRA/ETH)
+    receive() external payable {
+        emit NativeReceived(msg.sender, msg.value);
+    }
+
+    // Fallback function
+    fallback() external payable {
+        emit NativeReceived(msg.sender, msg.value);
+    }
+
+    // Kirim native token dari contract - dengan reentrancy guard
+    function sendNative(address payable to, uint256 amount) public onlyOwner nonReentrant {
+        require(address(this).balance >= amount, "SDR: INSUFFICIENT_NATIVE");
+        
+        // Gunakan transfer untuk keamanan tambahan (otomatis revert jika gagal)
+        to.transfer(amount);
+        emit NativeSent(to, amount);
+    }
+
+    // Cek native balance contract
+    function nativeBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    // === ERC20 TOKEN SUPPORT ===
+
+    // Transfer ERC20 token dari contract - dengan reentrancy guard
+    function transferERC20(address tokenAddress, address to, uint256 amount) public onlyOwner nonReentrant {
+        require(tokenAddress != address(0), "SDR: INVALID_TOKEN_ADDRESS");
+        require(to != address(0), "SDR: INVALID_RECIPIENT");
+        
+        IERC20 token = IERC20(tokenAddress);
+        bool success = token.transfer(to, amount);
+        require(success, "SDR: ERC20_TRANSFER_FAILED");
+    }
+
+    // Transfer semua ERC20 token dari contract - dengan reentrancy guard
+    function transferAllERC20(address tokenAddress, address to) public onlyOwner nonReentrant {
+        require(tokenAddress != address(0), "SDR: INVALID_TOKEN_ADDRESS");
+        require(to != address(0), "SDR: INVALID_RECIPIENT");
+        
+        IERC20 token = IERC20(tokenAddress);
+        uint256 balance = token.balanceOf(address(this));
+        require(balance > 0, "SDR: NO_ERC20_BALANCE");
+        
+        bool success = token.transfer(to, balance);
+        require(success, "SDR: ERC20_TRANSFER_FAILED");
+    }
+
+    // === INTERNAL FUNCTIONS ===
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(from != address(0), "SDR: FROM_ZERO_ADDRESS");
+        require(to != address(0), "SDR: TO_ZERO_ADDRESS");
+        require(value > 0, "SDR: ZERO_AMOUNT"); // Tambahan validasi
+
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= value, "SDR: INSUFFICIENT_BALANCE");
+
+        unchecked {
+            _balances[from] = fromBalance - value;
+            _balances[to] += value;
+        }
+
+        emit Transfer(from, to, value);
+    }
+
+    function _spendAllowance(address owner_, address spender, uint256 value) internal {
+        uint256 currentAllowance = allowance(owner_, spender);
+        
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance >= value, "SDR: INSUFFICIENT_ALLOWANCE");
+            
+            unchecked {
+                _approve(owner_, spender, currentAllowance - value);
+            }
+        }
+    }
+
+    function _approve(address owner_, address spender, uint256 value) internal {
+        require(owner_ != address(0), "SDR: APPROVE_FROM_ZERO");
+        require(spender != address(0), "SDR: APPROVE_TO_ZERO");
+
+        _allowances[owner_][spender] = value;
+        emit Approval(owner_, spender, value);
+    }
+
+    // === OWNER FUNCTIONS ===
+
+    // Transfer ownership
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "SDR: NEW_OWNER_ZERO");
+        require(newOwner != owner, "SDR: SAME_OWNER"); // Tambahan validasi
+        owner = newOwner;
+    }
+
+    // Renounce ownership
+    function renounceOwnership() public onlyOwner {
+        owner = address(0);
+    }
+    
+    // Fungsi tambahan untuk keamanan - menarik ETH yang tersisa
+    function withdraw() public onlyOwner nonReentrant {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "SDR: NO_BALANCE");
+        
+        payable(owner).transfer(balance);
+        emit NativeSent(owner, balance);
+    }
+}
+
+// Minimal ERC20 interface untuk transfer token
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
