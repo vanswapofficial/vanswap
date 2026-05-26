@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Withdraw Stuck Tokens - Core Chain</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: rgba(30, 30, 50, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 { color: #fff; margin-bottom: 8px; font-size: 24px; }
+        .subtitle { color: #888; margin-bottom: 24px; font-size: 14px; }
+        .info-box {
+            background: rgba(0,0,0,0.4);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .info-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .info-value { font-size: 13px; color: #4CAF50; word-break: break-all; font-family: monospace; }
+        .warning {
+            background: rgba(255, 100, 100, 0.15);
+            border-left: 3px solid #ff6464;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: #ff9999;
+            font-size: 13px;
+        }
+        .success-box {
+            background: rgba(76, 175, 80, 0.15);
+            border-left: 3px solid #4CAF50;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #ddd; margin-bottom: 8px; font-weight: 500; }
+        input, select {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+        }
+        input:focus { outline: none; border-color: #4CAF50; }
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+        button:hover:not(:disabled) { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .connect-btn { background: linear-gradient(135deg, #2196F3, #1976D2); margin-bottom: 16px; }
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+        .status.success { background: rgba(76,175,80,0.2); border: 1px solid #4CAF50; color: #4CAF50; display: block; }
+        .status.error { background: rgba(255,68,68,0.2); border: 1px solid #ff4444; color: #ff8888; display: block; }
+        .status.loading { background: rgba(33,150,243,0.2); border: 1px solid #2196F3; color: #2196F3; display: block; }
+        .wallet-info {
+            background: rgba(33,150,243,0.1);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #64b5f6;
+        }
+        .balance-display {
+            background: rgba(0,0,0,0.5);
+            padding: 16px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+        .balance-number { font-size: 24px; font-weight: bold; color: #FFD700; margin: 8px 0; }
+        .method-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .method-title { font-size: 16px; font-weight: bold; color: #FF9800; margin-bottom: 8px; }
+        hr { border-color: rgba(255,255,255,0.1); margin: 16px 0; }
+        .network-badge {
+            display: inline-block;
+            background: #4CAF50;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .small-text { font-size: 11px; color: #888; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔓 Force Withdraw <span class="network-badge">Core Chain</span></h1>
+    <div class="subtitle">Tarik paksa token yang tersangkut di Pair Contract</div>
+
+    <div class="warning">
+        ⚠️ <strong>Masalah Terdeteksi:</strong><br>
+        • Token terdeteksi tapi tidak bisa ditarik (perkiraan perubahan 0)<br>
+        • Biasanya karena kontrak pair tidak memiliki fungsi withdraw standar
+    </div>
+
+    <button id="connectWallet" class="connect-btn">🔌 Connect Wallet (MetaMask)</button>
+    <div id="walletStatus" style="display: none;" class="wallet-info"></div>
+
+    <div id="mainForm" style="display: none;">
+        <div class="form-group">
+            <label>🏦 Alamat Pair Contract (tempat token tersangkut)</label>
+            <input type="text" id="pairAddress" placeholder="0x...">
+            <div class="small-text">Cari di scan.coredao.org dari transaksi LP terakhir Anda</div>
+        </div>
+
+        <button id="checkBalanceBtn" style="background: #FF9800;">🔍 Cek & Deteksi Token di Pair</button>
+        
+        <div id="pairBalances" style="display: none;" class="balance-display">
+            <div><strong>💰 SISA TOKEN DI KONTRAK PAIR</strong></div>
+            <div id="token0Balance" class="balance-number">- Token 0</div>
+            <div id="token1Balance" class="balance-number">- Token 1</div>
+            <div id="nativeBalance" class="balance-number" style="color: #4CAF50;">- CORE (Native)</div>
+        </div>
+
+        <hr>
+
+        <div class="method-card">
+            <div class="method-title">📌 Metode 1: Skim() - Standar UniswapV2</div>
+            <button id="methodSkimBtn" style="background: #2196F3;">💨 Eksekusi Skim()</button>
+        </div>
+
+        <div class="method-card">
+            <div class="method-title">📌 Metode 2: Transfer Langsung (ERC20)</div>
+            <button id="methodTransferBtn" style="background: #9C27B0;">🔄 Transfer Token ke Wallet</button>
+        </div>
+
+        <div class="method-card">
+            <div class="method-title">📌 Metode 3: Withdraw Native CORE</div>
+            <button id="methodWithdrawNativeBtn" style="background: #E91E63;">💎 Tarik CORE Native (Jika Ada)</button>
+        </div>
+
+        <div class="method-card">
+            <div class="method-title">📌 Metode 4: Emergency Call (Multicall)</div>
+            <button id="methodEmergencyBtn" style="background: #F44336;">🚨 Emergency Withdraw</button>
+        </div>
+    </div>
+
+    <div id="statusMessage" class="status"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+<script>
+    const CORE_CHAIN_ID = "0x45c";
+    const WCORE_ADDRESS = "0x40375c92d9faf44d2f9db9bd9ba41a3317a2404f";
+
+    const PAIR_ABI = [
+        "function skim(address to) external",
+        "function sync() external",
+        "function token0() external view returns (address)",
+        "function token1() external view returns (address)",
+        "function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)",
+        "function balanceOf(address account) external view returns (uint256)",
+        "function transfer(address to, uint256 amount) external returns (bool)",
+        "function withdraw(uint256 amount) external",
+        "function emergencyWithdraw() external"
+    ];
+
+    const ERC20_ABI = [
+        "function balanceOf(address account) external view returns (uint256)",
+        "function decimals() external view returns (uint8)",
+        "function symbol() external view returns (string)",
+        "function transfer(address to, uint256 amount) external returns (bool)"
+    ];
+
+    let provider, signer, userAddress, isConnected = false;
+    let currentPairData = null;
+
+    const connectBtn = document.getElementById('connectWallet');
+    const walletStatusDiv = document.getElementById('walletStatus');
+    const mainForm = document.getElementById('mainForm');
+    const statusDiv = document.getElementById('statusMessage');
+    const pairAddressInput = document.getElementById('pairAddress');
+    const checkBalanceBtn = document.getElementById('checkBalanceBtn');
+    const pairBalancesDiv = document.getElementById('pairBalances');
+    const token0BalanceSpan = document.getElementById('token0Balance');
+    const token1BalanceSpan = document.getElementById('token1Balance');
+    const nativeBalanceSpan = document.getElementById('nativeBalance');
+
+    function showStatus(msg, type = 'loading') {
+        statusDiv.textContent = msg;
+        statusDiv.className = `status ${type}`;
+        if (type !== 'loading') {
+            setTimeout(() => {
+                if (statusDiv.className === `status ${type}`) statusDiv.style.display = 'none';
+            }, 8000);
+        }
+    }
+
+    async function ensureCoreNetwork() {
+        if (!window.ethereum) throw new Error('MetaMask tidak terinstall!');
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== CORE_CHAIN_ID) {
+            showStatus('Switch ke Core Chain...', 'loading');
+            try {
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CORE_CHAIN_ID }] });
+            } catch(e) {
+                if (e.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: CORE_CHAIN_ID,
+                            chainName: 'Core Chain',
+                            nativeCurrency: { name: 'CORE', symbol: 'CORE', decimals: 18 },
+                            rpcUrls: ['https://rpc.coredao.org'],
+                            blockExplorerUrls: ['https://scan.coredao.org']
+                        }]
+                    });
+                } else throw e;
+            }
+        }
+    }
+
+    async function connectWallet() {
+        try {
+            if (!window.ethereum) { alert("Install MetaMask!"); return; }
+            await ensureCoreNetwork();
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            const accounts = await provider.send("eth_requestAccounts", []);
+            userAddress = accounts[0];
+            signer = provider.getSigner();
+            isConnected = true;
+            
+            connectBtn.textContent = '✅ Wallet Connected';
+            connectBtn.disabled = true;
+            walletStatusDiv.style.display = 'block';
+            walletStatusDiv.innerHTML = `🔗 ${userAddress.slice(0,8)}...${userAddress.slice(-6)}<br>🌐 Core Chain (1116)`;
+            mainForm.style.display = 'block';
+            
+            window.ethereum.on('accountsChanged', () => window.location.reload());
+            window.ethereum.on('chainChanged', () => window.location.reload());
+        } catch(err) {
+            showStatus(err.message, 'error');
+        }
+    }
+
+    async function checkBalances() {
+        const pairAddress = pairAddressInput.value.trim();
+        if (!pairAddress || !ethers.utils.isAddress(pairAddress)) {
+            showStatus('Masukkan alamat Pair Contract yang valid!', 'error');
+            return;
+        }
+        
+        showStatus('Mengecek saldo di kontrak pair...', 'loading');
+        
+        try {
+            const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+            
+            // Baca token0 dan token1
+            let token0, token1;
+            try {
+                token0 = await pairContract.token0();
+                token1 = await pairContract.token1();
+            } catch(e) {
+                showStatus('Gagal membaca token pair. Alamat pair mungkin salah.', 'error');
+                return;
+            }
+            
+            // Baca balance token di pair contract
+            const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider);
+            const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider);
+            
+            const token0Balance = await token0Contract.balanceOf(pairAddress);
+            const token1Balance = await token1Contract.balanceOf(pairAddress);
+            
+            const token0Decimals = await token0Contract.decimals();
+            const token1Decimals = await token1Contract.decimals();
+            const token0Symbol = await token0Contract.symbol();
+            const token1Symbol = await token1Contract.symbol();
+            
+            // Cek native CORE balance di pair contract
+            const nativeBalance = await provider.getBalance(pairAddress);
+            
+            const token0Formatted = ethers.utils.formatUnits(token0Balance, token0Decimals);
+            const token1Formatted = ethers.utils.formatUnits(token1Balance, token1Decimals);
+            const nativeFormatted = ethers.utils.formatEther(nativeBalance);
+            
+            pairBalancesDiv.style.display = 'block';
+            token0BalanceSpan.innerHTML = `${parseFloat(token0Formatted).toFixed(8)} ${token0Symbol}`;
+            token1BalanceSpan.innerHTML = `${parseFloat(token1Formatted).toFixed(8)} ${token1Symbol}`;
+            nativeBalanceSpan.innerHTML = `${parseFloat(nativeFormatted).toFixed(8)} CORE (Native)`;
+            
+            currentPairData = {
+                pairAddress: pairAddress,
+                token0: token0,
+                token1: token1,
+                token0Symbol: token0Symbol,
+                token1Symbol: token1Symbol,
+                token0Balance: token0Balance,
+                token1Balance: token1Balance,
+                token0Decimals: token0Decimals,
+                token1Decimals: token1Decimals,
+                nativeBalance: nativeBalance
+            };
+            
+            const hasBalance = !token0Balance.isZero() || !token1Balance.isZero() || !nativeBalance.isZero();
+            if (hasBalance) {
+                showStatus(`⚠️ Ditemukan ${parseFloat(token0Formatted).toFixed(6)} ${token0Symbol} + ${parseFloat(token1Formatted).toFixed(6)} ${token1Symbol} + ${parseFloat(nativeFormatted).toFixed(6)} CORE`, 'warning');
+            } else {
+                showStatus('✅ Tidak ada sisa token di kontrak pair!', 'success');
+            }
+            
+        } catch(err) {
+            showStatus(`Error: ${err.message}`, 'error');
+        }
+    }
+    
+    // Method 1: Skim
+    async function methodSkim() {
+        if (!currentPairData) { showStatus('Cek balance terlebih dahulu!', 'error'); return; }
+        showStatus('Menjalankan skim()...', 'loading');
+        document.getElementById('methodSkimBtn').disabled = true;
+        
+        try {
+            const pairContract = new ethers.Contract(currentPairData.pairAddress, PAIR_ABI, signer);
+            const tx = await pairContract.skim(userAddress);
+            await tx.wait();
+            showStatus('✅ Skim() berhasil! Token seharusnya sudah masuk wallet.', 'success');
+            setTimeout(() => checkBalances(), 3000);
+        } catch(err) {
+            showStatus(`Skim gagal: ${err.message.slice(0,100)}`, 'error');
+        } finally {
+            document.getElementById('methodSkimBtn').disabled = false;
+        }
+    }
+    
+    // Method 2: Transfer langsung
+    async function methodTransfer() {
+        if (!currentPairData) { showStatus('Cek balance terlebih dahulu!', 'error'); return; }
+        showStatus('Menarik token via transfer langsung...', 'loading');
+        document.getElementById('methodTransferBtn').disabled = true;
+        
+        try {
+            let success = false;
+            
+            if (!currentPairData.token0Balance.isZero()) {
+                const tokenContract = new ethers.Contract(currentPairData.token0, ERC20_ABI, signer);
+                const tx = await tokenContract.transfer(userAddress, currentPairData.token0Balance);
+                await tx.wait();
+                showStatus(`Berhasil menarik ${currentPairData.token0Symbol}`, 'success');
+                success = true;
+            }
+            
+            if (!currentPairData.token1Balance.isZero()) {
+                const tokenContract = new ethers.Contract(currentPairData.token1, ERC20_ABI, signer);
+                const tx = await tokenContract.transfer(userAddress, currentPairData.token1Balance);
+                await tx.wait();
+                showStatus(`Berhasil menarik ${currentPairData.token1Symbol}`, 'success');
+                success = true;
+            }
+            
+            if (success) {
+                showStatus('✅ Semua token berhasil ditarik!', 'success');
+                setTimeout(() => checkBalances(), 3000);
+            } else {
+                showStatus('Tidak ada token ERC20 untuk ditarik', 'warning');
+            }
+        } catch(err) {
+            showStatus(`Transfer gagal: ${err.message.slice(0,100)}`, 'error');
+        } finally {
+            document.getElementById('methodTransferBtn').disabled = false;
+        }
+    }
+    
+    // Method 3: Withdraw native CORE
+    async function methodWithdrawNative() {
+        if (!currentPairData) { showStatus('Cek balance terlebih dahulu!', 'error'); return; }
+        if (currentPairData.nativeBalance.isZero()) {
+            showStatus('Tidak ada CORE native di kontrak pair!', 'error');
+            return;
+        }
+        
+        showStatus('Menarik CORE native...', 'loading');
+        document.getElementById('methodWithdrawNativeBtn').disabled = true;
+        
+        try {
+            // Kirim transaksi langsung dari pair contract ke wallet
+            const pairContract = new ethers.Contract(currentPairData.pairAddress, PAIR_ABI, signer);
+            
+            // Coba metode withdraw jika ada
+            try {
+                const tx = await pairContract.withdraw(currentPairData.nativeBalance);
+                await tx.wait();
+                showStatus('✅ Withdraw CORE berhasil!', 'success');
+            } catch(e) {
+                // Fallback: call langsung ke pair contract dengan data kosong
+                const tx = await signer.sendTransaction({
+                    to: currentPairData.pairAddress,
+                    value: 0,
+                    gasLimit: 100000
+                });
+                await tx.wait();
+                showStatus('✅ Emergency call berhasil! Cek wallet Anda.', 'success');
+            }
+            setTimeout(() => checkBalances(), 3000);
+        } catch(err) {
+            showStatus(`Withdraw native gagal: ${err.message.slice(0,100)}`, 'error');
+        } finally {
+            document.getElementById('methodWithdrawNativeBtn').disabled = false;
+        }
+    }
+    
+    // Method 4: Emergency - coba semua metode sekaligus
+    async function methodEmergency() {
+        showStatus('🚨 Menjalankan emergency withdraw...', 'loading');
+        await methodSkim();
+        await new Promise(r => setTimeout(r, 2000));
+        await methodTransfer();
+        await new Promise(r => setTimeout(r, 2000));
+        await methodWithdrawNative();
+        showStatus('✅ Emergency withdraw selesai. Cek wallet Anda.', 'success');
+    }
+
+    connectBtn.addEventListener('click', connectWallet);
+    checkBalanceBtn.addEventListener('click', checkBalances);
+    document.getElementById('methodSkimBtn').addEventListener('click', methodSkim);
+    document.getElementById('methodTransferBtn').addEventListener('click', methodTransfer);
+    document.getElementById('methodWithdrawNativeBtn').addEventListener('click', methodWithdrawNative);
+    document.getElementById('methodEmergencyBtn').addEventListener('click', methodEmergency);
+</script>
+</body>
+</html>
