@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Simple Swap - Core Chain DEX</title>
+    <title>Simple Swap - Import Token & Approve</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             backdrop-filter: blur(10px);
             border-radius: 32px;
             padding: 24px;
-            max-width: 480px;
+            max-width: 500px;
             width: 100%;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -34,7 +34,7 @@
 
         h1 {
             color: #fff;
-            font-size: 28px;
+            font-size: 26px;
             margin-bottom: 4px;
             text-align: center;
             display: flex;
@@ -46,7 +46,7 @@
         .subtitle {
             color: #888;
             text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             margin-bottom: 24px;
         }
 
@@ -72,13 +72,18 @@
             padding: 16px;
             margin-bottom: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .token-input:focus-within {
+            border-color: #4CAF50;
         }
 
         .token-label {
             display: flex;
             justify-content: space-between;
             margin-bottom: 12px;
-            font-size: 13px;
+            font-size: 12px;
             color: #aaa;
         }
 
@@ -112,6 +117,7 @@
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 500;
+            font-size: 14px;
         }
 
         .token-select:hover {
@@ -141,22 +147,27 @@
             margin-top: 12px;
         }
 
-        .slippage-input {
+        .slippage-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             background: rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 12px;
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .slippage-input input {
+        .slippage-control label {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .slippage-control input {
             width: 80px;
             background: rgba(255, 255, 255, 0.1);
             border: none;
-            border-radius: 8px;
-            padding: 6px 10px;
+            border-radius: 10px;
+            padding: 8px 12px;
             color: white;
             text-align: center;
         }
@@ -172,6 +183,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            margin-bottom: 10px;
         }
 
         button:hover:not(:disabled) {
@@ -186,6 +198,10 @@
 
         .connect-btn {
             background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .approve-btn {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
         }
 
         .status {
@@ -240,11 +256,6 @@
             color: #4CAF50;
         }
 
-        hr {
-            border-color: rgba(255, 255, 255, 0.08);
-            margin: 16px 0;
-        }
-
         .loading-spinner {
             display: inline-block;
             width: 14px;
@@ -259,6 +270,68 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Modal Style */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 28px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .token-item {
+            padding: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+
+        .token-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .import-btn {
+            background: #2196F3;
+            margin-top: 16px;
+        }
+
+        .close-btn {
+            background: #333;
+        }
     </style>
 </head>
 <body>
@@ -267,7 +340,7 @@
         🔄 Simple Swap
         <span class="network-badge">Core Chain</span>
     </h1>
-    <div class="subtitle">Swap Token dengan Router CORE</div>
+    <div class="subtitle">Import Token Manual | Approve Dulu Baru Swap</div>
 
     <button id="connectWallet" class="connect-btn">🔌 Connect Wallet (MetaMask)</button>
     <div id="walletStatus" style="display: none;" class="wallet-info"></div>
@@ -309,15 +382,16 @@
                 </div>
             </div>
 
-            <!-- Estimated Output -->
-            <div class="info-row">
-                <span>⏱️ Slippage Tolerance</span>
-                <input type="number" id="slippage" value="0.5" step="0.1" style="width: 80px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; padding: 4px 8px; color: white; text-align: center;">
+            <!-- Slippage -->
+            <div class="slippage-control">
+                <label>⏱️ Slippage Tolerance</label>
+                <input type="number" id="slippage" value="0.5" step="0.1">
                 <span>%</span>
             </div>
 
+            <!-- Estimated Output -->
             <div class="info-row">
-                <span>💧 Estimated Received</span>
+                <span>📊 Estimated Received</span>
                 <span id="estimatedOutput">0.00</span>
             </div>
 
@@ -327,33 +401,47 @@
             </div>
         </div>
 
+        <!-- Tombol Approve (muncul jika perlu) -->
+        <button id="approveBtn" class="approve-btn" style="display: none;">✅ Approve Token</button>
+        
+        <!-- Tombol Swap -->
         <button id="swapBtn">🔄 Swap</button>
-        <button id="approveBtn" style="background: #FF9800; margin-top: 10px; display: none;">✅ Approve Token</button>
     </div>
 
     <div id="statusMessage" class="status"></div>
 </div>
 
-<!-- Token Modal (Popup sederhana) -->
-<div id="tokenModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
-    <div style="background: #1a1a2e; border-radius: 28px; padding: 24px; width: 90%; max-width: 350px;">
-        <h3 style="color: white; margin-bottom: 16px;">Pilih Token</h3>
-        <div id="tokenList" style="max-height: 400px; overflow-y: auto;"></div>
-        <button id="closeModal" style="background: #333; margin-top: 16px;">Tutup</button>
+<!-- Modal Pilih/Import Token -->
+<div id="tokenModal" class="modal">
+    <div class="modal-content">
+        <h3>📋 Pilih Token</h3>
+        
+        <!-- Daftar token default -->
+        <div id="defaultTokenList"></div>
+        
+        <!-- Form Import Token Manual -->
+        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+            <h4 style="color: #FF9800; margin-bottom: 12px;">➕ Import Token Manual</h4>
+            <input type="text" id="importAddress" placeholder="Alamat Kontrak Token (0x...)">
+            <input type="text" id="importSymbol" placeholder="Symbol (contoh: TOKEN)">
+            <button id="importTokenBtn" class="import-btn">📥 Import Token</button>
+        </div>
+        
+        <button id="closeModalBtn" class="close-btn" style="margin-top: 16px;">Tutup</button>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
 <script>
     // ============ KONFIGURASI ============
-    const CORE_CHAIN_ID = "0x45c"; // 1116
+    const CORE_CHAIN_ID = "0x45c";
     const ROUTER_ADDRESS = "0xc885C4a8B112B8a165338566421c685024Ec44F9";
     const WCORE_ADDRESS = "0x40375c92d9faf44d2f9db9bd9ba41a3317a2404f";
 
-    // Daftar token populer di Core Chain (bisa ditambah)
-    const TOKENS = {
+    // Token default
+    let TOKENS = {
         "CORE": {
-            address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // Native CORE
+            address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
             symbol: "CORE",
             decimals: 18,
             isNative: true
@@ -363,22 +451,10 @@
             symbol: "WCORE",
             decimals: 18,
             isNative: false
-        },
-        "USDC": {
-            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC di Core? Sesuaikan
-            symbol: "USDC",
-            decimals: 6,
-            isNative: false
-        },
-        "USDT": {
-            address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-            symbol: "USDT",
-            decimals: 6,
-            isNative: false
         }
     };
 
-    // Router ABI (swap functions)
+    // Router ABI
     const ROUTER_ABI = [
         "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)",
         "function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts)",
@@ -398,9 +474,8 @@
     let isConnected = false;
     let fromToken = TOKENS["CORE"];
     let toToken = TOKENS["WCORE"];
-    let fromBalance = "0";
-    let toBalance = "0";
     let currentAllowance = "0";
+    let currentSelecting = 'from';
 
     // DOM Elements
     const connectBtn = document.getElementById('connectWallet');
@@ -420,10 +495,11 @@
     const slippageInput = document.getElementById('slippage');
     const swapArrow = document.getElementById('swapArrow');
     const tokenModal = document.getElementById('tokenModal');
-    const tokenListDiv = document.getElementById('tokenList');
-    const closeModalBtn = document.getElementById('closeModal');
-
-    let currentSelecting = 'from'; // 'from' or 'to'
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const importAddress = document.getElementById('importAddress');
+    const importSymbol = document.getElementById('importSymbol');
+    const importTokenBtn = document.getElementById('importTokenBtn');
+    const defaultTokenList = document.getElementById('defaultTokenList');
 
     function showStatus(msg, type = 'loading') {
         statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span> ${msg}` : msg;
@@ -466,24 +542,22 @@
             // Update FROM balance
             if (fromToken.isNative) {
                 const balance = await provider.getBalance(userAddress);
-                fromBalance = ethers.utils.formatEther(balance);
+                fromBalanceSpan.innerHTML = `Balance: ${parseFloat(ethers.utils.formatEther(balance)).toFixed(4)} ${fromToken.symbol}`;
             } else {
                 const tokenContract = new ethers.Contract(fromToken.address, ERC20_ABI, provider);
                 const balance = await tokenContract.balanceOf(userAddress);
-                fromBalance = ethers.utils.formatUnits(balance, fromToken.decimals);
+                fromBalanceSpan.innerHTML = `Balance: ${parseFloat(ethers.utils.formatUnits(balance, fromToken.decimals)).toFixed(4)} ${fromToken.symbol}`;
             }
-            fromBalanceSpan.innerHTML = `Balance: ${parseFloat(fromBalance).toFixed(4)} ${fromToken.symbol}`;
             
             // Update TO balance
             if (toToken.isNative) {
                 const balance = await provider.getBalance(userAddress);
-                toBalance = ethers.utils.formatEther(balance);
+                toBalanceSpan.innerHTML = `Balance: ${parseFloat(ethers.utils.formatEther(balance)).toFixed(4)} ${toToken.symbol}`;
             } else {
                 const tokenContract = new ethers.Contract(toToken.address, ERC20_ABI, provider);
                 const balance = await tokenContract.balanceOf(userAddress);
-                toBalance = ethers.utils.formatUnits(balance, toToken.decimals);
+                toBalanceSpan.innerHTML = `Balance: ${parseFloat(ethers.utils.formatUnits(balance, toToken.decimals)).toFixed(4)} ${toToken.symbol}`;
             }
-            toBalanceSpan.innerHTML = `Balance: ${parseFloat(toBalance).toFixed(4)} ${toToken.symbol}`;
             
             // Check allowance if from token is not native
             if (!fromToken.isNative) {
@@ -492,7 +566,7 @@
                 currentAllowance = ethers.utils.formatUnits(allowance, fromToken.decimals);
                 
                 const amountIn = parseFloat(fromAmountInput.value) || 0;
-                if (amountIn > parseFloat(currentAllowance)) {
+                if (amountIn > 0 && amountIn > parseFloat(currentAllowance)) {
                     approveBtn.style.display = 'block';
                     swapBtn.disabled = true;
                 } else {
@@ -512,6 +586,7 @@
         const amountIn = parseFloat(fromAmountInput.value);
         if (!amountIn || amountIn <= 0 || !isConnected) {
             estimatedOutputSpan.innerHTML = "0.00";
+            toAmountInput.value = "";
             return;
         }
         
@@ -527,11 +602,10 @@
             
             const outputFormatted = ethers.utils.formatUnits(outputAmount, toToken.decimals);
             estimatedOutputSpan.innerHTML = parseFloat(outputFormatted).toFixed(6);
-            
-            // Update to amount field
             toAmountInput.value = parseFloat(outputFormatted).toFixed(6);
         } catch(err) {
             estimatedOutputSpan.innerHTML = "0.00";
+            toAmountInput.value = "";
         }
     }
 
@@ -542,7 +616,6 @@
         if (fromToken.isNative || toToken.isNative) {
             return [tokenIn, tokenOut];
         } else {
-            // Token to Token via WCORE
             return [fromToken.address, WCORE_ADDRESS, toToken.address];
         }
     }
@@ -553,17 +626,25 @@
             return;
         }
         
-        showStatus(`Approving ${fromToken.symbol}...`, 'loading');
+        const amountIn = parseFloat(fromAmountInput.value);
+        if (!amountIn || amountIn <= 0) {
+            showStatus("Masukkan jumlah token yang akan di-swap terlebih dahulu!", 'error');
+            return;
+        }
+        
+        showStatus(`Menyetujui ${fromToken.symbol} untuk ditukar...`, 'loading');
         approveBtn.disabled = true;
         
         try {
             const tokenContract = new ethers.Contract(fromToken.address, ERC20_ABI, signer);
-            const amountIn = parseFloat(fromAmountInput.value);
             const amountInWei = ethers.utils.parseUnits(amountIn.toString(), fromToken.decimals);
             
-            const tx = await tokenContract.approve(ROUTER_ADDRESS, amountInWei);
+            // Approve dengan jumlah yang cukup (plus buffer 10%)
+            const approveAmount = amountInWei.mul(110).div(100);
+            
+            const tx = await tokenContract.approve(ROUTER_ADDRESS, approveAmount);
             await tx.wait();
-            showStatus(`✅ Approve ${fromToken.symbol} berhasil!`, 'success');
+            showStatus(`✅ Approve ${fromToken.symbol} berhasil! Sekarang bisa swap.`, 'success');
             await updateBalances();
         } catch(err) {
             showStatus(`Approve gagal: ${err.message.slice(0,100)}`, 'error');
@@ -579,17 +660,27 @@
             return;
         }
         
+        // Cek allowance lagi sebelum swap
+        if (!fromToken.isNative) {
+            const tokenContract = new ethers.Contract(fromToken.address, ERC20_ABI, signer);
+            const allowance = await tokenContract.allowance(userAddress, ROUTER_ADDRESS);
+            const amountInWei = ethers.utils.parseUnits(amountIn.toString(), fromToken.decimals);
+            
+            if (allowance.lt(amountInWei)) {
+                showStatus(`Harap approve ${fromToken.symbol} terlebih dahulu!`, 'error');
+                return;
+            }
+        }
+        
         const slippage = parseFloat(slippageInput.value) / 100;
         const path = getPath();
         const deadline = Math.floor(Date.now() / 1000) + 1200;
         
-        showStatus(`Menyiapkan swap ${amountIn} ${fromToken.symbol} → ${toToken.symbol}...`, 'loading');
+        showStatus(`Menukar ${amountIn} ${fromToken.symbol} → ${toToken.symbol}...`, 'loading');
         swapBtn.disabled = true;
         
         try {
             const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
-            
-            // Get expected output
             const amountInWei = fromToken.isNative ? 
                 ethers.utils.parseEther(amountIn.toString()) :
                 ethers.utils.parseUnits(amountIn.toString(), fromToken.decimals);
@@ -601,7 +692,6 @@
             let tx;
             
             if (fromToken.isNative) {
-                // Swap CORE → Token
                 tx = await router.swapExactETHForTokens(
                     minOutput,
                     path,
@@ -610,7 +700,6 @@
                     { value: amountInWei }
                 );
             } else if (toToken.isNative) {
-                // Swap Token → CORE
                 tx = await router.swapExactTokensForETH(
                     amountInWei,
                     minOutput,
@@ -619,7 +708,6 @@
                     deadline
                 );
             } else {
-                // Swap Token → Token
                 tx = await router.swapExactTokensForTokens(
                     amountInWei,
                     minOutput,
@@ -629,7 +717,7 @@
                 );
             }
             
-            showStatus('Menunggu konfirmasi...', 'loading');
+            showStatus('Menunggu konfirmasi di blockchain...', 'loading');
             const receipt = await tx.wait();
             
             if (receipt.status === 1) {
@@ -642,21 +730,85 @@
                 throw new Error('Transaksi gagal');
             }
         } catch(err) {
-            showStatus(`Swap gagal: ${err.message.slice(0,100)}`, 'error');
+            let msg = err.message;
+            if (msg.includes('INSUFFICIENT_OUTPUT_AMOUNT')) {
+                msg = 'Slippage terlalu kecil! Coba naikkan slippage.';
+            } else if (msg.includes('INSUFFICIENT_A_AMOUNT')) {
+                msg = 'Saldo token tidak cukup!';
+            }
+            showStatus(`Swap gagal: ${msg.slice(0,100)}`, 'error');
         } finally {
             swapBtn.disabled = false;
         }
     }
 
-    function showTokenSelector(selectType) {
-        currentSelecting = selectType;
-        tokenListDiv.innerHTML = '';
+    // Import token manual
+    async function importToken() {
+        const address = importAddress.value.trim();
+        const customSymbol = importSymbol.value.trim();
+        
+        if (!address || !ethers.utils.isAddress(address)) {
+            showStatus("Masukkan alamat token yang valid (0x...)", 'error');
+            return;
+        }
+        
+        showStatus("Mengimpor token...", 'loading');
+        
+        try {
+            const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+            let symbol = customSymbol;
+            let decimals = 18;
+            
+            if (!symbol) {
+                symbol = await tokenContract.symbol();
+            }
+            decimals = await tokenContract.decimals();
+            
+            const newToken = {
+                address: address,
+                symbol: symbol,
+                decimals: decimals,
+                isNative: false
+            };
+            
+            TOKENS[symbol] = newToken;
+            
+            showStatus(`✅ Token ${symbol} berhasil diimport!`, 'success');
+            importAddress.value = '';
+            importSymbol.value = '';
+            
+            renderTokenList();
+            
+            // Jika sedang memilih token, set ke token yang baru diimport
+            if (currentSelecting === 'from') {
+                fromToken = newToken;
+                fromTokenSymbolSpan.innerHTML = symbol;
+            } else {
+                toToken = newToken;
+                toTokenSymbolSpan.innerHTML = symbol;
+            }
+            
+            routeSpan.innerHTML = `${fromToken.symbol} → ${toToken.symbol}`;
+            tokenModal.style.display = 'none';
+            updateBalances();
+            estimateOutput();
+            
+        } catch(err) {
+            showStatus(`Gagal import token: ${err.message.slice(0,100)}`, 'error');
+        }
+    }
+
+    function renderTokenList() {
+        defaultTokenList.innerHTML = '';
         
         Object.keys(TOKENS).forEach(symbol => {
             const token = TOKENS[symbol];
             const div = document.createElement('div');
-            div.style.cssText = 'padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; color: white; display: flex; justify-content: space-between;';
-            div.innerHTML = `<span>${token.symbol}</span><span style="color:#888;">${token.isNative ? 'Native' : 'ERC20'}</span>`;
+            div.className = 'token-item';
+            div.innerHTML = `
+                <span><strong>${token.symbol}</strong> ${token.isNative ? '(Native)' : ''}</span>
+                <span style="color:#888; font-size:11px;">${token.address.slice(0,6)}...${token.address.slice(-4)}</span>
+            `;
             div.onclick = () => {
                 if (currentSelecting === 'from') {
                     fromToken = token;
@@ -670,9 +822,13 @@
                 updateBalances();
                 estimateOutput();
             };
-            tokenListDiv.appendChild(div);
+            defaultTokenList.appendChild(div);
         });
-        
+    }
+
+    function showTokenSelector(selectType) {
+        currentSelecting = selectType;
+        renderTokenList();
         tokenModal.style.display = 'flex';
     }
 
@@ -689,7 +845,7 @@
             connectBtn.textContent = '✅ Connected';
             connectBtn.disabled = true;
             walletStatusDiv.style.display = 'block';
-            walletStatusDiv.innerHTML = `🔗 ${userAddress.slice(0,8)}...${userAddress.slice(-6)}<br>🌐 Core Chain`;
+            walletStatusDiv.innerHTML = `🔗 ${userAddress.slice(0,8)}...${userAddress.slice(-6)}<br>🌐 Core Chain (1116)`;
             swapUI.style.display = 'block';
             
             await updateBalances();
@@ -718,9 +874,11 @@
         updateBalances();
         estimateOutput();
     });
+    
     fromTokenSymbolSpan.parentElement.onclick = () => showTokenSelector('from');
     toTokenSymbolSpan.parentElement.onclick = () => showTokenSelector('to');
     closeModalBtn.onclick = () => tokenModal.style.display = 'none';
+    importTokenBtn.onclick = importToken;
 </script>
 </body>
 </html>
