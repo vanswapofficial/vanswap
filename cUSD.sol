@@ -2,12 +2,14 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract cUSD is ERC20, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     uint8 private constant DECIMALS = 6;
     uint256 private constant INITIAL_SUPPLY = 100_000 * 10 ** 6;
@@ -15,7 +17,7 @@ contract cUSD is ERC20, Ownable, ReentrancyGuard {
     uint256 private constant MAX_DEPOSIT = 1_000_000 * 10 ** 6;  // $1M
 
     struct StablecoinInfo {
-        IERC20 token;
+        IERC20Metadata token;   // <-- FIX: pakai IERC20Metadata
         uint256 trackedReserve;
         uint256 actualReserve;
         uint8 decimals;
@@ -72,7 +74,7 @@ contract cUSD is ERC20, Ownable, ReentrancyGuard {
         require(_stablecoin != address(0), "Invalid address");
         require(!stablecoins[_stablecoin].isActive, "Already added");
 
-        IERC20 token = IERC20(_stablecoin);
+        IERC20Metadata token = IERC20Metadata(_stablecoin);  // <-- FIX: cast ke IERC20Metadata
 
         try token.totalSupply() {} catch {
             revert("Not a valid ERC20");
