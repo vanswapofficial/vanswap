@@ -10,7 +10,7 @@ contract cUSD is ERC20, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint8 private constant DECIMALS = 6;
-    uint256 private constant INITIAL_SUPPLY = 100_000 * 10 ** 6; // 100,000 cUSD untuk owner
+    uint256 private constant INITIAL_SUPPLY = 100_000 * 10 ** 6;
     uint256 private constant MIN_DEPOSIT = 10 * 10 ** 6;         // $10
     uint256 private constant MAX_DEPOSIT = 1_000_000 * 10 ** 6;  // $1M
 
