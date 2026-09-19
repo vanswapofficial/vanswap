@@ -245,8 +245,8 @@ contract cUSD is ERC20, Ownable, ReentrancyGuard {
         emit ReserveSynced(_stablecoin, info.trackedReserve, currentBalance, matched);
     }
 
-    /// @notice Emergency withdraw — versi asli (owner bisa tarik semua saat paused)
-    /// @dev Hanya owner, hanya saat paused. Reset state stablecoin.
+    /// @notice Emergency withdraw
+    /// @dev only owner
     function emergencyWithdraw(address _stablecoin, address _to) external onlyOwner {
         require(paused, "Only when paused");
         require(_to != address(0), "Invalid recipient");
@@ -257,12 +257,12 @@ contract cUSD is ERC20, Ownable, ReentrancyGuard {
         uint256 balance = info.token.balanceOf(address(this));
         require(balance > 0, "No balance");
 
-        // Reset semua state
+        // Reset all state
         info.trackedReserve = 0;
         info.actualReserve = 0;
         info.isActive = false;
 
-        // Transfer semua balance
+        // Transfer all balance
         info.token.safeTransfer(_to, balance);
 
         emit AdminWithdraw(_stablecoin, balance, _to);
