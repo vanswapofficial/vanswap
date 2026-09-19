@@ -6,20 +6,20 @@
 <title>Cek Saldo Wallet</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,sans-serif;background:#0B0E11;color:#fff;padding:16px;min-height:100vh}
-h1{font-size:20px;margin-bottom:4px}
-p.sub{color:#8A8F98;font-size:13px;margin-bottom:16px}
-textarea{width:100%;background:#1A1D22;border:1.5px solid #2A2F38;border-radius:12px;padding:14px;color:#fff;font-size:14px;font-family:monospace;resize:vertical;min-height:80px;outline:none}
+body{font-family:system-ui,sans-serif;background:#0B0E11;color:#fff;padding:14px;min-height:100vh}
+h1{font-size:19px;margin-bottom:4px}
+p.sub{color:#8A8F98;font-size:12px;margin-bottom:14px}
+textarea{width:100%;background:#1A1D22;border:1.5px solid #2A2F38;border-radius:12px;padding:12px;color:#fff;font-size:13px;font-family:monospace;resize:vertical;min-height:70px;outline:none}
 textarea:focus{border-color:#3375BB}
-button{width:100%;padding:15px;border-radius:12px;border:none;font-size:15px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#3375BB,#05A4FF);color:#fff;margin-top:12px}
+button{width:100%;padding:14px;border-radius:11px;border:none;font-size:14px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#3375BB,#05A4FF);color:#fff;margin-top:10px}
 button:active{transform:scale(.97)}
 button:disabled{opacity:.5;cursor:not-allowed}
 .btn-sec{background:#23272E;color:#fff}
-.card{background:#1A1D22;border-radius:12px;padding:14px;margin-top:14px;border:1px solid #2A2F38}
+.card{background:#1A1D22;border-radius:12px;padding:13px;margin-top:12px;border:1px solid #2A2F38}
 .label{font-size:11px;color:#8A8F98;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.value{font-size:13px;font-family:monospace;word-break:break-all;line-height:1.5}
+.value{font-size:12px;font-family:monospace;word-break:break-all;line-height:1.5}
 
-/* ===== GRID 2 KOLOM UNTUK CHAIN ===== */
+/* ===== GRID 2 KOLOM (kiri-kanan) ===== */
 .chain-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -27,32 +27,31 @@ button:disabled{opacity:.5;cursor:not-allowed}
   margin-top:10px;
 }
 
-.chain{background:#1A1D22;border-radius:12px;border:1px solid #2A2F38;overflow:hidden;display:flex;flex-direction:column}
-.chain-head{display:flex;align-items:center;gap:8px;padding:10px}
-.ico{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.chain{background:#1A1D22;border-radius:11px;border:1px solid #2A2F38;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.chain-head{display:flex;align-items:center;gap:7px;padding:9px}
+.ico{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
 .info{flex:1;min-width:0}
-.nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sy{font-size:10px;color:#8A8F98}
-.bal{text-align:right;font-family:monospace;font-size:12px;white-space:nowrap;font-weight:600}
-.tokens{padding:0 10px 10px 10px;display:flex;flex-direction:column;gap:4px}
-.token{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-family:monospace;padding:4px 8px;background:#23272E;border-radius:6px;gap:6px}
+.nm{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sy{font-size:9px;color:#8A8F98}
+.bal{text-align:right;font-family:monospace;font-size:11px;white-space:nowrap;font-weight:600}
+.tokens{padding:0 8px 8px 8px;display:flex;flex-direction:column;gap:3px}
+.token{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-family:monospace;padding:3px 7px;background:#23272E;border-radius:5px;gap:4px}
 .token .tk-name{color:#B0B7C3;font-weight:600}
 .token .tk-bal{color:#22C55E;white-space:nowrap}
-.token-empty{color:#8A8F98;font-size:10px;padding:2px 0}
+.token-empty{color:#8A8F98;font-size:9px;padding:2px 0}
 
-/* Responsive: kalau layar sempit, jadi 1 kolom */
-@media (max-width:520px){
-  .chain-grid{grid-template-columns:1fr}
-  .nm{font-size:13px}
-  .ico{width:36px;height:36px;font-size:14px}
-  .bal{font-size:13px}
-  .token{font-size:12px}
+/* Kalau layar sangat sempit (<360px), tetap 2 kolom biar tidak terlalu panjang */
+@media (max-width:340px){
+  .chain-grid{gap:6px}
+  .nm{font-size:10px}
+  .bal{font-size:10px}
+  .token{font-size:9px}
 }
 
-.err{background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.3);color:#FF4D4D;padding:12px;border-radius:10px;font-size:13px;margin-top:12px}
-.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:12px;border-radius:10px;font-size:13px;margin-top:12px}
-.warn{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;margin-top:10px}
-.mn-box{background:#23272E;border-radius:10px;padding:12px;font-family:monospace;font-size:13px;line-height:1.7;word-spacing:6px;user-select:all;margin-top:10px}
+.err{background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.3);color:#FF4D4D;padding:11px;border-radius:10px;font-size:12px;margin-top:10px}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:11px;border-radius:10px;font-size:12px;margin-top:10px}
+.warn{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:11px;border-radius:10px;font-size:11px;line-height:1.5;margin-top:10px}
+.mn-box{background:#23272E;border-radius:9px;padding:11px;font-family:monospace;font-size:12px;line-height:1.7;word-spacing:5px;user-select:all;margin-top:10px}
 .gen-actions{display:flex;gap:8px;margin-top:10px}
 .gen-actions button{margin-top:0}
 </style>
@@ -60,7 +59,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <body>
 
 <h1>Cek Saldo Wallet</h1>
-<p class="sub">Generate mnemonic aman (WebCrypto RNG), atau paste punyamu sendiri.</p>
+<p class="sub">Generate mnemonic aman atau paste punyamu. Cek native + token di 17 jaringan.</p>
 
 <!-- ===== MNEMONIC GENERATOR ===== -->
 <div class="card">
@@ -96,11 +95,8 @@ function genMnemonic(wordCount){
     return;
   }
 
-  // 12 kata = 16 byte (128 bit), 24 kata = 32 byte (256 bit)
   const byteLen = wordCount === 24 ? 32 : 16;
   const entropy = new Uint8Array(byteLen);
-
-  // ← RNG kriptografi dari browser
   crypto.getRandomValues(entropy);
 
   let mnemonic;
@@ -130,7 +126,7 @@ function copyGen(btn){
 }
 
 // ============================================================
-// CHAINS
+// DAFTAR CHAIN (17 jaringan — Moonbeam & Moonriver dibuang)
 // ============================================================
 const CHAINS = [
   {
@@ -304,23 +300,6 @@ const CHAINS = [
       {sym:'USDT', addr:'0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e', dec:6},
       {sym:'cUSD', addr:'0x765DE816845861e75A25fCA122bb6898B8B1282a', dec:18},
       {sym:'cEUR', addr:'0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73', dec:18}
-    ]
-  },
-  {
-    id:'moonbeam', name:'Moonbeam', symbol:'GLMR', color:'#53CBC9', icon:'M',
-    rpcs:['https://rpc.api.moonbeam.network','https://moonbeam.publicnode.com','https://1rpc.io/glmr'],
-    tokens:[
-      {sym:'USDC', addr:'0x931715FEE2d06333043d11F658C8CE934aC61D0c', dec:6},
-      {sym:'USDT', addr:'0xc30E9cA94CF52f3Bf5692aaCF81353a27052c46f', dec:6},
-      {sym:'WETH', addr:'0x30D2a9F5FDf90ACe8c17952cbb4eE48a55D916A7', dec:18}
-    ]
-  },
-  {
-    id:'moonriver', name:'Moonriver', symbol:'MOVR', color:'#F2B705', icon:'M',
-    rpcs:['https://rpc.api.moonriver.moonbeam.network','https://moonriver.publicnode.com','https://1rpc.io/movr'],
-    tokens:[
-      {sym:'USDC', addr:'0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D', dec:6},
-      {sym:'USDT', addr:'0xB44a9B6905aF7c801311e8E4E769e76776EdEb02', dec:6}
     ]
   }
 ];
