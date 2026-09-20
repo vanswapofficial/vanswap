@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETH Sniper — Fixed</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: monospace; max-width: 860px; margin: 12px auto; padding: 0 12px; background:#0d0d0d; color:#e0e0e0; font-size:13px; }
+  h2 { color:#4fc3f7; margin: 8px 0; font-size:16px; }
+  h3 { color:#81c784; margin: 14px 0 4px; font-size:12px; border-bottom:1px solid #333; padding-bottom:3px; text-transform:uppercase; letter-spacing:1px; }
+  input, button, select, textarea { font-family: monospace; font-size: 13px; padding: 7px; background:#1a1a1a; color:#e0e0e0; border:1px solid #333; border-radius:4px; width:100%; margin-bottom:6px; }
+  textarea { min-height: 60px; resize: vertical; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px; border-radius:4px; }
+  button:disabled { background:#444; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:14px; padding:12px; margin-top:5px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  button.gray { background:#555; color:#eee; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  pre { background:#000; padding:10px; border:1px solid #222; white-space:pre-wrap; word-break:break-all; max-height:300px; overflow:auto; font-size:11px; line-height:1.5; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#555; }
+  label { display:block; margin-top:8px; margin-bottom:2px; color:#999; font-size:11px; }
+  .status { text-align:center; font-size:15px; font-weight:bold; color:#ffb74d; margin:8px 0; min-height:22px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .box { background:#111; border:1px solid #222; border-radius:4px; padding:8px; margin:8px 0; font-size:12px; }
+  .kv { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #1a1a1a; }
+  .kv span:last-child { color:#4fc3f7; }
+  .hint { background:#1a1200; border:1px solid #3a2a00; color:#ffb74d; padding:7px; border-radius:4px; font-size:11px; margin:6px 0; }
+</style>
+</head>
+<body>
+<h2>⚡ ETH Sniper — Fixed</h2>
+
+<div class="hint">
+  Semua jalan di browser. Butuh RPC WSS yang support <code>eth_subscribe</code>. Publicnode support tapi rate-limited.
+</div>
+
+<h3>1. Wallet Target</h3>
+<label>Private key wallet target</label>
+<textarea id="pkTarget" placeholder="0x..."></textarea>
+<div class="box" id="infoTarget">Alamat: —</div>
+
+<h3>2. Wallet Penerima</h3>
+<label>Alamat tujuan</label>
+<input id="toAddr" placeholder="0x...">
+
+<h3>3. Network & RPC</h3>
+<div class="grid2">
+  <div>
+    <label>Network</label>
+    <select id="net">
+      <option value="eth">Ethereum Mainnet</option>
+      <option value="sep">Sepolia</option>
+    </select>
+  </div>
+  <div>
+    <label>RPC WSS</label>
+    <input id="wssUrl" value="wss://ethereum-rpc.publicnode.com">
+  </div>
+</div>
+<label>RPC HTTP (pisah koma)</label>
+<input id="httpRpcs" value="https://ethereum-rpc.publicnode.com,https://eth.llamarpc.com,https://eth.drpc.org">
+
+<h3>4. Gas</h3>
+<div class="grid3">
+  <div><label>Priority (gwei)</label><input id="prioGwei" type="number" value="30"></div>
+  <div><label>Max Fee (gwei)</label><input id="maxGwei" type="number" value="200"></div>
+  <div><label>Gas Limit</label><input id="gasLimit" type="number" value="21000"></div>
+</div>
+
+<h3>5. Strategi</h3>
+<div class="grid2">
+  <div>
+    <label>Mode</label>
+    <select id="mode">
+      <option value="pending">Pending Tx (WSS) — agresif</option>
+      <option value="block">Block (WSS newHeads) — aman</option>
+      <option value="poll">Polling getBalance — lambat</option>
+    </select>
+  </div>
+  <div>
+    <label>Broadcast ke RPC</label>
+    <select id="bcCount">
+      <option value="1">1</option>
+      <option value="3" selected>3</option>
+      <option value="all">Semua</option>
+    </select>
+  </div>
+</div>
+
+<h3>6. Kontrol</h3>
+<div class="status" id="status">— idle —</div>
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="start()">▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stop()" disabled>■ STOP</button>
+</div>
+<button class="big" id="btnOnce" onclick="manualSweep()">↻ Sweep Manual</button>
+<button class="big gray" onclick="testConn()">🔌 Test Koneksi</button>
+
+<div class="box">
+  <div class="kv"><span>Status WSS</span><span id="stWss">—</span></div>
+  <div class="kv"><span>Pending diterima</span><span id="stRx">0</span></div>
+  <div class="kv"><span>Tx match (value>0)</span><span id="stMatch">0</span></div>
+  <div class="kv"><span>Tx kuras terkirim</span><span id="stSent">0</span></div>
+  <div class="kv"><span>Nonce</span><span id="stNonce">—</span></div>
+  <div class="kv"><span>Saldo target</span><span id="stBal">—</span></div>
+  <div class="kv"><span>Latency</span><span id="stLat">—</span></div>
+</div>
+
+<pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const NET = {
+  eth: { chainId: 1n, symbol: "ETH" },
+  sep: { chainId: 11155111n, symbol: "ETH" }
+};
+
+let ws = null, wsId = 1;
+let targetWallet = null, targetAddr = null, toAddr = null;
+let provider = null, running = false;
+let stats = { rx:0, match:0, sent:0 };
+let nonceCache = null;
+let pendingSweep = false, sweepStartTs = 0;
+let wsRetry = null, pollId = null;
+const seenTx = new Set();
+
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function setStatus(t, active) {
+  const el = $('status');
+  el.textContent = t;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+function updStats() {
+  $('stRx').textContent = stats.rx;
+  $('stMatch').textContent = stats.match;
+  $('stSent').textContent = stats.sent;
+}
+function setSt(k, v, cls) {
+  const el = $(k);
+  el.textContent = v;
+  el.style.color = cls === 'ok' ? '#81c784' : cls === 'err' ? '#ef5350' : '#4fc3f7';
+}
+
+async function initWallet() {
+  const pk = $('pkTarget').value.trim();
+  if (!pk) throw new Error("PK kosong");
+  targetWallet = new ethers.Wallet(pk);
+  targetAddr = targetWallet.address;
+  $('infoTarget').innerHTML = `Alamat: <b style="color:#4fc3f7">${targetAddr}</b>`;
+}
+
+function getHttpRpcs() {
+  return $('httpRpcs').value.split(',').map(s => s.trim()).filter(Boolean);
+}
+function initProvider() {
+  const net = NET[$('net').value];
+  provider = new ethers.JsonRpcProvider(getHttpRpcs()[0], net.chainId, { staticNetwork: true });
+}
+
+function withTimeout(promise, ms, label = "rpc") {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timeout ${ms}ms`)), ms))
+  ]);
+}
+async function getBalanceSafe(addr, ms = 4000) {
+  try { return await withTimeout(provider.getBalance(addr), ms, "getBalance"); }
+  catch (e) { log("⚠ " + e.message, "warn"); return null; }
+}
+async function getTxSafe(hash, ms = 3000) {
+  try { return await withTimeout(provider.getTransaction(hash), ms, "getTx"); }
+  catch { return null; }
+}
+
+async function broadcastRaw(signedTx) {
+  const rpcs = getHttpRpcs();
+  const n = $('bcCount').value === 'all' ? rpcs.length : Math.min(parseInt($('bcCount').value), rpcs.length);
+  const targets = rpcs.slice(0, n);
+  const results = await Promise.allSettled(targets.map(async (url) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_sendRawTransaction", params:[signedTx] })
+    });
+    const j = await res.json();
+    if (j.error) throw new Error(j.error.message);
+    return { url, hash: j.result };
+  }));
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      log(`  ✓ broadcast → ${r.value.url.split('/')[2]}`, "ok");
+      return r.value.hash;
+    }
+  }
+  for (const r of results) {
+    if (r.status === "rejected") log(`  ✗ ${r.reason.message}`, "err");
+  }
+  return null;
+}
+
+async function sweep(triggerInfo) {
+  if (pendingSweep && Date.now() - sweepStartTs > 6000) {
+    log("⚠ Sweep nyangkut >6s, reset.", "warn");
+    pendingSweep = false;
+  }
+  if (pendingSweep) { log("⚠ Sweep jalan, skip.", "dim"); return; }
+  pendingSweep = true;
+  sweepStartTs = Date.now();
+  const t0 = performance.now();
+
+  try {
+    const net = NET[$('net').value];
+    const to = $('toAddr').value.trim();
+    if (!ethers.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
+
+    const bal = await getBalanceSafe(targetAddr, 4000);
+    if (bal === null) return;
+    if (bal === 0n) { log("⏳ Saldo 0", "dim"); return; }
+
+    const gasLimit = BigInt($('gasLimit').value);
+    const prio = ethers.parseUnits($('prioGwei').value, "gwei");
+    const maxFee = ethers.parseUnits($('maxGwei').value, "gwei");
+    const gasCost = gasLimit * maxFee;
+    const value = bal - gasCost;
+    if (value <= 0n) { log(`⏳ Saldo ${ethers.formatEther(bal)} < gasCost`, "warn"); return; }
+
+    let nonce;
+    if (nonceCache === null) {
+      nonce = await withTimeout(provider.getTransactionCount(targetAddr, "pending"), 4000, "nonce");
+    } else {
+      nonce = nonceCache;
+    }
+
+    const signed = await targetWallet.signTransaction({
+      to, value, gasLimit,
+      maxFeePerGas: maxFee,
+      maxPriorityFeePerGas: prio,
+      nonce, type: 2, chainId: net.chainId
+    });
+
+    setStatus("⚡ Broadcasting...", true);
+    const hash = await broadcastRaw(signed);
+    const dt = (performance.now() - t0).toFixed(0);
+
+    if (hash) {
+      stats.sent++; nonceCache = nonce + 1; updStats();
+      setSt('stNonce', nonce);
+      setSt('stLat', dt + " ms", 'ok');
+      log(`⚡ SWEEP OK | ${ethers.formatEther(value)} ${net.symbol} | nonce=${nonce} | ${dt}ms`, "ok");
+      if (triggerInfo) log(`   trigger: ${triggerInfo}`, "dim");
+      provider.waitForTransaction(hash, 1, 90000).then(r => {
+        if (r) { nonceCache = r.nonce + 1; log(`   ✓ confirm blok ${r.blockNumber}`, "ok"); refreshBalance(); }
+      }).catch(() => {});
+    } else {
+      log("✗ Semua broadcast gagal.", "err");
+      if (nonceCache !== null) nonceCache = nonce;
+    }
+  } catch (e) {
+    log("✗ Sweep error: " + (e.shortMessage || e.message), "err");
+  } finally {
+    pendingSweep = false;
+  }
+}
+
+function connectWss() {
+  const url = $('wssUrl').value.trim();
+  setSt('stWss', 'connecting...');
+  ws = new WebSocket(url);
+  wsId = 1;
+
+  ws.onopen = () => {
+    setSt('stWss', 'connected', 'ok');
+    log("✓ WSS connected", "ok");
+    const mode = $('mode').value;
+    if (mode === "pending") subscribe("newPendingTransactions");
+    else if (mode === "block") subscribe("newHeads");
+  };
+  ws.onmessage = async (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.method === "eth_subscription" && msg.params) {
+      await handleEvent(msg.params.subscription, msg.params.result);
+      return;
+    }
+    if (msg.id && msg.result && typeof msg.result === "string") {
+      log(`  sub: ${msg.result.slice(0,20)}...`, "dim");
+    }
+  };
+  ws.onerror = () => { setSt('stWss', 'error', 'err'); log("✗ WSS error", "err"); };
+  ws.onclose = () => {
+    setSt('stWss', 'closed', 'err');
+    log("✗ WSS closed", "warn");
+    if (running) { wsRetry = setTimeout(() => { if (running) connectWss(); }, 2000); }
+  };
+}
+function subscribe(kind) {
+  ws.send(JSON.stringify({ jsonrpc:"2.0", id: wsId++, method:"eth_subscribe", params:[kind] }));
+  log(`→ subscribe ${kind}`, "info");
+}
+
+async function handleEvent(sub, data) {
+  const mode = $('mode').value;
+  if (mode === "pending") {
+    stats.rx++;
+    if (stats.rx % 100 === 0) updStats();
+    if (seenTx.has(data)) return;
+    seenTx.add(data);
+    if (seenTx.size > 8000) seenTx.clear();
+    const tx = await getTxSafe(data, 3000);
+    if (!tx) return;
+    if (tx.to && tx.to.toLowerCase() === targetAddr.toLowerCase() && tx.value > 0n) {
+      stats.match++; updStats();
+      log(`🎯 MATCH! ${data.slice(0,12)}... value=${ethers.formatEther(tx.value)} ${NET[$('net').value].symbol}`, "ok");
+      sweep(`pending ${data.slice(0,10)}...`);
+    }
+    return;
+  }
+  if (mode === "block") {
+    const bn = parseInt(data.number, 16);
+    const bal = await getBalanceSafe(targetAddr, 4000);
+    if (bal !== null) {
+      setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
+      if (bal > 0n) sweep(`block ${bn}`);
+    }
+  }
+}
+
+function startPolling() {
+  pollId = setInterval(async () => {
+    if (!running) return;
+    const bal = await getBalanceSafe(targetAddr, 3000);
+    if (bal !== null) {
+      setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
+      if (bal > 0n) sweep("polling");
+    }
+  }, 300);
+  log("▶ Polling aktif (300ms)", "info");
+}
+
+async function refreshBalance() {
+  const bal = await getBalanceSafe(targetAddr, 4000);
+  if (bal !== null) setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
+  try {
+    const nonce = await withTimeout(provider.getTransactionCount(targetAddr, "pending"), 4000, "nonce");
+    nonceCache = Number(nonce);
+    setSt('stNonce', nonceCache);
+  } catch {}
+}
+
+async function start() {
+  if (running) return;
+  try {
+    await initWallet();
+    initProvider();
+    const to = $('toAddr').value.trim();
+    if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
+    toAddr = to;
+
+    running = true;
+    stats = { rx:0, match:0, sent:0 };
+    seenTx.clear();
+    updStats();
+    nonceCache = null;
+
+    $('btnStart').disabled = true;
+    $('btnStop').disabled = false;
+    $('btnOnce').disabled = true;
+    setStatus("▶ Sniper aktif...", true);
+
+    await refreshBalance();
+
+    const mode = $('mode').value;
+    if (mode === "poll") startPolling();
+    else connectWss();
+
+    log(`▶ START | mode=${mode} | target=${targetAddr}`, "ok");
+  } catch (e) {
+    log("✗ Start: " + (e.message || e), "err");
+    running = false;
+    $('btnStart').disabled = false;
+    $('btnStop').disabled = true;
+    $('btnOnce').disabled = false;
+  }
+}
+
+async function stop() {
+  if (!running) return;
+  running = false;
+  if (wsRetry) { clearTimeout(wsRetry); wsRetry = null; }
+  if (pollId) { clearInterval(pollId); pollId = null; }
+  if (ws) { try { ws.close(); } catch {} ws = null; }
+  setSt('stWss', 'stopped', 'err');
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnOnce').disabled = false;
+  setStatus("■ Berhenti", false);
+  log("■ STOP", "warn");
+}
+
+async function manualSweep() {
+  try {
+    await initWallet();
+    if (!provider) initProvider();
+    await refreshBalance();
+    await sweep("manual");
+  } catch (e) { log("✗ " + e.message, "err"); }
+}
+
+async function testConn() {
+  try {
+    await initWallet();
+    initProvider();
+    await refreshBalance();
+    log("✓ HTTP RPC OK", "ok");
+    const url = $('wssUrl').value.trim();
+    const testWs = new WebSocket(url);
+    testWs.onopen = () => {
+      log("✓ WSS OK", "ok");
+      testWs.send(JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_subscribe", params:["newHeads"] }));
+    };
+    testWs.onmessage = (ev) => {
+      const m = JSON.parse(ev.data);
+      if (m.result) { log("✓ eth_subscribe OK!", "ok"); testWs.close(); }
+      else if (m.error) { log("✗ " + m.error.message, "err"); testWs.close(); }
+    };
+    testWs.onerror = () => log("✗ WSS gagal", "err");
+    setTimeout(() => { try { testWs.close(); } catch {} }, 5000);
+  } catch (e) { log("✗ " + e.message, "err"); }
+}
+
+['pkTarget','toAddr','net','wssUrl','httpRpcs','prioGwei','maxGwei','gasLimit','mode','bcCount'].forEach(id => {
+  const s = localStorage.getItem('sn_' + id);
+  if (s) $(id).value = s;
+  $(id).addEventListener('input', () => localStorage.setItem('sn_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('sn_' + id, $(id).value));
+});
+$('pkTarget').addEventListener('blur', () => { try { initWallet(); } catch {} });
+</script>
+</body>
+</html>
