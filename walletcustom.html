@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cek Saldo + Vanity Wallet Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#0B0E11;color:#fff;padding:14px;min-height:100vh}
+h1{font-size:19px;margin-bottom:4px}
+p.sub{color:#8A8F98;font-size:12px;margin-bottom:14px}
+textarea,input{width:100%;background:#1A1D22;border:1.5px solid #2A2F38;border-radius:12px;padding:12px;color:#fff;font-size:13px;font-family:monospace;outline:none}
+textarea{resize:vertical;min-height:70px}
+textarea:focus,input:focus{border-color:#3375BB}
+button{width:100%;padding:14px;border-radius:11px;border:none;font-size:14px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#3375BB,#05A4FF);color:#fff;margin-top:10px}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.btn-sec{background:#23272E;color:#fff}
+.btn-danger{background:linear-gradient(135deg,#DC2626,#EF4444)}
+.card{background:#1A1D22;border-radius:12px;padding:13px;margin-top:12px;border:1px solid #2A2F38}
+.label{font-size:11px;color:#8A8F98;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.value{font-size:12px;font-family:monospace;word-break:break-all;line-height:1.5}
+
+.chain-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.chain{background:#1A1D22;border-radius:11px;border:1px solid #2A2F38;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.chain-head{display:flex;align-items:center;gap:7px;padding:9px}
+.ico{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+.info{flex:1;min-width:0}
+.nm{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sy{font-size:9px;color:#8A8F98}
+.bal{text-align:right;font-family:monospace;font-size:11px;white-space:nowrap;font-weight:600}
+.tokens{padding:0 8px 8px 8px;display:flex;flex-direction:column;gap:3px}
+.token{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-family:monospace;padding:3px 7px;background:#23272E;border-radius:5px;gap:4px}
+.token .tk-name{color:#B0B7C3;font-weight:600}
+.token .tk-bal{color:#22C55E;white-space:nowrap}
+.token-empty{color:#8A8F98;font-size:9px;padding:2px 0}
+
+@media (max-width:340px){
+  .chain-grid{gap:6px}
+  .nm{font-size:10px}
+  .bal{font-size:10px}
+  .token{font-size:9px}
+}
+
+.err{background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.3);color:#FF4D4D;padding:11px;border-radius:10px;font-size:12px;margin-top:10px}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:11px;border-radius:10px;font-size:12px;margin-top:10px}
+.warn{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22C55E;padding:11px;border-radius:10px;font-size:11px;line-height:1.5;margin-top:10px}
+.alert{background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.4);color:#FFC107;padding:11px;border-radius:10px;font-size:11px;line-height:1.6;margin-top:10px}
+.mn-box{background:#23272E;border-radius:9px;padding:11px;font-family:monospace;font-size:12px;line-height:1.7;word-spacing:5px;user-select:all;margin-top:10px}
+.gen-actions{display:flex;gap:8px;margin-top:10px}
+.gen-actions button{margin-top:0}
+.row{display:flex;gap:8px;margin-top:10px}
+.row input{flex:1}
+.row button{width:auto;padding:12px 18px;margin-top:0}
+
+.vanity-result{background:#0F1419;border:1.5px solid #22C55E;border-radius:11px;padding:12px;margin-top:12px}
+.vanity-result .vk{font-size:10px;color:#8A8F98;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:8px}
+.vanity-result .vv{font-family:monospace;font-size:11px;word-break:break-all;color:#fff;user-select:all}
+.stat{display:flex;justify-content:space-between;font-size:11px;color:#8A8F98;font-family:monospace;margin-top:6px;padding-top:6px;border-top:1px solid #2A2F38}
+</style>
+</head>
+<body>
+
+<h1>Cek Saldo Wallet</h1>
+<p class="sub">Generate mnemonic aman, vanity address kustom (hex), atau paste punyamu.</p>
+
+<!-- MNEMONIC GENERATOR -->
+<div class="card">
+  <div class="label">Mnemonic Generator — Aman (crypto.getRandomValues)</div>
+  <div class="gen-actions">
+    <button class="btn-sec" onclick="genMnemonic(12)">Generate 12 kata</button>
+    <button class="btn-sec" onclick="genMnemonic(24)">Generate 24 kata</button>
+  </div>
+  <div id="genOut"></div>
+  <div class="warn">
+    ✓ Menggunakan <b>crypto.getRandomValues()</b> — RNG kriptografi standar browser.
+  </div>
+</div>
+
+<!-- VANITY ADDRESS GENERATOR -->
+<div class="card">
+  <div class="label">🎯 Vanity Address Generator</div>
+  <div class="alert">
+    <b>⚠️ PENTING:</b> Address Ethereum hanya boleh berisi <b>karakter hex</b>: <code>0-9</code> dan <code>a-f</code>.<br>
+    Contoh valid: <code>0x0000023...</code>, <code>0xdead...</code>, <code>0xcafe...</code><br>
+    Contoh TIDAK valid: <code>0xLDRZ2307...</code> (L, R, Z bukan hex)
+  </div>
+
+  <div class="label" style="margin-top:12px">Pola prefix (setelah 0x)</div>
+  <input id="vanityPrefix" placeholder="contoh: 0000023 atau cafe" maxlength="10">
+
+  <div class="label" style="margin-top:8px">Pola suffix (opsional)</div>
+  <input id="vanitySuffix" placeholder="contoh: dead atau 777" maxlength="10">
+
+  <div class="row">
+    <button class="btn-sec" onclick="startVanity()" id="vanityBtn">🚀 Mulai Generate</button>
+    <button class="btn-danger" onclick="stopVanity()" id="vanityStop" style="display:none">⛔ Stop</button>
+  </div>
+
+  <div id="vanityOut"></div>
+</div>
+
+<!-- INPUT MANUAL -->
+<div class="card">
+  <div class="label">Atau paste mnemonic di sini</div>
+  <textarea id="mn" placeholder="apple banana cherry ..."></textarea>
+  <button id="btn" onclick="cek()">Cek Saldo</button>
+</div>
+
+<div id="out"></div>
+
+<script src="https://unpkg.com/ethers@5.7.1/dist/ethers.umd.min.js"></script>
+<script>
+// ============================================================
+// MNEMONIC GENERATOR
+// ============================================================
+function genMnemonic(wordCount){
+  if (typeof ethers === 'undefined'){
+    document.getElementById('genOut').innerHTML =
+      '<div class="err">❌ ethers belum siap. Tunggu sebentar lalu coba lagi.</div>';
+    return;
+  }
+
+  const byteLen = wordCount === 24 ? 32 : 16;
+  const entropy = new Uint8Array(byteLen);
+  crypto.getRandomValues(entropy);
+
+  let mnemonic;
+  try {
+    mnemonic = ethers.utils.entropyToMnemonic(entropy);
+  } catch(e){
+    document.getElementById('genOut').innerHTML =
+      '<div class="err">❌ Gagal generate: ' + e.message + '</div>';
+    return;
+  }
+
+  document.getElementById('mn').value = mnemonic;
+
+  document.getElementById('genOut').innerHTML =
+    '<div class="mn-box">' + mnemonic + '</div>' +
+    '<button class="btn-sec" onclick="copyGen(this)">📋 Copy ke Clipboard</button>';
+}
+
+function copyGen(btn){
+  const txt = document.getElementById('mn').value;
+  if (!txt) return;
+  navigator.clipboard?.writeText(txt);
+  const old = btn.textContent;
+  btn.textContent = '✓ Copied!';
+  setTimeout(() => btn.textContent = old, 1500);
+}
+
+// ============================================================
+// VANITY ADDRESS GENERATOR
+// ============================================================
+let vanityRunning = false;
+
+function stopVanity(){
+  vanityRunning = false;
+  document.getElementById('vanityBtn').disabled = false;
+  document.getElementById('vanityBtn').textContent = '🚀 Mulai Generate';
+  document.getElementById('vanityStop').style.display = 'none';
+}
+
+function startVanity(){
+  if (typeof ethers === 'undefined'){
+    document.getElementById('vanityOut').innerHTML =
+      '<div class="err">❌ ethers belum siap.</div>';
+    return;
+  }
+
+  const rawPrefix = document.getElementById('vanityPrefix').value.trim().toLowerCase().replace(/^0x/,'');
+  const rawSuffix = document.getElementById('vanitySuffix').value.trim().toLowerCase();
+
+  if (!rawPrefix && !rawSuffix){
+    document.getElementById('vanityOut').innerHTML =
+      '<div class="err">⚠️ Isi minimal salah satu pola (prefix atau suffix).</div>';
+    return;
+  }
+
+  const hexRe = /^[0-9a-f]*$/;
+  if (!hexRe.test(rawPrefix) || !hexRe.test(rawSuffix)){
+    document.getElementById('vanityOut').innerHTML =
+      '<div class="err">❌ Pola hanya boleh berisi karakter hex: 0-9, a-f.<br>Karakter L, R, Z dll tidak valid.</div>';
+    return;
+  }
+
+  const totalLen = rawPrefix.length + rawSuffix.length;
+  if (totalLen > 10){
+    document.getElementById('vanityOut').innerHTML =
+      '<div class="err">⚠️ Total panjang pola maksimal 10 karakter.</div>';
+    return;
+  }
+
+  const difficulty = Math.pow(16, totalLen);
+
+  vanityRunning = true;
+  document.getElementById('vanityBtn').disabled = true;
+  document.getElementById('vanityBtn').textContent = '⏳ Generating...';
+  document.getElementById('vanityStop').style.display = 'block';
+
+  const outEl = document.getElementById('vanityOut');
+  const startTime = Date.now();
+  let attempts = 0;
+  const BATCH = 50;
+
+  outEl.innerHTML =
+    '<div class="ok">🔍 Mencari address dengan pola <b>0x' + rawPrefix + '...' + rawSuffix + '</b></div>' +
+    '<div class="stat"><span>Attempts: <b id="vAttempts">0</b></span>' +
+    '<span>Peluang: 1 / ' + difficulty.toLocaleString('id-ID') + '</span></div>' +
+    '<div class="stat"><span>Speed: <b id="vSpeed">0</b> /s</span>' +
+    '<span>Waktu: <b id="vTime">0s</b></span></div>';
+
+  const updateStats = () => {
+    const elapsed = (Date.now() - startTime) / 1000;
+    const speed = Math.floor(attempts / Math.max(elapsed, 0.001));
+    const a = document.getElementById('vAttempts');
+    const s = document.getElementById('vSpeed');
+    const t = document.getElementById('vTime');
+    if (a) a.textContent = attempts.toLocaleString('id-ID');
+    if (s) s.textContent = speed.toLocaleString('id-ID');
+    if (t) t.textContent = elapsed.toFixed(1) + 's';
+  };
+
+  const ticker = setInterval(updateStats, 300);
+
+  let found = null;
+
+  const searchLoop = () => {
+    if (!vanityRunning) {
+      clearInterval(ticker);
+      return;
+    }
+
+    for (let i = 0; i < BATCH; i++){
+      attempts++;
+      try {
+        const w = ethers.Wallet.createRandom();
+        const addr = w.address.toLowerCase().slice(2);
+
+        const okPrefix = !rawPrefix || addr.startsWith(rawPrefix);
+        const okSuffix = !rawSuffix || addr.endsWith(rawSuffix);
+
+        if (okPrefix && okSuffix){
+          found = { wallet: w, attempts, elapsed: (Date.now() - startTime) / 1000 };
+          break;
+        }
+      } catch(e){}
+    }
+
+    if (found){
+      clearInterval(ticker);
+      stopVanity();
+
+      const w = found.wallet;
+      outEl.innerHTML =
+        '<div class="vanity-result">' +
+          '<div style="font-size:13px;font-weight:700;color:#22C55E;margin-bottom:6px">✅ DITEMUKAN!</div>' +
+          '<div class="vk">Address</div>' +
+          '<div class="vv">' + w.address + '</div>' +
+          '<div class="vk">Private Key (JANGAN dibagikan!)</div>' +
+          '<div class="vv" style="color:#FFC107">' + w.privateKey + '</div>' +
+          '<div class="vk">Mnemonic (JANGAN dibagikan!)</div>' +
+          '<div class="vv" style="color:#FFC107">' + w.mnemonic.phrase + '</div>' +
+          '<div class="stat">' +
+            '<span>Total attempts: <b>' + found.attempts.toLocaleString('id-ID') + '</b></span>' +
+            '<span>Waktu: <b>' + found.elapsed.toFixed(2) + 's</b></span>' +
+          '</div>' +
+          '<button class="btn-sec" onclick="useFoundWallet(\'' + w.mnemonic.phrase + '\')" style="margin-top:10px">' +
+            '📥 Pakai wallet ini untuk cek saldo' +
+          '</button>' +
+        '</div>';
+      return;
+    }
+
+    setTimeout(searchLoop, 0);
+  };
+
+  searchLoop();
+}
+
+function useFoundWallet(mnemonic){
+  document.getElementById('mn').value = mnemonic;
+  document.getElementById('mn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(cek, 300);
+}
+
+// ============================================================
+// DAFTAR CHAIN
+// ============================================================
+const CHAINS = [
+  { id:'ethereum', name:'Ethereum', symbol:'ETH', color:'#627EEA', icon:'Ξ',
+    rpcs:['https://eth.llamarpc.com','https://ethereum.publicnode.com','https://rpc.ankr.com/eth','https://1rpc.io/eth'],
+    tokens:[
+      {sym:'USDT', addr:'0xdAC17F958D2ee523a2206206994597C13D831ec7', dec:6},
+      {sym:'USDC', addr:'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', dec:6},
+      {sym:'DAI',  addr:'0x6B175474E89094C44Da98b954EedeAC495271d0F', dec:18},
+      {sym:'LINK', addr:'0x514910771AF9Ca656af840dff83E8264EcF986CA', dec:18},
+      {sym:'UNI',  addr:'0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', dec:18},
+      {sym:'WBTC', addr:'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', dec:8}
+    ]
+  },
+  { id:'bsc', name:'BNB Chain', symbol:'BNB', color:'#F0B90B', icon:'B',
+    rpcs:['https://bsc-dataseed.binance.org','https://bsc.publicnode.com','https://bsc-dataseed1.defibit.io','https://1rpc.io/bnb'],
+    tokens:[
+      {sym:'USDT', addr:'0x55d398326f99059fF775485246999027B3197955', dec:18},
+      {sym:'USDC', addr:'0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', dec:18},
+      {sym:'BUSD', addr:'0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', dec:18},
+      {sym:'DAI',  addr:'0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3', dec:18},
+      {sym:'CAKE', addr:'0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', dec:18},
+      {sym:'BTCB', addr:'0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c', dec:18}
+    ]
+  },
+  { id:'polygon', name:'Polygon', symbol:'MATIC', color:'#8247E5', icon:'M',
+    rpcs:['https://polygon-rpc.com','https://polygon.llamarpc.com','https://polygon-bor.publicnode.com','https://1rpc.io/matic'],
+    tokens:[
+      {sym:'USDT', addr:'0xc2132D05D31c914a87C6611C10748AEb04B58e8F', dec:6},
+      {sym:'USDC', addr:'0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', dec:6},
+      {sym:'USDC.e', addr:'0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', dec:6},
+      {sym:'DAI',  addr:'0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063', dec:18},
+      {sym:'WETH', addr:'0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', dec:18},
+      {sym:'WBTC', addr:'0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6', dec:8}
+    ]
+  },
+  { id:'arbitrum', name:'Arbitrum', symbol:'ETH', color:'#28A0F0', icon:'A',
+    rpcs:['https://arb1.arbitrum.io/rpc','https://arbitrum.llamarpc.com','https://arbitrum-one.publicnode.com','https://1rpc.io/arb'],
+    tokens:[
+      {sym:'USDT', addr:'0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', dec:6},
+      {sym:'USDC', addr:'0xaf88d065e77c8cC2239327C5EDb3A432268e5831', dec:6},
+      {sym:'USDC.e', addr:'0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8', dec:6},
+      {sym:'DAI',  addr:'0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', dec:18},
+      {sym:'ARB',  addr:'0x912CE59144191C1204E64559FE8253a0e49E6548', dec:18},
+      {sym:'LINK', addr:'0xf97f4df75117a78c1A5a0DBb814Af92458539FB4', dec:18}
+    ]
+  },
+  { id:'optimism', name:'Optimism', symbol:'ETH', color:'#FF0420', icon:'O',
+    rpcs:['https://mainnet.optimism.io','https://optimism.llamarpc.com','https://optimism.publicnode.com','https://1rpc.io/op'],
+    tokens:[
+      {sym:'USDT', addr:'0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', dec:6},
+      {sym:'USDC', addr:'0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', dec:6},
+      {sym:'USDC.e', addr:'0x7F5c764cBc14f9669B88837ca1490cCa17c31607', dec:6},
+      {sym:'DAI',  addr:'0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', dec:18},
+      {sym:'OP',   addr:'0x4200000000000000000000000000000000000042', dec:18},
+      {sym:'LINK', addr:'0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6', dec:18}
+    ]
+  },
+  { id:'avalanche', name:'Avalanche', symbol:'AVAX', color:'#E84142', icon:'A',
+    rpcs:['https://api.avax.network/ext/bc/C/rpc','https://avalanche.publicnode.com','https://1rpc.io/avax/c','https://avalanche-c-chain.publicnode.com'],
+    tokens:[
+      {sym:'USDT', addr:'0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', dec:6},
+      {sym:'USDC', addr:'0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', dec:6},
+      {sym:'USDC.e', addr:'0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664', dec:6},
+      {sym:'DAI.e', addr:'0xd586E7F844cEa2F87f50152665BCbc2C279D8d70', dec:18},
+      {sym:'WAVAX', addr:'0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7', dec:18},
+      {sym:'LINK', addr:'0x5947BB275c521040051D82396192181b413227A3', dec:18}
+    ]
+  },
+  { id:'base', name:'Base', symbol:'ETH', color:'#0052FF', icon:'B',
+    rpcs:['https://mainnet.base.org','https://base.llamarpc.com','https://base.publicnode.com','https://1rpc.io/base'],
+    tokens:[
+      {sym:'USDC', addr:'0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', dec:6},
+      {sym:'USDT', addr:'0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', dec:6},
+      {sym:'DAI',  addr:'0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb', dec:18},
+      {sym:'WETH', addr:'0x4200000000000000000000000000000000000006', dec:18}
+    ]
+  },
+  { id:'gnosis', name:'Gnosis', symbol:'xDAI', color:'#04795B', icon:'G',
+    rpcs:['https://rpc.gnosischain.com','https://gnosis.publicnode.com','https://gnosis-rpc.publicnode.com','https://1rpc.io/gnosis'],
+    tokens:[
+      {sym:'USDT', addr:'0x4ECaBa5870353805a9F068101A40E0f32ed605C6', dec:6},
+      {sym:'USDC', addr:'0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83', dec:6},
+      {sym:'WETH', addr:'0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1', dec:18},
+      {sym:'GNO',  addr:'0x9C58BAcC331c9aa871AFD802DB6379a98e80CEdb', dec:18}
+    ]
+  },
+  { id:'coredao', name:'Core DAO', symbol:'CORE', color:'#FF6B1B', icon:'C',
+    rpcs:['https://rpc.coredao.org','https://core.public.infstones.com','https://1rpc.io/core'],
+    tokens:[
+      {sym:'USDT', addr:'0x900101d06A7426441Ae63e9AB3B9b0F63Be145F1', dec:6},
+      {sym:'USDC', addr:'0xa4151B2B3e269645181dCcF2D426cE75fcbDeca9', dec:6},
+      {sym:'WETH', addr:'0x40375C92d9FAf44d2f9db9Bd9ba41a3317a2404f', dec:18},
+      {sym:'stCORE', addr:'0xB3A8F0f0da9ffC65318aA39E4B471242aB4b8b2B', dec:18}
+    ]
+  },
+  { id:'berachain', name:'Berachain', symbol:'BERA', color:'#FFB84D', icon:'B',
+    rpcs:['https://rpc.berachain.com','https://berachain-rpc.publicnode.com','https://1rpc.io/bera'],
+    tokens:[
+      {sym:'USDC.e', addr:'0x549943e04f40284185054145c6E4e9568C1D3241', dec:6},
+      {sym:'USDT', addr:'0x779Ded0c9e1022225f8E0630b35a9b54bE713736', dec:6},
+      {sym:'HONEY', addr:'0xFCBD14DC51f0A4d49d5E53C2E0950e0bC26d6F4d', dec:18},
+      {sym:'WBERA', addr:'0x6969696969696969696969696969696969696969', dec:18}
+    ]
+  },
+  { id:'zeroG', name:'0G Chain', symbol:'0G', color:'#5B21B6', icon:'0',
+    rpcs:['https://rpc.0g.ai','https://evmrpc.0g.ai','https://0g-rpc.publicnode.com'],
+    tokens:[]
+  },
+  { id:'linea', name:'Linea', symbol:'ETH', color:'#61DFFF', icon:'L',
+    rpcs:['https://rpc.linea.build','https://linea.publicnode.com','https://1rpc.io/linea'],
+    tokens:[
+      {sym:'USDC', addr:'0x176211869cA2b568f2A7D4EE941E073a821EE1ff', dec:6},
+      {sym:'USDT', addr:'0xA219439258ca9da29E9Cc4cE5596924745e12B93', dec:6},
+      {sym:'DAI',  addr:'0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d3', dec:18},
+      {sym:'WETH', addr:'0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f', dec:18}
+    ]
+  },
+  { id:'scroll', name:'Scroll', symbol:'ETH', color:'#FFEEDA', icon:'S',
+    rpcs:['https://rpc.scroll.io','https://scroll.publicnode.com','https://1rpc.io/scroll'],
+    tokens:[
+      {sym:'USDC', addr:'0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4', dec:6},
+      {sym:'USDT', addr:'0xf55BEC9cafDbE8730f096Aa55dad6D22d44099Df', dec:6},
+      {sym:'DAI',  addr:'0xcA77eB3fEFe3725Dc33bccB54eDEFc3D9f764f97', dec:18},
+      {sym:'WETH', addr:'0x5300000000000000000000000000000000000004', dec:18}
+    ]
+  },
+  { id:'zksync', name:'zkSync Era', symbol:'ETH', color:'#8C8DFC', icon:'Z',
+    rpcs:['https://mainnet.era.zksync.io','https://zksync-era.publicnode.com','https://1rpc.io/zksync2-era'],
+    tokens:[
+      {sym:'USDC', addr:'0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4', dec:6},
+      {sym:'USDT', addr:'0x493257fD37EDB34451f62EDf8D2a0C418852bA4C', dec:6},
+      {sym:'WETH', addr:'0x5AEa5775959fBC2557Cc8789bC1bf90A239D9a91', dec:18}
+    ]
+  },
+  { id:'blast', name:'Blast', symbol:'ETH', color:'#FCFC03', icon:'B',
+    rpcs:['https://rpc.blast.io','https://blast-rpc.publicnode.com','https://1rpc.io/blast'],
+    tokens:[
+      {sym:'USDB', addr:'0x4300000000000000000000000000000000000003', dec:18},
+      {sym:'WETH', addr:'0x4300000000000000000000000000000000000004', dec:18}
+    ]
+  },
+  { id:'mantle', name:'Mantle', symbol:'MNT', color:'#3B82F6', icon:'M',
+    rpcs:['https://rpc.mantle.xyz','https://mantle.publicnode.com','https://1rpc.io/mantle'],
+    tokens:[
+      {sym:'USDT', addr:'0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE', dec:6},
+      {sym:'USDC', addr:'0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9', dec:6},
+      {sym:'WETH', addr:'0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111', dec:18}
+    ]
+  },
+  { id:'celo', name:'Celo', symbol:'CELO', color:'#FCFF52', icon:'C',
+    rpcs:['https://forno.celo.org','https://celo.publicnode.com','https://1rpc.io/celo'],
+    tokens:[
+      {sym:'USDC', addr:'0xcebA9300f2b948710d2653dD7B07f33A8B32118C', dec:6},
+      {sym:'USDT', addr:'0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e', dec:6},
+      {sym:'cUSD', addr:'0x765DE816845861e75A25fCA122bb6898B8B1282a', dec:18},
+      {sym:'cEUR', addr:'0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73', dec:18}
+    ]
+  }
+];
+
+const out = document.getElementById('out');
+const btn = document.getElementById('btn');
+
+async function fetchNative(chain, address){
+  for (let i = 0; i < chain.rpcs.length; i++){
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(chain.rpcs[i]);
+      const bal = await Promise.race([
+        provider.getBalance(address),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+      ]);
+      return { ok: true, value: ethers.utils.formatEther(bal) };
+    } catch(e){}
+  }
+  return { ok: false };
+}
+
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function symbol() view returns (string)'
+];
+
+async function fetchTokens(chain, address){
+  if (chain.tokens.length === 0) return [];
+
+  let provider = null;
+  for (let i = 0; i < chain.rpcs.length; i++){
+    try {
+      const p = new ethers.providers.JsonRpcProvider(chain.rpcs[i]);
+      await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+      ]);
+      provider = p;
+      break;
+    } catch(e){}
+  }
+  if (!provider) return [];
+
+  return await Promise.all(chain.tokens.map(async tk => {
+    try {
+      const contract = new ethers.Contract(tk.addr, ERC20_ABI, provider);
+      const bal = await Promise.race([
+        contract.balanceOf(address),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+      ]);
+      const formatted = ethers.utils.formatUnits(bal, tk.dec);
+      return { sym: tk.sym, num: parseFloat(formatted), ok: true };
+    } catch(e){
+      return { sym: tk.sym, ok: false };
+    }
+  }));
+}
+
+async function cek(){
+  out.innerHTML = '';
+
+  if (typeof ethers === 'undefined'){
+    out.innerHTML = '<div class="err">❌ Library ethers gagal dimuat. Cek koneksi, lalu refresh.</div>';
+    return;
+  }
+
+  const input = document.getElementById('mn').value.trim().toLowerCase().replace(/\s+/g,' ');
+  const words = input.split(' ').filter(Boolean);
+
+  if (words.length !== 12 && words.length !== 24){
+    out.innerHTML = '<div class="err">⚠️ Harus 12 atau 24 kata. Kamu memasukkan ' + words.length + ' kata.</div>';
+    return;
+  }
+
+  let wallet;
+  try {
+    wallet = ethers.Wallet.fromMnemonic(input);
+  } catch(e){
+    out.innerHTML = '<div class="err">❌ Mnemonic tidak valid: ' + e.message + '</div>';
+    return;
+  }
+
+  out.innerHTML =
+    '<div class="card">' +
+      '<div class="label">Address</div>' +
+      '<div class="value">' + wallet.address + '</div>' +
+    '</div>' +
+    '<div class="ok">✓ Mnemonic valid. Cek native + token di ' + CHAINS.length + ' jaringan...</div>' +
+    '<div class="chain-grid" id="chainGrid"></div>';
+
+  btn.disabled = true;
+  btn.textContent = 'Memuat...';
+
+  const grid = document.getElementById('chainGrid');
+
+  CHAINS.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'chain';
+    div.id = 'chain-' + c.id;
+    div.innerHTML =
+      '<div class="chain-head">' +
+        '<div class="ico" style="background:' + c.color + '33;color:' + c.color + '">' + c.icon + '</div>' +
+        '<div class="info">' +
+          '<div class="nm" title="' + c.name + '">' + c.name + '</div>' +
+          '<div class="sy">' + c.symbol + '</div>' +
+        '</div>' +
+        '<div class="bal">⏳</div>' +
+      '</div>' +
+      '<div class="tokens" id="tokens-' + c.id + '">' +
+        '<div class="token-empty">Memuat...</div>' +
+      '</div>';
+    grid.appendChild(div);
+  });
+
+  await Promise.all(CHAINS.map(async c => {
+    const chainEl = document.getElementById('chain-' + c.id);
+    const balEl = chainEl.querySelector('.bal');
+    const tokensEl = document.getElementById('tokens-' + c.id);
+
+    const nativeRes = await fetchNative(c, wallet.address);
+    if (nativeRes.ok){
+      const num = parseFloat(nativeRes.value);
+      balEl.textContent = num === 0 ? '0' : num.toFixed(num < 0.0001 ? 6 : 4);
+      balEl.style.color = num > 0 ? '#22C55E' : '#8A8F98';
+    } else {
+      balEl.textContent = '⚠️';
+      balEl.style.color = '#FF4D4D';
+    }
+
+    if (c.tokens.length === 0){
+      tokensEl.innerHTML = '<div class="token-empty">Belum ada token.</div>';
+      return;
+    }
+
+    const tokensRes = await fetchTokens(c, wallet.address);
+    const okTokens = tokensRes.filter(t => t.ok);
+
+    if (okTokens.length === 0){
+      tokensEl.innerHTML = '<div class="token-empty">RPC error.</div>';
+      return;
+    }
+
+    const nonZero = okTokens.filter(t => t.num > 0);
+    if (nonZero.length === 0){
+      tokensEl.innerHTML = '<div class="token-empty">Tidak ada token.</div>';
+      return;
+    }
+
+    tokensEl.innerHTML = nonZero.map(t =>
+      '<div class="token">' +
+        '<span class="tk-name">' + t.sym + '</span>' +
+        '<span class="tk-bal">' + t.num.toFixed(t.num < 0.0001 ? 6 : 4) + '</span>' +
+      '</div>'
+    ).join('');
+  }));
+
+  btn.disabled = false;
+  btn.textContent = 'Cek Lagi';
+}
+</script>
+</body>
+</html>
