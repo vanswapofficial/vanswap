@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Auto Transfer ETH</title>
+<style>
+  body { font-family: monospace; max-width: 700px; margin: 40px auto; padding: 0 20px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; }
+  input, button, select { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, select { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 20px; }
+  button:disabled { background:#555; cursor:not-allowed; }
+  button.big { background:#81c784; font-size:16px; padding:14px 28px; width:100%; }
+  button.max { background:#ffb74d; padding:8px 14px; margin-left:6px; }
+  .row { display:flex; gap:6px; align-items:center; }
+  .row input { margin-bottom:0; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:400px; overflow:auto; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .saldo { background:#0a2a0a; padding:10px; border:1px solid #2a5a2a; border-radius:4px; margin:10px 0; }
+  .chk { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa; }
+  .chk input { width:auto; margin:0; }
+</style>
+</head>
+<body>
+<h2>Auto Transfer ETH</h2>
+
+<label>Private key (disimpan di localStorage — hanya untuk testnet!)</label>
+<input id="pk" type="password" placeholder="0x...">
+
+<label>Alamat tujuan (disimpan)</label>
+<input id="to" placeholder="0x...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="sep">Sepolia Testnet</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<div class="saldo" id="saldoBox">Saldo: —</div>
+
+<div class="chk">
+  <input type="checkbox" id="autoConfirm">
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi (hati-hati!)</label>
+</div>
+
+<button class="big" id="btnGo" onclick="go()">▶ KIRIM SEMUA (1 KLIK)</button>
+<pre id="log">Siap. Isi PK & tujuan, lalu klik tombol hijau.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const NETWORKS = {
+  eth: {
+    name: "Ethereum",
+    chainId: 1n,
+    symbol: "ETH",
+    explorer: "https://etherscan.io/tx/",
+    rpcs: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com", "https://rpc.ankr.com/eth", "https://cloudflare-eth.com"]
+  },
+  sep: {
+    name: "Sepolia",
+    chainId: 11155111n,
+    symbol: "ETH",
+    explorer: "https://sepolia.etherscan.io/tx/",
+    rpcs: ["https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.org", "https://sepolia.gateway.tenderly.co"]
+  },
+  poa: {
+    name: "POA",
+    chainId: 99n,
+    symbol: "POA",
+    explorer: "https://explorer.poa.network/tx/",
+    rpcs: ["https://rpc.poa.network", "https://poa-rpc.today", "https://core.poa.network"]
+  }
+};
+const GAS_LIMIT = 21000n;
+let provider, wallet, pending = null, refreshTimer = null;
+
+const $ = id => document.getElementById(id);
+function log(msg, cls) {
+  $('log').innerHTML += (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function reset() { $('log').textContent = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+
+// ===== auto-save =====
+['pk','to','net'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => {
+    if (id === 'pk') localStorage.setItem('atx_' + id, $(id).value);
+    else localStorage.setItem('atx_' + id, $(id).value);
+  });
+});
+
+// ===== RPC =====
+async function probeRpc(url, chainId) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "eth_chainId", params: [], id: 1 })
+  });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  if (!j.result) throw new Error("no result");
+  if (BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chainId mismatch");
+}
+
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try { await probeRpc(url, net.chainId); return new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true }); }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+
+async function hitungGas(prov) {
+  const fee = await prov.getFeeData();
+  const gasPrice = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30", "gwei");
+  return { gasPrice, gasCost: GAS_LIMIT * gasPrice };
+}
+
+// ===== refresh saldo =====
+async function refreshSaldo() {
+  const pk = $('pk').value.trim();
+  if (!pk) return;
+  try {
+    const net = cfg();
+    if (!provider) provider = await pilihProvider(net);
+    if (!wallet) wallet = new ethers.Wallet(pk, provider);
+    const bal = await provider.getBalance(wallet.address);
+    const { gasCost } = await hitungGas(provider);
+    const max = bal - gasCost;
+    const sym = net.symbol;
+    $('saldoBox').innerHTML =
+      `Wallet: <b>${wallet.address}</b><br>` +
+      `Saldo : <b>${ethers.formatEther(bal)} ${sym}</b><br>` +
+      `Gas   : ${ethers.formatEther(gasCost)} ${sym}<br>` +
+      `MAX   : <b class="${max > 0n ? 'ok' : 'err'}">${max > 0n ? ethers.formatEther(max) + ' ' + sym : 'tidak cukup'}</b>`;
+  } catch (e) { /* diamkan */ }
+}
+
+// ===== main action =====
+async function go() {
+  reset();
+  $('btnGo').disabled = true;
+  const net = cfg();
+  const pk = $('pk').value.trim();
+  const to = $('to').value.trim();
+
+  if (!pk) return fail("Isi private key.", net);
+  if (!to) return fail("Isi alamat tujuan.", net);
+  if (!ethers.isAddress(to)) return fail("Alamat tujuan tidak valid.", net);
+  const checksummed = ethers.getAddress(to);
+  if (checksummed !== to) return fail("Checksum alamat tidak cocok. Seharusnya: " + checksummed, net);
+
+  try {
+    log("→ Menghubungi " + net.name + "...", "info");
+    provider = await pilihProvider(net);
+    wallet = new ethers.Wallet(pk, provider);
+    log("✓ Wallet: " + wallet.address, "ok");
+
+    const bal = await provider.getBalance(wallet.address);
+    const { gasPrice, gasCost } = await hitungGas(provider);
+    const value = bal - gasCost;
+
+    log("  Saldo : " + ethers.formatEther(bal) + " " + net.symbol);
+    log("  Gas   : " + ethers.formatEther(gasCost) + " " + net.symbol + " (@" + ethers.formatUnits(gasPrice, "gwei") + " gwei)");
+
+    if (value <= 0n) return fail("Saldo tidak cukup untuk gas. Butuh minimal " + ethers.formatEther(gasCost) + " " + net.symbol, net);
+
+    log("  Kirim : " + ethers.formatEther(value) + " " + net.symbol, "ok");
+    log("  Ke    : " + to, "ok");
+
+    if (!$('autoConfirm').checked) {
+      const ok = confirm(`Kirim ${ethers.formatEther(value)} ${net.symbol} ke ${to}?`);
+      if (!ok) { log("Dibatalkan.", "warn"); $('btnGo').disabled = false; return; }
+    }
+
+    log("→ Mengirim...", "info");
+    const tx = await wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT, gasPrice });
+    log("✓ Tx terkirim: " + tx.hash, "ok");
+    log("  Menunggu konfirmasi...", "info");
+    const rcpt = await tx.wait();
+    log("✓ SUKSES di block " + rcpt.blockNumber, "ok");
+    log("  " + net.explorer + tx.hash, "ok");
+
+  } catch (e) {
+    log("Error: " + e.message, "err");
+  } finally {
+    $('btnGo').disabled = false;
+    provider = null; wallet = null;
+  }
+}
+
+function fail(msg, net) {
+  log("✗ " + msg, "err");
+  $('btnGo').disabled = false;
+  provider = null; wallet = null;
+}
+
+// refresh saldo saat PK diisi / network diganti
+$('pk').addEventListener('blur', () => { provider = null; wallet = null; refreshSaldo(); });
+$('net').addEventListener('change', () => { provider = null; wallet = null; refreshSaldo(); });
+
+// auto refresh tiap 30 detik
+setInterval(() => { provider = null; wallet = null; refreshSaldo(); }, 30000);
+</script>
+</body>
+</html>
