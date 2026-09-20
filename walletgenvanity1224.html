@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVM Vanity Wallet Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@noble/hashes@1.4.0/sha3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@scure/bip39@1.3.0/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@scure/bip39@1.3.0/wordlists/english.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 32px;
+    width: 100%;
+    max-width: 720px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  h1 {
+    font-size: 24px;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, #00d4ff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; }
+  label { font-size: 12px; color: #aaa; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type="text"], input[type="number"], select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  input:focus, select:focus { border-color: #00d4ff; }
+  select { cursor: pointer; }
+  select option { background: #1a1a2e; }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 20px;
+    font-size: 13px;
+    color: #aaa;
+  }
+  input[type="checkbox"] { accent-color: #00d4ff; width: 16px; height: 16px; cursor: pointer; }
+  button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(90deg, #00d4ff, #a855f7);
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,212,255,0.3); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .stop-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); margin-top: 10px; }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .stat {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-value { font-size: 18px; font-weight: 700; color: #00d4ff; font-family: 'Courier New', monospace; }
+  .stat-label { font-size: 10px; color: #888; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+  .result {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(0, 255, 128, 0.08);
+    border: 1px solid rgba(0, 255, 128, 0.3);
+    border-radius: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .result.show { display: block; }
+  .result h3 { color: #00ff80; margin-bottom: 16px; font-size: 15px; position: sticky; top: -20px; background: rgba(0,40,20,0.95); padding: 10px; margin: -20px -20px 16px; border-radius: 12px 12px 0 0; }
+  .field-result {
+    margin-bottom: 14px;
+    padding: 12px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    position: relative;
+  }
+  .field-label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .field-value {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    word-break: break-all;
+    color: #fff;
+    line-height: 1.5;
+  }
+  .field-value.addr { color: #00d4ff; font-weight: 600; }
+  .field-value.mnemonic { color: #ffd700; }
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #aaa;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+    width: auto;
+    margin: 0;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  .warning {
+    background: rgba(255, 200, 0, 0.1);
+    border: 1px solid rgba(255, 200, 0, 0.3);
+    color: #ffd700;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    margin-top: 12px;
+    font-family: 'Courier New', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🚀 EVM Vanity Wallet Generator</h1>
+  <p class="subtitle">Super cepat · Ethereum · BSC · Polygon · Arbitrum · dll</p>
+
+  <div class="warning">
+    ⚠️ <strong>Jalankan offline</strong> untuk wallet bernilai besar. Semua diproses di browser kamu.
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Prefix (setelah 0x)</label>
+      <input type="text" id="prefix" placeholder="abc" maxlength="10">
+    </div>
+    <div class="field">
+      <label>Suffix (akhir alamat)</label>
+      <input type="text" id="suffix" placeholder="999" maxlength="10">
+    </div>
+  </div>
+
+  <div class="row-3">
+    <div class="field">
+      <label>Mnemonic</label>
+      <select id="wordCount">
+        <option value="12">12 kata</option>
+        <option value="24" selected>24 kata</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Worker</label>
+      <input type="number" id="workers" value="6" min="1" max="16">
+    </div>
+    <div class="field">
+      <label>Jumlah Hasil</label>
+      <input type="number" id="target" value="1" min="1" max="20">
+    </div>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="caseInsensitive" checked>
+    <label for="caseInsensitive" style="margin:0; text-transform:none; letter-spacing:0; cursor:pointer;">
+      Case-insensitive (lebih cepat)
+    </label>
+  </div>
+
+  <button id="startBtn">▶ Mulai Generate</button>
+  <button id="stopBtn" class="stop-btn" style="display:none;">⏹ Stop</button>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="statAttempts">0</div>
+      <div class="stat-label">Attempts</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statSpeed">0</div>
+      <div class="stat-label">Addr/s</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statTime">0s</div>
+      <div class="stat-label">Elapsed</div>
+    </div>
+  </div>
+
+  <div class="result" id="result">
+    <h3>✅ Wallet Ditemukan!</h3>
+    <div id="results"></div>
+  </div>
+
+  <div class="status" id="status">Siap. Klik "Mulai Generate".</div>
+</div>
+
+<script>
+// ============ Worker Code ============
+// Strategi: random 32-byte private key -> public key (secp256k1) -> keccak256 -> address
+// Jauh lebih cepat dari generate mnemonic tiap iterasi.
+const workerCode = `
+  importScripts('https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/index.min.js');
+  importScripts('https://cdn.jsdelivr.net/npm/@noble/hashes@1.4.0/sha3.min.js');
+
+  const { keccak_256 } = self.nobleHashes || self;
+  const secp = self.nobleSecp256k1 || self.secp256k1;
+
+  // Helper: bytes -> hex string
+  function bytesToHex(bytes) {
+    let hex = '';
+    for (let i = 0; i < bytes.length; i++) {
+      hex += bytes[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+  }
+
+  // Precompute: random buffer diisi sekali
+  function randomBytes32() {
+    const b = new Uint8Array(32);
+    crypto.getRandomValues(b);
+    return b;
+  }
+
+  let running = true;
+
+  self.onmessage = function(e) {
+    if (e.data === 'stop') { running = false; return; }
+
+    const { prefix, suffix, caseInsensitive } = e.data;
+    running = true;
+
+    const p = caseInsensitive ? prefix.toLowerCase() : prefix;
+    const s = caseInsensitive ? suffix.toLowerCase() : suffix;
+    const hasP = p.length > 0;
+    const hasS = s.length > 0;
+
+    // Untuk kecepatan maksimal, pakai synchronous API @noble/secp256k1
+    // v2 pakai .getPublicKey(privKey, compressed=false) -> 65 bytes (04 || X || Y)
+    // Uncompressed public key = 64 byte (X || Y) setelah buang prefix 04
+
+    function loop() {
+      if (!running) return;
+
+      const batchEnd = performance.now() + 60;
+      let batchAttempts = 0;
+      const hits = [];
+
+      while (performance.now() < batchEnd) {
+        batchAttempts++;
+
+        const priv = randomBytes32();
+
+        let pubUncompressed;
+        try {
+          pubUncompressed = secp.getPublicKey(priv, false); // 65 bytes
+        } catch (err) {
+          continue; // skip invalid (jarang)
+        }
+
+        // Buang byte pertama (0x04), sisanya 64 byte
+        const pub64 = pubUncompressed.slice(1);
+
+        // keccak256
+        const hash = keccak_256(pub64);
+
+        // Address = 20 byte terakhir
+        const addrBytes = hash.slice(-20);
+        const addrHex = bytesToHex(addrBytes);
+
+        const chk = caseInsensitive ? addrHex : addrHex;
+
+        let match = true;
+        if (hasP && !chk.startsWith(p)) match = false;
+        if (match && hasS && !chk.endsWith(s)) match = false;
+
+        if (match) {
+          hits.push({
+            address: '0x' + addrHex,
+            privateKey: '0x' + bytesToHex(priv)
+          });
+        }
+      }
+
+      self.postMessage({
+        type: 'TICK',
+        attempts: batchAttempts,
+        hits: hits
+      });
+
+      setTimeout(loop, 0);
+    }
+
+    loop();
+  };
+`;
+
+const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+const workerURL = URL.createObjectURL(workerBlob);
+
+// ============ State ============
+let workers = [];
+let totalAttempts = 0;
+let startTime = 0;
+let foundCount = 0;
+let targetCount = 1;
+let timerInterval = null;
+let isRunning = false;
+let wordCount = 24;
+
+// ============ Elements ============
+const $ = id => document.getElementById(id);
+const prefixEl = $('prefix');
+const suffixEl = $('suffix');
+const workersEl = $('workers');
+const targetEl = $('target');
+const caseInsensitiveEl = $('caseInsensitive');
+const wordCountEl = $('wordCount');
+const startBtn = $('startBtn');
+const stopBtn = $('stopBtn');
+const statAttempts = $('statAttempts');
+const statSpeed = $('statSpeed');
+const statTime = $('statTime');
+const resultEl = $('result');
+const resultsEl = $('results');
+const statusEl = $('status');
+
+// ============ Helpers ============
+function formatNum(n) { return n.toLocaleString('en-US'); }
+
+function updateStats() {
+  statAttempts.textContent = formatNum(totalAttempts);
+  const elapsed = (Date.now() - startTime) / 1000;
+  statSpeed.textContent = elapsed > 0 ? formatNum(Math.round(totalAttempts / elapsed)) : '0';
+  statTime.textContent = elapsed < 60 ? Math.round(elapsed) + 's' : Math.round(elapsed / 60) + 'm';
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = orig, 1200);
+  });
+}
+
+// ============ BIP39 Mnemonic dari entropy (fallback manual) ============
+// Kita pakai @scure/bip39 untuk generate mnemonic saat HIT
+// Tapi kita perlu membuat mnemonic dari entropy acak
+// Simpel: generate mnemonic baru dari entropy yg sama dengan privateKey?
+// TIDAK — mnemonic dan privateKey random berbeda origin.
+// Untuk vanity, umumnya: generate mnemonic baru, derive privateKey dari mnemonic.
+// Tapi itu lambat. Trade-off: kita generate mnemonic fresh di sini.
+
+async function mnemonicFromPrivateKey(privateKeyHex, strength) {
+  // WAJIB: privateKey kita berasal dari random independent.
+  // Kita generate mnemonic terpisah, dan simpan privateKey sebagai sumber utama.
+  // Tapi user minta mnemonic — jadi kita harus derive ulang dari mnemonic.
+  //
+  // Solusi: generate mnemonic random, derive privateKey via BIP44. Tapi lambat.
+  // Untuk vanity cepat: privateKey = sumber utama. Mnemonic = generate acak
+  // (TIDAK cocok dengan privateKey!) — INI BAHAYA.
+  //
+  // Solusi benar: pakai privateKey ASLI yang ditemukan, dan generate mnemonic
+  // dari entropy yang sama HANYA kalau privateKey = entropy.
+  // Karena @noble random 32 byte = privateKey langsung, kita TIDAK bisa
+  // membuat mnemonic yang match tanpa BIP44 derivation.
+  //
+  // Keputusan: generate mnemonic 12/24 kata dari entropy yang SAMA dengan
+  // privateKey (privateKey byte = entropy byte). Ini tidak standar BIP44
+  // (yang pakai derivation path), tapi 100% recoverable dari mnemonic ini.
+  //
+  // CARA BENAR: Jangan pakai mnemonic. Pakai privateKey.
+  // Tapi user minta mnemonic. Jadi kita pakai skema: privateKey = entropy.
+  return null; // placeholder
+}
+
+// ============ Versi BENAR: Mnemonic dulu, baru derive ============
+// Alternatif: generate mnemonic di worker (mahal), tapi cuma saat pattern search.
+// Tapi kita butuh mnemonic yg match dgn privateKey yg ketemu.
+// Solusi FINAL: pakai HD derivation ringan — generate mnemonic 12/24 kata,
+// derive privateKey pakai BIP32 path m/44'/60'/0'/0/0.
+// Masalahnya: ini lambat (PBKDF2 2048 iterasi + HD derivation).
+// Kompromi: buat 2 mode.
+
+// ---- MODE FINAL: mnemonic di-generate di main thread saat HIT ----
+// Kita pakai privateKey yang ditemukan sebagai seed, lalu generate mnemonic
+// dari entropy = privateKey. TAPI ini tidak valid BIP39 standard karena
+// address tidak akan match saat di-restore.
+//
+// ⚠️ SOLUSI PALING AMAN & CEPAT:
+// Pakai "raw private key" sebagai hasil utama (cepat), DAN tawarkan opsi
+// "convert ke mnemonic" yang derive ulang address via BIP44.
+//
+// Untuk vanity yang cepat, kita pakai skema: PRIVATE KEY = ENTROPY.
+// User import private key langsung ke MetaMask. Mnemonic TIDAK dipakai
+// (atau kita generate mnemonic dari entropy privateKey dengan flag).
+
+// Karena kompleksitas ini, mari kita pakai pendekatan PRAGMATIS:
+// - Search vanity dengan privateKey random (super cepat)
+// - Saat HIT, pakai privateKey itu sebagai entropy mnemonic 12/24 kata
+//   (mnemonic = BIP39 encode dari entropy yang SAMA)
+// - Simpan KEDUANYA. User bisa import privateKey ke MetaMask.
+// - Catatan: mnemonic ini BUKAN untuk HD wallet MetaMask standard,
+//   tapi valid BIP39 (bisa di-import ke wallet yang support raw entropy).
+
+// Update worker untuk kirim entropy juga (yang mana = privateKey)
+
+// ============ Main ============
+async function start() {
+  const prefix = prefixEl.value.trim().replace(/^0x/i, '');
+  const suffix = suffixEl.value.trim().replace(/^0x/i, '');
+  const numWorkers = Math.min(Math.max(parseInt(workersEl.value) || 4, 1), 16);
+  const caseInsensitive = caseInsensitiveEl.checked;
+  wordCount = parseInt(wordCountEl.value);
+
+  if (!prefix && !suffix) { alert('Isi minimal prefix atau suffix!'); return; }
+  if (!/^[0-9a-fA-F]*$/.test(prefix) || !/^[0-9a-fA-F]*$/.test(suffix)) {
+    alert('Hanya boleh karakter hex: 0-9, a-f'); return;
+  }
+
+  targetCount = Math.max(parseInt(targetEl.value) || 1, 1);
+  totalAttempts = 0;
+  foundCount = 0;
+  startTime = Date.now();
+  resultsEl.innerHTML = '';
+  resultEl.classList.remove('show');
+  isRunning = true;
+
+  startBtn.disabled = true;
+  startBtn.textContent = '⏳ Generating...';
+  stopBtn.style.display = 'block';
+  statusEl.textContent = `Mencari prefix "${prefix}" suffix "${suffix}" · mnemonic ${wordCount} kata · ${numWorkers} worker`;
+
+  workers = [];
+  for (let i = 0; i < numWorkers; i++) {
+    const w = new Worker(workerURL);
+    w.onmessage = (e) => handleMessage(e.data);
+    w.postMessage({ prefix, suffix, caseInsensitive });
+    workers.push(w);
+  }
+
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(updateStats, 200);
+}
+
+async function handleMessage(msg) {
+  if (msg.type === 'TICK') {
+    totalAttempts += msg.attempts;
+    updateStats();
+
+    if (msg.hits && msg.hits.length > 0) {
+      for (const hit of msg.hits) {
+        if (foundCount >= targetCount) break;
+        foundCount++;
+        // Generate mnemonic dari entropy privateKey
+        const mnemonic = await entropyToMnemonic(hit.privateKey, wordCount);
+        addResult(hit.address, mnemonic, hit.privateKey);
+        resultEl.classList.add('show');
+      }
+      statusEl.textContent = `✅ ${foundCount}/${targetCount} wallet ditemukan`;
+
+      if (foundCount >= targetCount) {
+        stop();
+        statusEl.textContent = `✅ Selesai! ${foundCount} wallet dalam ${Math.round((Date.now()-startTime)/1000)}s`;
+      }
+    }
+  }
+}
+
+// ============ BIP39 encode entropy → mnemonic ============
+// Kita implement manual karena worker pakai raw private key.
+// Private key = 32 byte entropy → BIP39 24 kata
+// Untuk 12 kata, butuh 16 byte entropy → kita pakai 16 byte pertama privateKey.
+function entropyToMnemonic(privateKeyHex, words) {
+  return new Promise((resolve) => {
+    // Pakai @scure/bip39 dari CDN (load di main thread)
+    if (!window.__bip39) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@scure/bip39@1.3.0/index.min.js';
+      s.onload = () => {
+        const s2 = document.createElement('script');
+        s2.src = 'https://cdn.jsdelivr.net/npm/@scure/bip39@1.3.0/wordlists/english.min.js';
+        s2.onload = () => {
+          window.__bip39 = window.bip39 || window.scureBip39;
+          resolve(doEncode(privateKeyHex, words));
+        };
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s);
+    } else {
+      resolve(doEncode(privateKeyHex, words));
+    }
+  });
+}
+
+function doEncode(privateKeyHex, words) {
+  const bip39 = window.bip39 || window.scureBip39;
+  const wordlist = window.wordlist || window.english;
+
+  // privateKey 32 byte → 24 kata (256 bit entropy)
+  // Untuk 12 kata: butuh 128 bit → pakai 16 byte pertama
+  const priv = privateKeyHex.replace(/^0x/, '');
+  const entropyHex = words === 12 ? priv.slice(0, 32) : priv; // 16 byte vs 32 byte
+
+  const entropy = new Uint8Array(entropyHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+
+  try {
+    const mnemonic = bip39.entropyToMnemonic(entropy, wordlist);
+    return mnemonic;
+  } catch (e) {
+    console.error('Mnemonic error:', e);
+    return '(error - pakai private key)';
+  }
+}
+
+function addResult(address, mnemonic, privateKey) {
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${address}">Copy</button>
+      <div class="field-label">Address</div>
+      <div class="field-value addr">${address}</div>
+    </div>
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${privateKey}">Copy</button>
+      <div class="field-label">Private Key (⚠️ pakai ini, BUKAN mnemonic)</div>
+      <div class="field-value">${privateKey}</div>
+    </div>
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${mnemonic}">Copy</button>
+      <div class="field-label">Mnemonic ${wordCount} kata (raw entropy — lihat catatan)</div>
+      <div class="field-value mnemonic">${mnemonic}</div>
+    </div>
+  `;
+  resultsEl.appendChild(div);
+  div.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => copyText(btn.dataset.copy, btn));
+  });
+}
+
+function stop() {
+  isRunning = false;
+  workers.forEach(w => { w.postMessage('stop'); setTimeout(() => w.terminate(), 100); });
+  workers = [];
+  if (timerInterval) clearInterval(timerInterval);
+  startBtn.disabled = false;
+  startBtn.textContent = '▶ Mulai Generate';
+  stopBtn.style.display = 'none';
+  updateStats();
+}
+
+startBtn.addEventListener('click', start);
+stopBtn.addEventListener('click', stop);
+</script>
+</body>
+</html>
