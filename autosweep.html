@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Transfer ETH — Loop</title>
+<style>
+  body { font-family: monospace; max-width: 700px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; margin: 10px 0; }
+  input, button, select { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, select { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 20px; }
+  button:disabled { background:#555; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:16px; padding:14px 20px; width:100%; margin-top:6px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:340px; overflow:auto; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#666; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .saldo { background:#0a2a0a; padding:10px; border:1px solid #2a5a2a; border-radius:4px; margin:10px 0; font-size:13px; line-height:1.6; }
+  .chk { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa; }
+  .chk input { width:auto; margin:0; }
+  .status { text-align:center; font-size:18px; font-weight:bold; color:#ffb74d; margin:10px 0; min-height:26px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+<h2>Auto Transfer ETH — Loop 1s</h2>
+
+<label>Private key (disimpan di localStorage)</label>
+<input id="pk" type="password" placeholder="0x...">
+
+<label>Alamat tujuan (disimpan)</label>
+<input id="to" placeholder="0x...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="sep">Sepolia Testnet</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<div class="saldo" id="saldoBox">Saldo: —</div>
+
+<div class="chk">
+  <input type="checkbox" id="autoConfirm" checked>
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi</label>
+</div>
+
+<div class="status" id="status">— idle —</div>
+
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="startAuto()">▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
+</div>
+<button class="big" id="btnOnce" onclick="go(true)" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali</button>
+
+<pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const NETWORKS = {
+  eth: { name:"Ethereum", chainId:1n, symbol:"ETH", explorer:"https://etherscan.io/tx/",
+    rpcs:["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://rpc.ankr.com/eth","https://cloudflare-eth.com"] },
+  sep: { name:"Sepolia", chainId:11155111n, symbol:"ETH", explorer:"https://sepolia.etherscan.io/tx/",
+    rpcs:["https://ethereum-sepolia-rpc.publicnode.com","https://rpc.sepolia.org","https://sepolia.gateway.tenderly.co"] },
+  poa: { name:"POA", chainId:99n, symbol:"POA", explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://poa-rpc.today","https://core.poa.network"] }
+};
+const GAS_LIMIT = 21000n;
+const POLL_MS = 1000;              // cek tiap 1 detik
+const REFRESH_UI_MS = 5000;        // refresh UI tiap 5 detik (biar tidak spam)
+
+let provider = null, wallet = null;
+let autoRunning = false;
+let loopId = null;
+let lastStatusKey = "";            // untuk cegah spam log
+let lastUiRefresh = 0;
+let lastSendTime = 0;
+let lastTxHash = "";
+
+const $ = id => document.getElementById(id);
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function reset() { $('log').textContent = ""; lastStatusKey = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+function setStatus(text, active) {
+  const el = $('status');
+  el.textContent = text;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+
+// ===== auto-save =====
+['pk','to','net'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).value));
+});
+
+// ===== RPC =====
+async function probeRpc(url, chainId) {
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ jsonrpc:"2.0", method:"eth_chainId", params:[], id:1 }) });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  if (!j.result || BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chain mismatch");
+}
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try { await probeRpc(url, net.chainId); return new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true }); }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+async function hitungGas(prov) {
+  const fee = await prov.getFeeData();
+  const gasPrice = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+  return { gasPrice, gasCost: GAS_LIMIT * gasPrice };
+}
+async function ensureConn() {
+  const net = cfg();
+  const pk = $('pk').value.trim();
+  if (!pk) throw new Error("Private key kosong");
+  if (!provider) provider = await pilihProvider(net);
+  const want = new ethers.Wallet(pk).address;
+  if (!wallet || wallet.address !== want) wallet = new ethers.Wallet(pk, provider);
+}
+
+// ===== UI saldo =====
+async function refreshSaldo(force) {
+  const now = Date.now();
+  if (!force && now - lastUiRefresh < REFRESH_UI_MS) return;
+  lastUiRefresh = now;
+  try {
+    await ensureConn();
+    const net = cfg();
+    const bal = await provider.getBalance(wallet.address);
+    const { gasCost } = await hitungGas(provider);
+    const max = bal - gasCost;
+    $('saldoBox').innerHTML =
+      `Wallet: <b>${wallet.address}</b><br>` +
+      `Saldo : <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>` +
+      `Gas   : ${ethers.formatEther(gasCost)} ${net.symbol}<br>` +
+      `MAX   : <b class="${max > 0n ? 'ok' : 'err'}">${max > 0n ? ethers.formatEther(max) + ' ' + net.symbol : 'tidak cukup'}</b>`;
+  } catch (e) { /* diamkan */ }
+}
+
+// ===== kirim sekali =====
+async function go(silent) {
+  const net = cfg();
+  const pk = $('pk').value.trim();
+  const to = $('to').value.trim();
+  if (!pk) { log("✗ Private key kosong.", "err"); return false; }
+  if (!to) { log("✗ Alamat tujuan kosong.", "err"); return false; }
+  if (!ethers.isAddress(to)) { log("✗ Alamat tidak valid.", "err"); return false; }
+  if (ethers.getAddress(to) !== to) { log("✗ Checksum tidak cocok: " + ethers.getAddress(to), "err"); return false; }
+
+  try {
+    await ensureConn();
+    const bal = await provider.getBalance(wallet.address);
+    const { gasPrice, gasCost } = await hitungGas(provider);
+    const value = bal - gasCost;
+
+    if (value <= 0n) {
+      return { ok:false, reason:"saldo_kosong", gasCost, bal };
+    }
+
+    log(`→ Kirim ${ethers.formatEther(value)} ${net.symbol} ke ${to.slice(0,8)}...${to.slice(-6)}`, "info");
+    if (!silent && !$('autoConfirm').checked) {
+      if (!confirm(`Kirim ${ethers.formatEther(value)} ${net.symbol}?`)) { log("Dibatalkan.", "warn"); return { ok:false, reason:"dibatalkan" }; }
+    }
+
+    const tx = await wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT, gasPrice });
+    lastTxHash = tx.hash;
+    log("✓ Tx: " + tx.hash, "ok");
+    const r = await tx.wait();
+    log(`✓ Sukses di block ${r.blockNumber}`, "ok");
+    log("  " + net.explorer + tx.hash, "ok");
+    lastSendTime = Date.now();
+    return { ok:true, hash: tx.hash };
+  } catch (e) {
+    log("✗ Error: " + e.message, "err");
+    return { ok:false, reason:"error", err:e.message };
+  }
+}
+
+// ===== loop utama =====
+async function loopTick() {
+  if (!autoRunning) return;
+  const net = cfg();
+
+  try {
+    await ensureConn();
+    const bal = await provider.getBalance(wallet.address);
+    const { gasPrice, gasCost } = await hitungGas(provider);
+    const value = bal - gasCost;
+
+    if (value <= 0n) {
+      const need = ethers.formatEther(gasCost);
+      const have = ethers.formatEther(bal);
+      const key = "wait:" + have;
+      if (key !== lastStatusKey) {
+        log(`⏳ Menunggu saldo cukup. Punya ${have} ${net.symbol}, butuh > ${need} ${net.symbol}`, "warn");
+        lastStatusKey = key;
+      }
+      setStatus(`⏳ Menunggu saldo (${have} ${net.symbol})`, true);
+      refreshSaldo(false);
+      return;
+    }
+
+    // saldo cukup → kirim
+    lastStatusKey = "";
+    setStatus(`⚙ Mengirim...`, true);
+    const res = await go(true);
+    if (res.ok) {
+      setStatus(`✓ Terkirim — lanjut pantau`, true);
+    } else if (res.reason === "error") {
+      setStatus(`✗ Error, tetap mencoba...`, true);
+    }
+    await refreshSaldo(true);
+
+  } catch (e) {
+    const key = "err:" + e.message;
+    if (key !== lastStatusKey) {
+      log("✗ Loop error: " + e.message, "err");
+      lastStatusKey = key;
+    }
+    setStatus(`✗ Error — tetap mencoba...`, true);
+    // reset koneksi agar dicoba ulang di tick berikutnya
+    provider = null; wallet = null;
+  }
+}
+
+function startAuto() {
+  if (autoRunning) return;
+  const pk = $('pk').value.trim();
+  const to = $('to').value.trim();
+  if (!pk) return log("✗ Isi private key.", "err");
+  if (!to) return log("✗ Isi alamat tujuan.", "err");
+  if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
+
+  autoRunning = true;
+  reset();
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('btnOnce').disabled = true;
+  log("▶ AUTO START — cek tiap 1 detik. Klik STOP untuk berhenti.", "ok");
+  setStatus("▶ Berjalan...", true);
+
+  loopId = setInterval(loopTick, POLL_MS);
+  loopTick(); // jalankan sekali langsung
+}
+
+function stopAuto() {
+  if (!autoRunning) return;
+  autoRunning = false;
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnOnce').disabled = false;
+  log("■ AUTO STOP (manual).", "warn");
+  setStatus("■ Berhenti", false);
+}
+
+// reset koneksi saat ganti network / PK
+$('net').addEventListener('change', () => { provider = null; wallet = null; refreshSaldo(true); });
+$('pk').addEventListener('blur', () => { provider = null; wallet = null; refreshSaldo(true); });
+
+// refresh UI dasar saat idle
+setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 3000);
+</script>
+</body>
+</html>
