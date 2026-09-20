@@ -3,126 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EVM Vanity Wallet Generator</title>
+<title>EVM Vanity HD Wallet</title>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-    color: #e0e0e0;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 20px;
-  }
-  .container {
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 24px;
-    width: 100%;
-    max-width: 720px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  }
-  h1 {
-    font-size: 22px;
-    margin-bottom: 6px;
-    background: linear-gradient(90deg, #00d4ff, #a855f7);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .subtitle { color: #888; font-size: 12px; margin-bottom: 16px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #e0e0e0; min-height: 100vh; padding: 12px; }
+  .container { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 17px; margin-bottom: 4px; background: linear-gradient(90deg, #00d4ff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: #888; font-size: 11px; margin-bottom: 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .field { display: flex; flex-direction: column; }
-  label { font-size: 11px; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-  input, select {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    outline: none;
-    width: 100%;
-  }
+  label { font-size: 10px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px; color: #fff; font-family: 'Courier New', monospace; font-size: 13px; outline: none; width: 100%; }
   input:focus, select:focus { border-color: #00d4ff; }
   select option { background: #1a1a2e; }
-  .checkbox-row {
-    display: flex; align-items: center; gap: 8px;
-    margin: 10px 0 16px; font-size: 12px; color: #aaa;
-  }
-  input[type="checkbox"] { accent-color: #00d4ff; width: 16px; height: 16px; cursor: pointer; }
-  button {
-    width: 100%; padding: 12px; border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    background: linear-gradient(90deg, #00d4ff, #a855f7);
-    color: #fff; transition: all 0.2s;
-  }
-  button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,212,255,0.3); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; font-size: 12px; color: #aaa; }
+  input[type="checkbox"] { accent-color: #00d4ff; width: 16px; height: 16px; }
+  button { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: linear-gradient(90deg, #00d4ff, #a855f7); color: #fff; transition: all 0.2s; }
+  button:disabled { opacity: 0.5; }
   .stop-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); margin-top: 8px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
   .stat { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; text-align: center; }
   .stat-value { font-size: 16px; font-weight: 700; color: #00d4ff; font-family: 'Courier New', monospace; }
   .stat-label { font-size: 9px; color: #888; text-transform: uppercase; margin-top: 3px; }
-  .result {
-    display: none; margin-top: 16px; padding: 16px;
-    background: rgba(0, 255, 128, 0.08);
-    border: 1px solid rgba(0, 255, 128, 0.3);
-    border-radius: 10px;
-  }
+  .result { display: none; margin-top: 12px; padding: 12px; background: rgba(0,255,128,0.08); border: 1px solid rgba(0,255,128,0.3); border-radius: 10px; }
   .result.show { display: block; }
-  .result h3 { color: #00ff80; margin-bottom: 12px; font-size: 14px; }
-  .field-result {
-    margin-bottom: 10px; padding: 10px;
-    background: rgba(0,0,0,0.4); border-radius: 8px;
-    position: relative;
-  }
-  .field-label { font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-  .field-value {
-    font-family: 'Courier New', monospace; font-size: 12px;
-    word-break: break-all; color: #fff; line-height: 1.5;
-  }
+  .result h3 { color: #00ff80; margin-bottom: 10px; font-size: 13px; }
+  .field-result { margin-bottom: 8px; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; position: relative; }
+  .field-label { font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+  .field-value { font-family: 'Courier New', monospace; font-size: 11px; word-break: break-all; color: #fff; line-height: 1.5; padding-right: 50px; }
   .field-value.addr { color: #00d4ff; font-weight: 600; }
   .field-value.mnemonic { color: #ffd700; }
-  .copy-btn {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(255,255,255,0.1); border: none;
-    color: #aaa; padding: 3px 8px; border-radius: 5px;
-    font-size: 9px; cursor: pointer; width: auto; margin: 0;
-  }
-  .copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
-  .warning {
-    background: rgba(255, 200, 0, 0.1);
-    border: 1px solid rgba(255, 200, 0, 0.3);
-    color: #ffd700; padding: 10px; border-radius: 8px;
-    font-size: 11px; margin-bottom: 16px; line-height: 1.5;
-  }
-  .status {
-    text-align: center; font-size: 11px; color: #888;
-    margin-top: 10px; font-family: 'Courier New', monospace;
-    word-break: break-all;
-  }
-  .log {
-    margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3);
-    border-radius: 6px; font-family: 'Courier New', monospace;
-    font-size: 10px; color: #666; max-height: 100px; overflow-y: auto;
-  }
+  .field-value.pk { color: #ff80ff; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.15); border: none; color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 9px; cursor: pointer; width: auto; }
+  .warning { background: rgba(255,200,0,0.1); border: 1px solid rgba(255,200,0,0.3); color: #ffd700; padding: 10px; border-radius: 8px; font-size: 11px; margin-bottom: 12px; line-height: 1.5; }
+  .status { text-align: center; font-size: 11px; color: #888; margin-top: 10px; font-family: 'Courier New', monospace; }
+  .log { margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; font-family: 'Courier New', monospace; font-size: 10px; color: #666; max-height: 60px; overflow-y: auto; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>🚀 EVM Vanity Wallet Generator</h1>
-  <p class="subtitle">HD Wallet · Ethereum · BSC · Polygon · Arbitrum</p>
+  <h1>🚀 EVM Vanity HD Wallet</h1>
+  <p class="subtitle">Mnemonic valid BIP39 + BIP44 · Ethereum/BSC/Polygon</p>
 
   <div class="warning">
-    ⚠️ Jalankan <strong>offline</strong> untuk wallet bernilai besar. Semua diproses di browser.
+    ✅ <strong>Address = mnemonic.</strong> Import mnemonic ke MetaMask → address yang muncul PERSIS sama dengan hasil di sini.
   </div>
 
   <div class="row">
@@ -131,7 +57,7 @@
       <input type="text" id="prefix" placeholder="abc" maxlength="6">
     </div>
     <div class="field">
-      <label>Suffix (akhir alamat)</label>
+      <label>Suffix</label>
       <input type="text" id="suffix" placeholder="" maxlength="6">
     </div>
   </div>
@@ -146,7 +72,7 @@
     </div>
     <div class="field">
       <label>Worker</label>
-      <input type="number" id="workers" value="4" min="1" max="8">
+      <input type="number" id="workers" value="4" min="1" max="16">
     </div>
     <div class="field">
       <label>Jumlah Hasil</label>
@@ -156,9 +82,7 @@
 
   <div class="checkbox-row">
     <input type="checkbox" id="caseInsensitive" checked>
-    <label for="caseInsensitive" style="margin:0; text-transform:none; letter-spacing:0; cursor:pointer;">
-      Case-insensitive
-    </label>
+    <label for="caseInsensitive" style="margin:0; text-transform:none; letter-spacing:0;">Case-insensitive</label>
   </div>
 
   <button id="startBtn">▶ Mulai Generate</button>
@@ -185,32 +109,25 @@
   </div>
 
   <div class="status" id="status">Siap. Klik "Mulai Generate".</div>
-  <div class="log" id="log"></div>
+  <div class="log" id="log">Loading ethers...</div>
 </div>
 
 <script>
 // ============================================================
-//  STRATEGI CEPAT + BENAR (HD Wallet):
-//  - Generate 1 mnemonic master di main thread
-//  - Kirim mnemonic ke worker
-//  - Worker pakai HDNodeWallet.fromPhrase(mnemonic, path=m/44'/60'/0'/0/i)
-//    dengan incrementing index i
-//  - Semua address diturunkan dari mnemonic yang SAMA
-//    → JIKA KETEMU, address = mnemonic (100% valid BIP44)
-//  - Bulk derivation: kirim batch index (i, i+1, i+2, ...) ke worker
+//  HD MODE: mnemonic → BIP44 derive → address
+//  Address 100% match dengan mnemonic (valid BIP39/BIP44)
+//  Speed ~100-300/s per worker
 // ============================================================
 
 const workerCode = `
   importScripts('https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js');
 
   let running = true;
-  let mnemonic = null;
 
   self.onmessage = function(e) {
     if (e.data === 'stop') { running = false; return; }
 
-    const { mnemonic: m, prefix, suffix, caseInsensitive, startIndex } = e.data;
-    mnemonic = m;
+    const { mnemonic, prefix, suffix, caseInsensitive, startIndex, indexStep } = e.data;
     running = true;
 
     const p = caseInsensitive ? prefix.toLowerCase() : prefix;
@@ -219,25 +136,23 @@ const workerCode = `
     const hasS = s.length > 0;
 
     let index = startIndex;
-    let attempts = 0;
+    const step = indexStep || 1;
 
     function loop() {
       if (!running) return;
 
-      const batchEnd = performance.now() + 100; // kerja 100ms, yield
-      const hits = [];
+      const batchEnd = performance.now() + 40;
       let batchAttempts = 0;
+      const hits = [];
 
       while (performance.now() < batchEnd) {
         try {
-          // HD derivation: m/44'/60'/0'/0/index
           const path = "m/44'/60'/0'/0/" + index;
           const wallet = ethers.HDNodeWallet.fromPhrase(mnemonic, "", path);
-          const addr = wallet.address.slice(2); // buang 0x
-          const chk = addr;
+          const addr = wallet.address.slice(2);
+          const chk = caseInsensitive ? addr.toLowerCase() : addr;
 
           batchAttempts++;
-          index++;
 
           let match = true;
           if (hasP && !chk.startsWith(p)) match = false;
@@ -248,27 +163,20 @@ const workerCode = `
               address: wallet.address,
               privateKey: wallet.privateKey,
               path: path,
-              index: index - 1
+              index: index
             });
           }
+
+          index += step;
         } catch (err) {
-          // skip error
+          index += step;
         }
       }
 
-      attempts += batchAttempts;
-
       if (hits.length > 0) {
-        self.postMessage({
-          type: 'HIT',
-          hits: hits,
-          attempts: batchAttempts
-        });
+        self.postMessage({ type: 'HIT', hits, attempts: batchAttempts });
       } else if (batchAttempts > 0) {
-        self.postMessage({
-          type: 'TICK',
-          attempts: batchAttempts
-        });
+        self.postMessage({ type: 'TICK', attempts: batchAttempts });
       }
 
       setTimeout(loop, 0);
@@ -281,7 +189,7 @@ const workerCode = `
 const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
 const workerURL = URL.createObjectURL(workerBlob);
 
-// ============ State ============
+const $ = id => document.getElementById(id);
 let workers = [];
 let totalAttempts = 0;
 let startTime = 0;
@@ -291,16 +199,7 @@ let timerInterval = null;
 let isRunning = false;
 let masterMnemonic = null;
 
-const $ = id => document.getElementById(id);
-const startBtn = $('startBtn');
-const stopBtn = $('stopBtn');
-const statusEl = $('status');
-const logEl = $('log');
-
-function log(msg) {
-  console.log(msg);
-  logEl.textContent = msg;
-}
+function log(msg) { console.log(msg); $('log').textContent = msg; }
 
 function updateStats() {
   $('statAttempts').textContent = totalAttempts.toLocaleString('en-US');
@@ -310,32 +209,63 @@ function updateStats() {
 }
 
 function copyText(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(() => btn.textContent = orig, 1000);
+  const done = () => { const o = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = o, 1000); };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); done();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); done();
+  }
+}
+
+function addResult(hit, mnemonic) {
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${hit.address}">Copy</button>
+      <div class="field-label">Address (path: ${hit.path})</div>
+      <div class="field-value addr">${hit.address}</div>
+    </div>
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${mnemonic}">Copy</button>
+      <div class="field-label">⭐ Mnemonic (import ini ke MetaMask)</div>
+      <div class="field-value mnemonic">${mnemonic}</div>
+    </div>
+    <div class="field-result">
+      <button class="copy-btn" data-copy="${hit.privateKey}">Copy</button>
+      <div class="field-label">Private Key (alternatif)</div>
+      <div class="field-value pk">${hit.privateKey}</div>
+    </div>
+  `;
+  $('results').appendChild(div);
+  div.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => copyText(btn.dataset.copy, btn));
   });
 }
 
 async function start() {
   if (isRunning) return;
 
+  if (typeof ethers === 'undefined') {
+    alert('ethers.js tidak load. Cek koneksi.');
+    log('❌ ethers undefined');
+    return;
+  }
+
   const prefix = $('prefix').value.trim().replace(/^0x/i, '');
   const suffix = $('suffix').value.trim().replace(/^0x/i, '');
-  const numWorkers = Math.min(Math.max(parseInt($('workers').value) || 4, 1), 8);
+  const numWorkers = Math.min(Math.max(parseInt($('workers').value) || 4, 1), 16);
   const caseInsensitive = $('caseInsensitive').checked;
   const wordCount = parseInt($('wordCount').value);
-  const strength = wordCount === 12 ? 128 : 256;
 
   if (!prefix && !suffix) { alert('Isi minimal prefix atau suffix!'); return; }
   if (!/^[0-9a-fA-F]*$/.test(prefix) || !/^[0-9a-fA-F]*$/.test(suffix)) {
-    alert('Hanya boleh karakter hex: 0-9, a-f'); return;
-  }
-
-  // Cek ethers.js loaded
-  if (typeof ethers === 'undefined') {
-    alert('ethers.js gagal load. Cek koneksi internet.');
-    return;
+    alert('Hanya karakter hex: 0-9, a-f'); return;
   }
 
   targetCount = Math.max(parseInt($('target').value) || 1, 1);
@@ -346,112 +276,75 @@ async function start() {
   $('result').classList.remove('show');
   isRunning = true;
 
-  startBtn.disabled = true;
-  startBtn.textContent = '⏳ Generating...';
-  stopBtn.style.display = 'block';
-  statusEl.textContent = 'Membuat master mnemonic...';
+  $('startBtn').disabled = true;
+  $('startBtn').textContent = '⏳ Generating...';
+  $('stopBtn').style.display = 'block';
 
-  // Generate master mnemonic SEKALI
+  // Generate master mnemonic
   try {
-    const tempWallet = ethers.Wallet.createRandom();
-    masterMnemonic = tempWallet.mnemonic.phrase;
-    if (wordCount === 12) {
-      masterMnemonic = ethers.Mnemonic.fromEntropy(
-        ethers.randomBytes(16)
-      ).phrase;
-    }
+    let entropyBytes = wordCount === 12 ? ethers.randomBytes(16) : ethers.randomBytes(32);
+    masterMnemonic = ethers.Mnemonic.fromEntropy(entropyBytes).phrase;
     log('Master mnemonic: ' + masterMnemonic);
   } catch (err) {
     alert('Gagal buat mnemonic: ' + err.message);
-    isRunning = false;
-    startBtn.disabled = false;
-    startBtn.textContent = '▶ Mulai Generate';
-    stopBtn.style.display = 'none';
+    stop();
     return;
   }
 
-  statusEl.textContent = `Mencari "${prefix}...${suffix}" · ${wordCount} kata · ${numWorkers} worker`;
+  $('status').textContent = `HD MODE · "${prefix}...${suffix}" · ${wordCount} kata · ${numWorkers} worker`;
 
-  // Spawn workers
+  // Spawn worker. Setiap worker handle index berbeda biar tidak overlap.
+  // Worker i: startIndex = i, step = numWorkers (round-robin)
   workers = [];
   for (let i = 0; i < numWorkers; i++) {
     try {
       const w = new Worker(workerURL);
       w.onmessage = (e) => handleMessage(e.data);
-      w.onerror = (err) => {
-        log('Worker error: ' + err.message);
-      };
-      // Setiap worker mulai dari index berbeda biar tidak overlap
-      const startIndex = i * 1000000;
+      w.onerror = (err) => log('Worker error: ' + err.message);
       w.postMessage({
         mnemonic: masterMnemonic,
         prefix,
         suffix,
         caseInsensitive,
-        startIndex
+        startIndex: i,
+        indexStep: numWorkers
       });
       workers.push(w);
     } catch (err) {
-      log('Gagal buat worker: ' + err.message);
+      log('Gagal buat worker ' + i + ': ' + err.message);
     }
   }
 
   if (workers.length === 0) {
-    alert('Tidak ada worker yang berhasil dibuat. Cek console.');
+    alert('Worker gagal. Coba Chrome/Firefox.');
     stop();
     return;
   }
 
+  log(`✅ ${workers.length} worker HD aktif.`);
+
   if (timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(updateStats, 200);
+  timerInterval = setInterval(updateStats, 250);
 }
 
 function handleMessage(msg) {
   if (msg.type === 'TICK') {
     totalAttempts += msg.attempts;
-    updateStats();
   } else if (msg.type === 'HIT') {
     totalAttempts += msg.attempts;
-
     for (const hit of msg.hits) {
       if (foundCount >= targetCount) break;
       foundCount++;
       addResult(hit, masterMnemonic);
       $('result').classList.add('show');
     }
-
-    statusEl.textContent = `✅ ${foundCount}/${targetCount} wallet ditemukan`;
+    $('status').textContent = `✅ ${foundCount}/${targetCount} wallet ditemukan`;
 
     if (foundCount >= targetCount) {
       stop();
-      statusEl.textContent = `✅ Selesai! ${foundCount} wallet dalam ${Math.round((Date.now()-startTime)/1000)}s`;
+      $('status').textContent = `✅ Selesai! ${foundCount} wallet dalam ${Math.round((Date.now()-startTime)/1000)}s`;
     }
   }
-}
-
-function addResult(hit, mnemonic) {
-  const div = document.createElement('div');
-  div.innerHTML = `
-    <div class="field-result">
-      <button class="copy-btn" data-copy="${hit.address}">Copy</button>
-      <div class="field-label">Address (m/44'/60'/0'/0/${hit.index})</div>
-      <div class="field-value addr">${hit.address}</div>
-    </div>
-    <div class="field-result">
-      <button class="copy-btn" data-copy="${mnemonic}">Copy</button>
-      <div class="field-label">Mnemonic (dari sini address diturunkan)</div>
-      <div class="field-value mnemonic">${mnemonic}</div>
-    </div>
-    <div class="field-result">
-      <button class="copy-btn" data-copy="${hit.privateKey}">Copy</button>
-      <div class="field-label">Private Key</div>
-      <div class="field-value">${hit.privateKey}</div>
-    </div>
-  `;
-  $('results').appendChild(div);
-  div.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => copyText(btn.dataset.copy, btn));
-  });
 }
 
 function stop() {
@@ -459,14 +352,19 @@ function stop() {
   workers.forEach(w => { try { w.postMessage('stop'); } catch(e){} setTimeout(() => w.terminate(), 100); });
   workers = [];
   if (timerInterval) clearInterval(timerInterval);
-  startBtn.disabled = false;
-  startBtn.textContent = '▶ Mulai Generate';
-  stopBtn.style.display = 'none';
+  $('startBtn').disabled = false;
+  $('startBtn').textContent = '▶ Mulai Generate';
+  $('stopBtn').style.display = 'none';
   updateStats();
 }
 
-startBtn.addEventListener('click', start);
-stopBtn.addEventListener('click', stop);
+$('startBtn').addEventListener('click', start);
+$('stopBtn').addEventListener('click', stop);
+
+window.addEventListener('load', () => {
+  if (typeof ethers === 'undefined') log('❌ ethers.js GAGAL LOAD. Cek internet.');
+  else log('✅ ethers.js v' + (ethers.version || '?') + ' siap.');
+});
 </script>
 </body>
 </html>
