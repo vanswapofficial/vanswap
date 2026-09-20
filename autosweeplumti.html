@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Transfer ETH — Multi Wallet</title>
+<style>
+  body { font-family: monospace; max-width: 780px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; margin: 10px 0; }
+  input, textarea, button, select { font-family: monospace; font-size: 13px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, textarea, select { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  textarea { min-height: 80px; resize: vertical; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 16px; }
+  button:disabled { background:#555; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:15px; padding:13px 18px; width:100%; margin-top:6px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  button.tab { background:#222; color:#aaa; border:1px solid #444; padding:6px 12px; font-size:12px; }
+  button.tab.active { background:#4fc3f7; color:#000; border-color:#4fc3f7; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:300px; overflow:auto; font-size:12px; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#666; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .tabbar { display:flex; gap:6px; margin-bottom:10px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; margin-top:6px; }
+  th, td { padding:4px 6px; border-bottom:1px solid #333; text-align:left; }
+  th { color:#4fc3f7; font-weight:normal; }
+  td.addr { color:#888; font-size:10px; word-break:break-all; }
+  td.bal { color:#81c784; }
+  .status { text-align:center; font-size:16px; font-weight:bold; color:#ffb74d; margin:10px 0; min-height:24px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+<h2>Auto Transfer ETH — Multi Wallet</h2>
+
+<label>Alamat tujuan</label>
+<input id="to" placeholder="0x...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="sep">Sepolia Testnet</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<div class="tabbar">
+  <button class="tab active" id="tabPK" onclick="switchTab('pk')">Private Key</button>
+  <button class="tab" id="tabSeed" onclick="switchTab('seed')">Seed Phrase</button>
+</div>
+
+<div id="panelPK">
+  <label>Private key (satu per baris, atau pisah koma/spasi)</label>
+  <textarea id="pkList" placeholder="0xabc...&#10;0xdef...&#10;0x123..."></textarea>
+</div>
+
+<div id="panelSeed" style="display:none;">
+  <label>Seed phrase (12 / 24 kata)</label>
+  <textarea id="seed" placeholder="word1 word2 word3 ... word12"></textarea>
+  <label>Jumlah alamat yang di-derive (default 5)</label>
+  <input id="seedCount" type="number" min="1" max="50" value="5">
+  <label>Derivation path (default BIP-44 Ethereum)</label>
+  <input id="seedPath" value="m/44'/60'/0'/0">
+</div>
+
+<button id="btnDerive" onclick="deriveWallets()" style="margin-top:8px;">🔑 Muat Wallet</button>
+
+<div style="margin-top:14px;">
+  <table id="walletsTable">
+    <thead><tr><th>#</th><th>Alamat</th><th>Saldo</th></tr></thead>
+    <tbody id="walletsBody"><tr><td colspan="3" style="color:#666;">Belum ada wallet dimuat.</td></tr></tbody>
+  </table>
+</div>
+
+<div class="chk" style="display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa;">
+  <input type="checkbox" id="autoConfirm" checked style="width:auto; margin:0;">
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi</label>
+</div>
+
+<div class="status" id="status">— idle —</div>
+
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="startAuto()" disabled>▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
+</div>
+
+<pre id="log">Siap. Isi tujuan, muat wallet, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const NETWORKS = {
+  eth: { name:"Ethereum", chainId:1n, symbol:"ETH", explorer:"https://etherscan.io/tx/",
+    rpcs:["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://rpc.ankr.com/eth","https://cloudflare-eth.com"] },
+  sep: { name:"Sepolia", chainId:11155111n, symbol:"ETH", explorer:"https://sepolia.etherscan.io/tx/",
+    rpcs:["https://ethereum-sepolia-rpc.publicnode.com","https://rpc.sepolia.org","https://sepolia.gateway.tenderly.co"] },
+  poa: { name:"POA", chainId:99n, symbol:"POA", explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://poa-rpc.today","https://core.poa.network"] }
+};
+const GAS_LIMIT = 21000n;
+const POLL_MS = 1000;
+
+let provider = null;
+let wallets = [];       // [{ pk, address, wallet }]
+let autoRunning = false;
+let loopId = null;
+let lastStatusKey = "";
+let lastTxHashes = [];  // untuk ringkasan
+
+const $ = id => document.getElementById(id);
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function reset() { $('log').textContent = ""; lastStatusKey = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+function setStatus(text, active) {
+  const el = $('status');
+  el.textContent = text;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+
+// ===== auto-save =====
+['to','net','pkList','seed','seedCount','seedPath'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).value));
+});
+
+function switchTab(t) {
+  $('tabPK').classList.toggle('active', t === 'pk');
+  $('tabSeed').classList.toggle('active', t === 'seed');
+  $('panelPK').style.display = t === 'pk' ? 'block' : 'none';
+  $('panelSeed').style.display = t === 'seed' ? 'block' : 'none';
+}
+
+// ===== RPC =====
+async function probeRpc(url, chainId) {
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ jsonrpc:"2.0", method:"eth_chainId", params:[], id:1 }) });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  if (!j.result || BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chain mismatch");
+}
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try { await probeRpc(url, net.chainId); return new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true }); }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+async function hitungGas(prov) {
+  const fee = await prov.getFeeData();
+  const gasPrice = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+  return { gasPrice, gasCost: GAS_LIMIT * gasPrice };
+}
+
+// ===== muat wallet =====
+function parsePkList(text) {
+  return text.split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+async function deriveWallets() {
+  const net = cfg();
+  const mode = $('panelPK').style.display !== 'none' ? 'pk' : 'seed';
+  log("→ Memuat wallet (" + mode + ")...", "info");
+  wallets = [];
+
+  try {
+    if (mode === 'pk') {
+      const list = parsePkList($('pkList').value);
+      if (list.length === 0) throw new Error("Tidak ada private key.");
+      for (const pk of list) {
+        let norm = pk.startsWith('0x') ? pk : '0x' + pk;
+        const w = new ethers.Wallet(norm);
+        wallets.push({ pk: norm, address: w.address, wallet: null });
+      }
+    } else {
+      const phrase = $('seed').value.trim();
+      if (!phrase) throw new Error("Seed phrase kosong.");
+      const count = Math.max(1, Math.min(50, parseInt($('seedCount').value) || 5));
+      const basePath = $('seedPath').value.trim() || "m/44'/60'/0'/0";
+      const mnemonic = ethers.Mnemonic.fromPhrase(phrase);
+      for (let i = 0; i < count; i++) {
+        const path = basePath + "/" + i;
+        const hd = ethers.HDNodeWallet.fromMnemonic(mnemonic, path);
+        wallets.push({ pk: hd.privateKey, address: hd.address, wallet: null, path });
+      }
+    }
+
+    // tampilkan tabel
+    const tbody = $('walletsBody');
+    tbody.innerHTML = "";
+    wallets.forEach((w, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td class="addr">${w.address}</td><td class="bal" id="bal_${i}">—</td>`;
+      tbody.appendChild(tr);
+    });
+
+    log("✓ " + wallets.length + " wallet dimuat.", "ok");
+    wallets.forEach((w, i) => log("  [" + (i+1) + "] " + w.address, "dim"));
+    $('btnStart').disabled = false;
+
+    // cek saldo awal
+    await refreshAllBalances(true);
+
+  } catch (e) {
+    log("✗ Gagal muat: " + e.message, "err");
+    $('walletsBody').innerHTML = '<tr><td colspan="3" style="color:#ef5350;">Error: ' + e.message + '</td></tr>';
+    $('btnStart').disabled = true;
+  }
+}
+
+// ===== cek saldo semua =====
+async function refreshAllBalances(force) {
+  if (!provider) provider = await pilihProvider(cfg());
+  const net = cfg();
+  let adaSaldo = 0;
+  for (let i = 0; i < wallets.length; i++) {
+    const w = wallets[i];
+    if (!w.wallet) w.wallet = new ethers.Wallet(w.pk, provider);
+    try {
+      const bal = await provider.getBalance(w.address);
+      const el = $('bal_' + i);
+      if (el) el.textContent = ethers.formatEther(bal) + " " + net.symbol;
+      if (bal > 0n) adaSaldo++;
+    } catch (e) {
+      const el = $('bal_' + i);
+      if (el) el.textContent = "err";
+    }
+  }
+  return adaSaldo;
+}
+
+// ===== kirim dari satu wallet =====
+async function kirimDari(w) {
+  const net = cfg();
+  const to = $('to').value.trim();
+  const bal = await provider.getBalance(w.address);
+  const { gasPrice, gasCost } = await hitungGas(provider);
+  const value = bal - gasCost;
+  if (value <= 0n) return { ok:false, reason:"saldo_kosong", bal, gasCost };
+
+  log(`→ [${w.address.slice(0,6)}…${w.address.slice(-4)}] Kirim ${ethers.formatEther(value)} ${net.symbol}`, "info");
+  const tx = await w.wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT, gasPrice });
+  log("✓ Tx: " + tx.hash, "ok");
+  const r = await tx.wait();
+  log(`✓ Sukses di block ${r.blockNumber} — ${net.explorer}${tx.hash}`, "ok");
+  lastTxHashes.push(tx.hash);
+  return { ok:true, hash: tx.hash };
+}
+
+// ===== loop =====
+async function loopTick() {
+  if (!autoRunning) return;
+  const net = cfg();
+  const to = $('to').value.trim();
+  if (!to) { stopAuto(); return log("✗ Tujuan kosong.", "err"); }
+
+  try {
+    if (!provider) provider = await pilihProvider(net);
+
+    let totalWithBalance = 0;
+    const statuses = [];
+
+    for (let i = 0; i < wallets.length; i++) {
+      const w = wallets[i];
+      if (!w.wallet) w.wallet = new ethers.Wallet(w.pk, provider);
+
+      let bal, gasCost;
+      try {
+        bal = await provider.getBalance(w.address);
+        const g = await hitungGas(provider);
+        gasCost = g.gasCost;
+      } catch (e) {
+        statuses.push(`[${i+1}] rpc-err`);
+        continue;
+      }
+      const el = $('bal_' + i);
+      if (el) el.textContent = ethers.formatEther(bal) + " " + net.symbol;
+
+      const val = bal - gasCost;
+      if (val <= 0n) {
+        statuses.push(`[${i+1}] kosong`);
+        continue;
+      }
+      totalWithBalance++;
+      statuses.push(`[${i+1}] kirim`);
+      try {
+        await kirimDari(w);
+      } catch (e) {
+        log(`✗ [${i+1}] gagal: ${e.message}`, "err");
+      }
+    }
+
+    const key = statuses.join("|");
+    if (key !== lastStatusKey) {
+      const ringkas = wallets.length + " wallet | " + totalWithBalance + " siap kirim | " +
+                      statuses.filter(s => s.includes("kosong")).length + " kosong";
+      log("· " + ringkas, "dim");
+      lastStatusKey = key;
+    }
+
+    setStatus(`▶ Loop: ${totalWithBalance}/${wallets.length} siap · cek tiap 1s`, true);
+
+  } catch (e) {
+    const key = "err:" + e.message;
+    if (key !== lastStatusKey) {
+      log("✗ Loop error: " + e.message, "err");
+      lastStatusKey = key;
+    }
+    setStatus("✗ Error — tetap mencoba...", true);
+    provider = null; // reset koneksi
+  }
+}
+
+function startAuto() {
+  if (autoRunning) return;
+  const to = $('to').value.trim();
+  if (!to) return log("✗ Isi alamat tujuan.", "err");
+  if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
+  if (ethers.getAddress(to) !== to) return log("✗ Checksum: " + ethers.getAddress(to), "err");
+  if (wallets.length === 0) return log("✗ Muat wallet dulu.", "err");
+  if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
+
+  autoRunning = true;
+  reset();
+  lastTxHashes = [];
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('btnDerive').disabled = true;
+  log("▶ AUTO START — " + wallets.length + " wallet, cek tiap 1s.", "ok");
+  setStatus("▶ Berjalan...", true);
+
+  loopId = setInterval(loopTick, POLL_MS);
+  loopTick();
+}
+
+function stopAuto() {
+  if (!autoRunning) return;
+  autoRunning = false;
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnDerive').disabled = false;
+  log("■ AUTO STOP.", "warn");
+  if (lastTxHashes.length) {
+    log("Total tx terkirim: " + lastTxHashes.length, "ok");
+    lastTxHashes.forEach(h => log("  " + cfg().explorer + h, "dim"));
+  }
+  setStatus("■ Berhenti", false);
+}
+
+// reset koneksi saat ganti network
+$('net').addEventListener('change', () => {
+  provider = null;
+  wallets.forEach(w => w.wallet = null);
+  if (wallets.length) refreshAllBalances(true);
+});
+</script>
+</body>
+</html>
