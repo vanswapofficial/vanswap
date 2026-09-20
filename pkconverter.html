@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Chain Wallet Derivation & Balance Checker</title>
+<style>
+  :root {
+    --bg: #0b0f19;
+    --bg-2: #111827;
+    --card: #161e2e;
+    --card-2: #1c2740;
+    --border: #23304a;
+    --text: #e6edf7;
+    --muted: #8b98b0;
+    --accent: #4f8cff;
+    --accent-2: #7c5cff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(124,92,255,.18), transparent 60%),
+      radial-gradient(1000px 500px at 90% 0%, rgba(79,140,255,.15), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 {
+    font-size: 28px; font-weight: 700; margin: 0 0 8px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -.02em;
+  }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .panel {
+    background: linear-gradient(180deg, var(--card), var(--bg-2));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+  label.field-label {
+    display: block; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted); margin-bottom: 8px;
+  }
+  textarea, input[type="number"] {
+    width: 100%; background: #0d1424; border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 12px 14px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px;
+    outline: none; transition: border-color .15s, box-shadow .15s; resize: vertical;
+  }
+  textarea:focus, input[type="number"]:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,140,255,.15);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 160px; gap: 14px; margin-top: 14px; }
+  .chains { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: #0d1424; cursor: pointer; font-size: 13px;
+    user-select: none; transition: all .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip input { display: none; }
+  .chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3a4761; transition: background .15s, box-shadow .15s;
+  }
+  .chip.active {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, rgba(79,140,255,.15), rgba(124,92,255,.1));
+  }
+  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  button {
+    border: none; border-radius: 10px; padding: 12px 20px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all .15s; color: white; font-family: inherit;
+  }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 20px rgba(79,140,255,.35);
+  }
+  button.primary:hover:not(:disabled) { transform: translateY(-1px); }
+  button.ghost {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+  }
+  button.ghost:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  #results { display: flex; flex-direction: column; gap: 16px; }
+  .wallet-card {
+    background: linear-gradient(180deg, var(--card), var(--card-2));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; animation: fadeIn .3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .wallet-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.02);
+  }
+  .wallet-index {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 14px;
+  }
+  .badge-index {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; padding: 0 8px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    font-size: 12px; font-weight: 700;
+  }
+  .wallet-body { padding: 14px 18px; }
+  .key-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; background: #0b1220;
+    border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+  }
+  .key-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); min-width: 90px; padding-top: 2px;
+  }
+  .key-value {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px;
+    color: var(--text); word-break: break-all; flex: 1;
+  }
+  .key-value.private { color: #ffb4b4; }
+  .chain-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .chain-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: rgba(255,255,255,.02);
+    border: 1px solid var(--border); border-radius: 10px; font-size: 13px;
+    transition: background .15s;
+  }
+  .chain-item:hover { background: rgba(255,255,255,.04); }
+  .chain-left { display: flex; align-items: center; gap: 10px; }
+  .chain-icon {
+    width: 26px; height: 26px; border-radius: 8px;
+    display: grid; place-items: center; font-size: 11px;
+    font-weight: 700; color: white;
+  }
+  .chain-name { font-weight: 500; }
+  .chain-symbol { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  .chain-balance {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px;
+    text-align: right; max-width: 60%;
+  }
+  .chain-balance.zero { color: var(--muted); }
+  .chain-balance.has  { color: var(--green); font-weight: 600; }
+  .chain-balance.err  { color: var(--red); font-size: 11px; }
+  .empty, .status {
+    text-align: center; color: var(--muted); padding: 40px 20px;
+    font-size: 14px; border: 1px dashed var(--border);
+    border-radius: var(--radius); background: rgba(255,255,255,.01);
+  }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.15); border-top-color: var(--accent);
+    animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .warn {
+    margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(234,179,8,.08); border: 1px solid rgba(234,179,8,.3);
+    color: #fde68a; font-size: 12px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Multi-Chain Wallet Derivation</h1>
+    <p>Derive private key & cek saldo di banyak jaringan sekaligus</p>
+  </header>
+
+  <div class="panel">
+    <label class="field-label" for="mnemonic">Mnemonic Phrase</label>
+    <textarea id="mnemonic" placeholder="contoh: apple banana cherry ... (12 / 24 kata)" rows="3"></textarea>
+
+    <div class="grid-2">
+      <div>
+        <label class="field-label">Jaringan</label>
+        <div class="chains" id="chains"></div>
+      </div>
+      <div>
+        <label class="field-label">Jumlah Wallet</label>
+        <input id="count" type="number" value="3" min="1" max="50">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="derive" class="primary">🔍 Derive &amp; Check Balance</button>
+      <button id="stop" class="ghost" disabled>Stop</button>
+      <button id="clear" class="ghost">Clear</button>
+    </div>
+
+    <div class="warn">
+      ⚠️ <b>Peringatan:</b> Private key ditampilkan di layar &amp; koneksi internet aktif (RPC publik).
+      Jangan gunakan mnemonic yang menyimpan dana nyata di lingkungan yang tidak aman.
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="empty">Belum ada hasil. Masukkan mnemonic dan klik <b>Derive</b>.</div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { HDNodeWallet, Mnemonic, JsonRpcProvider, formatUnits } from "https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.min.js";
+
+  // ====== Chain config dengan MULTI-RPC FALLBACK ======
+  // Kalau RPC pertama gagal, coba berikutnya.
+  const CHAINS = {
+    eth: {
+      name: "Ethereum", symbol: "ETH", color: "#627eea",
+      rpcs: [
+        "https://ethereum-rpc.publicnode.com",
+        "https://eth.llamarpc.com",
+        "https://rpc.ankr.com/eth",
+        "https://1rpc.io/eth"
+      ]
+    },
+    bnb: {
+      name: "BNB Chain", symbol: "BNB", color: "#f0b90b",
+      rpcs: [
+        "https://bsc-rpc.publicnode.com",
+        "https://bsc-dataseed.binance.org",
+        "https://rpc.ankr.com/bsc",
+        "https://1rpc.io/bnb"
+      ]
+    },
+    polygon: {
+      name: "Polygon", symbol: "POL", color: "#8247e5",
+      rpcs: [
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://polygon-rpc.com",
+        "https://rpc.ankr.com/polygon",
+        "https://1rpc.io/matic"
+      ]
+    },
+    celo: {
+      name: "Celo", symbol: "CELO", color: "#35d07f",
+      rpcs: [
+        "https://celo-rpc.publicnode.com",
+        "https://forno.celo.org",
+        "https://rpc.ankr.com/celo"
+      ]
+    },
+    arbitrum: {
+      name: "Arbitrum", symbol: "ETH", color: "#28a0f0",
+      rpcs: [
+        "https://arbitrum-one-rpc.publicnode.com",
+        "https://arb1.arbitrum.io/rpc",
+        "https://rpc.ankr.com/arbitrum"
+      ]
+    },
+    optimism: {
+      name: "Optimism", symbol: "ETH", color: "#ff0420",
+      rpcs: [
+        "https://optimism-rpc.publicnode.com",
+        "https://mainnet.optimism.io",
+        "https://rpc.ankr.com/optimism"
+      ]
+    },
+    base: {
+      name: "Base", symbol: "ETH", color: "#0052ff",
+      rpcs: [
+        "https://base-rpc.publicnode.com",
+        "https://mainnet.base.org",
+        "https://rpc.ankr.com/base"
+      ]
+    },
+    avalanche: {
+      name: "Avalanche", symbol: "AVAX", color: "#e84142",
+      rpcs: [
+        "https://avalanche-c-chain-rpc.publicnode.com",
+        "https://api.avax.network/ext/bc/C/rpc",
+        "https://rpc.ankr.com/avalanche"
+      ]
+    },
+    fantom: {
+      name: "Fantom", symbol: "FTM", color: "#1969ff",
+      rpcs: [
+        "https://fantom-rpc.publicnode.com",
+        "https://rpcapi.fantom.network",
+        "https://rpc.ankr.com/fantom"
+      ]
+    },
+  };
+
+  // Simpan provider terpilih per chain (yang berhasil connect)
+  const activeProviders = {};
+
+  // Timeout helper untuk fetch
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout ${ms}ms (${label})`)), ms))
+    ]);
+  }
+
+  // Coba RPC satu per satu sampai berhasil
+  async function getWorkingProvider(chainKey) {
+    if (activeProviders[chainKey]) return activeProviders[chainKey];
+    const cfg = CHAINS[chainKey];
+    let lastErr;
+    for (const url of cfg.rpcs) {
+      try {
+        const p = new JsonRpcProvider(url, undefined, { staticNetwork: true });
+        // Test koneksi dengan blockNumber + timeout 6s
+        await withTimeout(p.getBlockNumber(), 6000, url);
+        activeProviders[chainKey] = p;
+        return p;
+      } catch (e) {
+        lastErr = e;
+        // coba RPC berikutnya
+      }
+    }
+    throw new Error(lastErr?.message || "Semua RPC gagal");
+  }
+
+  // Fallback getBalance: coba semua RPC sampai berhasil
+  async function getBalanceWithFallback(chainKey, address) {
+    const cfg = CHAINS[chainKey];
+    let lastErr;
+    for (const url of cfg.rpcs) {
+      try {
+        const p = activeProviders[chainKey] && activeProviders[chainKey]._getConnection?.().url === url
+          ? activeProviders[chainKey]
+          : new JsonRpcProvider(url, undefined, { staticNetwork: true });
+        const raw = await withTimeout(p.getBalance(address), 8000, url);
+        activeProviders[chainKey] = p;
+        return raw;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw new Error(lastErr?.shortMessage || lastErr?.message || "Semua RPC gagal");
+  }
+
+  // ====== Build chain chips ======
+  const chainsEl = document.getElementById("chains");
+  Object.entries(CHAINS).forEach(([key, cfg], idx) => {
+    const chip = document.createElement("label");
+    const active = idx < 5;
+    chip.className = "chip" + (active ? " active" : "");
+    chip.innerHTML = `
+      <input type="checkbox" value="${key}" ${active ? "checked" : ""}>
+      <span class="dot" style="${active ? `background:${cfg.color};box-shadow:0 0 10px ${cfg.color}` : ""}"></span>
+      <span>${cfg.name}</span>
+    `;
+    const input = chip.querySelector("input");
+    input.addEventListener("change", () => {
+      chip.classList.toggle("active", input.checked);
+      const dot = chip.querySelector(".dot");
+      dot.style.background = input.checked ? cfg.color : "#3a4761";
+      dot.style.boxShadow = input.checked ? `0 0 10px ${cfg.color}` : "none";
+    });
+    chainsEl.appendChild(chip);
+  });
+
+  // ====== UI helpers ======
+  const resultsEl = document.getElementById("results");
+  const deriveBtn = document.getElementById("derive");
+  const stopBtn   = document.getElementById("stop");
+  const clearBtn  = document.getElementById("clear");
+
+  let stopFlag = false;
+  stopBtn.onclick = () => { stopFlag = true; };
+  clearBtn.onclick = () => {
+    resultsEl.innerHTML = `<div class="empty">Belum ada hasil. Masukkan mnemonic dan klik <b>Derive</b>.</div>`;
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderWalletCard(index, wallet, selectedChains) {
+    const card = document.createElement("div");
+    card.className = "wallet-card";
+
+    const chainRows = selectedChains.map(key => {
+      const cfg = CHAINS[key];
+      return `
+        <div class="chain-item" data-chain="${key}">
+          <div class="chain-left">
+            <div class="chain-icon" style="background:${cfg.color}">${cfg.symbol.slice(0,2)}</div>
+            <div>
+              <span class="chain-name">${cfg.name}</span>
+              <span class="chain-symbol">${cfg.symbol}</span>
+            </div>
+          </div>
+          <div class="chain-balance zero"><span class="spinner"></span>loading…</div>
+        </div>
+      `;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="wallet-header">
+        <div class="wallet-index">
+          <span class="badge-index">#${index}</span>
+          <span>Wallet ${index}</span>
+        </div>
+      </div>
+      <div class="wallet-body">
+        <div class="key-row">
+          <div class="key-label">Address</div>
+          <div class="key-value">${escapeHtml(wallet.address)}</div>
+        </div>
+        <div class="key-row">
+          <div class="key-label">Private Key</div>
+          <div class="key-value private">${escapeHtml(wallet.privateKey)}</div>
+        </div>
+        <div class="chain-list">${chainRows}</div>
+      </div>
+    `;
+    return card;
+  }
+
+  function updateChainBalance(card, chainKey, raw, formatted) {
+    const row = card.querySelector(`.chain-item[data-chain="${chainKey}"] .chain-balance`);
+    if (!row) return;
+    const zero = raw === 0n;
+    row.textContent = `${formatted} ${CHAINS[chainKey].symbol}`;
+    row.className = "chain-balance " + (zero ? "zero" : "has");
+  }
+
+  function updateChainError(card, chainKey, msg) {
+    const row = card.querySelector(`.chain-item[data-chain="${chainKey}"] .chain-balance`);
+    if (!row) return;
+    row.textContent = "⚠ " + msg;
+    row.className = "chain-balance err";
+    row.title = msg;
+  }
+
+  // ====== Main ======
+  deriveBtn.onclick = async () => {
+    stopFlag = false;
+    deriveBtn.disabled = true;
+    stopBtn.disabled = false;
+    resultsEl.innerHTML = `<div class="status"><span class="spinner"></span>Menyiapkan…</div>`;
+
+    const phrase = document.getElementById("mnemonic").value.trim();
+    const count = parseInt(document.getElementById("count").value);
+    const selected = [...document.querySelectorAll('#chains input:checked')].map(i => i.value);
+
+    if (!phrase) {
+      resultsEl.innerHTML = `<div class="empty">❌ Mnemonic masih kosong.</div>`;
+      deriveBtn.disabled = false; stopBtn.disabled = true; return;
+    }
+    if (selected.length === 0) {
+      resultsEl.innerHTML = `<div class="empty">❌ Pilih minimal 1 jaringan.</div>`;
+      deriveBtn.disabled = false; stopBtn.disabled = true; return;
+    }
+
+    let m;
+    try {
+      m = Mnemonic.fromPhrase(phrase);
+    } catch (e) {
+      resultsEl.innerHTML = `<div class="empty">❌ Mnemonic tidak valid: ${escapeHtml(e.message)}</div>`;
+      deriveBtn.disabled = false; stopBtn.disabled = true; return;
+    }
+
+    resultsEl.innerHTML = "";
+
+    for (let i = 0; i < count; i++) {
+      if (stopFlag) break;
+
+      const w = HDNodeWallet.fromMnemonic(m, `m/44'/60'/0'/0/${i}`);
+      const card = renderWalletCard(i, w, selected);
+      resultsEl.appendChild(card);
+
+      // Query balance paralel untuk semua chain terpilih
+      const tasks = selected.map(async (key) => {
+        try {
+          const raw = await getBalanceWithFallback(key, w.address);
+          const formatted = formatUnits(raw, 18);
+          return { key, status: "ok", raw, formatted };
+        } catch (err) {
+          const msg = (err?.shortMessage || err?.message || "gagal").slice(0, 80);
+          return { key, status: "error", message: msg };
+        }
+      });
+
+      const settled = await Promise.all(tasks);
+      for (const r of settled) {
+        if (r.status === "ok") updateChainBalance(card, r.key, r.raw, r.formatted);
+        else updateChainError(card, r.key, r.message);
+      }
+    }
+
+    if (stopFlag) {
+      const stopMsg = document.createElement("div");
+      stopMsg.className = "empty";
+      stopMsg.textContent = "⏹ Dihentikan oleh pengguna.";
+      resultsEl.appendChild(stopMsg);
+    }
+
+    deriveBtn.disabled = false;
+    stopBtn.disabled = true;
+  };
+</script>
+</body>
+</html>
