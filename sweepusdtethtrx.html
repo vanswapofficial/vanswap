@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Transfer USDT+ETH+BNB+TRX — Loop Cepat + Multi PK</title>
+<style>
+  body { font-family: monospace; max-width: 760px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; margin: 10px 0; }
+  h3 { color:#81c784; margin: 14px 0 6px; font-size:14px; }
+  input, button, select, textarea { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  textarea { min-height: 78px; resize: vertical; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 20px; }
+  button:disabled { background:#555; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:16px; padding:14px 20px; width:100%; margin-top:6px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  button.cancel { background:#ffb74d; color:#000; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:360px; overflow:auto; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#666; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .saldo { background:#0a2a0a; padding:10px; border:1px solid #2a5a2a; border-radius:4px; margin:10px 0; font-size:13px; line-height:1.6; }
+  .saldo.wallet-card { background:#0a1a2a; border-color:#2a4a6a; margin:6px 0; padding:8px 10px; }
+  .chk { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa; }
+  .chk input { width:auto; margin:0; }
+  .status { text-align:center; font-size:18px; font-weight:bold; color:#ffb74d; margin:10px 0; min-height:26px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+<h2>Auto Transfer USDT (max) → ETH/BNB/TRX — Multi PK</h2>
+
+<label>Private key (satu per baris, bisa banyak — disimpan di localStorage)</label>
+<textarea id="pk" placeholder="0xabc...&#10;0xdef...&#10;0x123..."></textarea>
+
+<label>Alamat tujuan (disimpan)</label>
+<input id="to" placeholder="0x... atau T...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="bnb">BNB Smart Chain (BSC)</option>
+  <option value="tron">Tron Mainnet (TRX)</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<label>Interval cek (ms) — lebih kecil = lebih cepat</label>
+<input id="interval" type="number" min="50" step="50" value="300">
+
+<div class="saldo" id="saldoBox">Saldo: —</div>
+
+<div class="chk">
+  <input type="checkbox" id="autoConfirm" checked>
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="cancelOnStop">
+  <label for="cancelOnStop" style="margin:0;">Saat STOP: batalkan pending tx (EVM only)</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="fastGas" checked>
+  <label for="fastGas" style="margin:0;">Gunakan gas agresif (EVM only)</label>
+</div>
+
+<div class="status" id="status">— idle —</div>
+
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="startAuto()">▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
+</div>
+<button class="big" id="btnOnce" onclick="go(true)" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali (semua PK)</button>
+<button class="big cancel" id="btnCancel" onclick="cancelPending()" style="margin-top:8px;">✖ Batalkan Semua Pending Tx</button>
+
+<pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.2/dist/TronWeb.js"></script>
+<script>
+// ===== Konfigurasi Network (MAINNET only) =====
+const NETWORKS = {
+  eth: {
+    type:"evm", name:"Ethereum", chainId:1n, symbol:"ETH",
+    explorer:"https://etherscan.io/tx/",
+    rpcs:[
+      "https://ethereum-rpc.publicnode.com",
+      "https://eth.llamarpc.com",
+      "https://rpc.ankr.com/eth",
+      "https://cloudflare-eth.com"
+    ],
+    usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    usdtDecimals: 6
+  },
+  bnb: {
+    type:"evm", name:"BNB Smart Chain", chainId:56n, symbol:"BNB",
+    explorer:"https://bscscan.com/tx/",
+    rpcs:[
+      "https://bsc-rpc.publicnode.com",
+      "https://bsc-dataseed.binance.org",
+      "https://bsc-dataseed1.defibit.io",
+      "https://rpc.ankr.com/bsc"
+    ],
+    usdt: "0x55d398326f99059fF775485246999027B3197955",
+    usdtDecimals: 18
+  },
+  tron: {
+    type:"tron", name:"Tron", chainId:null, symbol:"TRX",
+    explorer:"https://tronscan.org/#/transaction/",
+    fullHost:"https://api.trongrid.io",
+    usdt: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    usdtDecimals: 6
+  },
+  poa: {
+    type:"evm", name:"POA", chainId:99n, symbol:"POA",
+    explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://poa-rpc.today","https://core.poa.network"],
+    usdt: null,
+    usdtDecimals: 0
+  }
+};
+
+const GAS_LIMIT_ETH   = 21000n;
+const GAS_LIMIT_USDT  = 100000n;
+const TRON_FEE_LIMIT  = 100_000_000;    // 100 TRX max fee (safety)
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)"
+];
+const TRC20_ABI = [
+  { "constant":true,  "inputs":[{"name":"who","type":"address"}], "name":"balanceOf","outputs":[{"name":"","type":"uint256"}], "type":"function" },
+  { "constant":false, "inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}], "name":"transfer","outputs":[{"name":"","type":"bool"}], "type":"function" },
+  { "constant":true,  "inputs":[], "name":"decimals","outputs":[{"name":"","type":"uint8"}], "type":"function" }
+];
+
+// EVM state
+let provider = null;
+let wallets = [];              // [{ pk, wallet }]
+// Tron state
+let tronWeb = null;
+let tronWallets = [];          // [{ pk, address }]
+
+let autoRunning = false;
+let loopId = null;
+let lastStatusKey = "";
+let lastUiRefresh = 0;
+let pendingNonces = new Map(); // EVM: address -> { nonce, hash }
+
+const $ = id => document.getElementById(id);
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function reset() { $('log').textContent = ""; lastStatusKey = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+function setStatus(text, active) {
+  const el = $('status');
+  el.textContent = text;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+function getInterval() {
+  const v = parseInt($('interval').value, 10);
+  return isNaN(v) ? 300 : Math.max(50, v);
+}
+
+// ===== auto-save =====
+['pk','to','net','interval'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).value));
+});
+
+// ==================================================
+// ============== EVM HELPERS (ethers) ==============
+// ==================================================
+async function probeRpc(url, chainId) {
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ jsonrpc:"2.0", method:"eth_chainId", params:[], id:1 }) });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  if (!j.result || BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chain mismatch");
+}
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try { await probeRpc(url, net.chainId); return new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true }); }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+async function hitungGas(prov, gasLimit = GAS_LIMIT_ETH) {
+  const fee = await prov.getFeeData();
+  let gasPrice;
+  if ($('fastGas').checked) {
+    const base = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+    const priority = ethers.parseUnits("2","gwei");
+    gasPrice = (base * 2n) + priority;
+  } else {
+    gasPrice = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+  }
+  return { gasPrice, gasCost: gasLimit * gasPrice };
+}
+
+// ==================================================
+// ============== TRON HELPERS (TronWeb) =============
+// ==================================================
+async function initTron(net) {
+  if (tronWeb) return tronWeb;
+  if (typeof TronWeb === 'undefined') throw new Error("TronWeb library belum dimuat");
+  tronWeb = new TronWeb({ fullHost: net.fullHost });
+  return tronWeb;
+}
+
+// Tron address dari private key
+function tronAddrFromPK(pk) {
+  try {
+    let key = pk.trim();
+    if (key.startsWith('0x')) key = key.slice(2);
+    return tronWeb.address.fromPrivateKey(key);
+  } catch (e) {
+    throw new Error("PK Tron tidak valid: " + pk.slice(0,10) + "...");
+  }
+}
+
+// convert base58 T... ke hex untuk TronWeb contract call
+function toTronHex(addr) {
+  if (addr.startsWith('T')) return tronWeb.address.toHex(addr);
+  return addr;
+}
+
+async function getTrxBalance(addr) {
+  const sun = await tronWeb.trx.getBalance(addr);   // dalam SUN (1 TRX = 1e6 SUN)
+  return BigInt(sun);
+}
+async function getTrc20Balance(addr, contractAddr) {
+  try {
+    const c = await tronWeb.contract(TRC20_ABI, contractAddr);
+    const bal = await c.balanceOf(addr).call();
+    return BigInt(bal.toString());
+  } catch { return 0n; }
+}
+
+async function ensureConnTron() {
+  const net = cfg();
+  const pks = parsePKs();
+  if (!pks.length) throw new Error("Private key kosong");
+  await initTron(net);
+
+  const needRebuild = tronWallets.length !== pks.length ||
+    pks.some((pk, i) => !tronWallets[i] || tronWallets[i].pk !== pk);
+  if (needRebuild) {
+    const built = [];
+    for (const pk of pks) {
+      const addr = tronAddrFromPK(pk);
+      built.push({ pk, address: addr });
+    }
+    tronWallets = built;
+  }
+}
+
+// ==================================================
+// ============== UNIFIED CONNECTION =================
+// ==================================================
+async function ensureConn() {
+  const net = cfg();
+  if (net.type === 'tron') {
+    await ensureConnTron();
+  } else {
+    const pks = parsePKs();
+    if (!pks.length) throw new Error("Private key kosong");
+    if (!provider) provider = await pilihProvider(net);
+    const needRebuild = wallets.length !== pks.length ||
+      pks.some((pk, i) => !wallets[i] || wallets[i].pk !== pk);
+    if (needRebuild) {
+      const built = [];
+      for (const pk of pks) {
+        try {
+          const w = new ethers.Wallet(pk, provider);
+          built.push({ pk, wallet: w });
+        } catch (e) {
+          throw new Error("PK tidak valid: " + pk.slice(0,10) + "... — " + e.message);
+        }
+      }
+      wallets = built;
+    } else {
+      wallets.forEach(item => { if (item.wallet.provider !== provider) item.wallet = item.wallet.connect(provider); });
+    }
+  }
+}
+
+// ==================================================
+// ============== VALIDASI ALAMAT TUJUAN ============
+// ==================================================
+function validateTo(to, net) {
+  if (!to) return { ok:false, msg:"Alamat tujuan kosong" };
+  if (net.type === 'tron') {
+    if (!tronWeb) return { ok:false, msg:"TronWeb belum init" };
+    if (!to.startsWith('T') || to.length !== 34)
+      return { ok:false, msg:"Alamat Tron harus mulai 'T' dan 34 char" };
+    try {
+      const hex = tronWeb.address.toHex(to);
+      if (!/^41[0-9a-fA-F]{40}$/.test(hex)) return { ok:false, msg:"Alamat Tron tidak valid" };
+      return { ok:true };
+    } catch { return { ok:false, msg:"Alamat Tron tidak valid" }; }
+  } else {
+    if (!ethers.isAddress(to)) return { ok:false, msg:"Alamat EVM tidak valid" };
+    if (ethers.getAddress(to) !== to) return { ok:false, msg:"Checksum tidak cocok: " + ethers.getAddress(to) };
+    return { ok:true };
+  }
+}
+
+// ==================================================
+// ============== UI SALDO ===========================
+// ==================================================
+async function refreshSaldo(force) {
+  const now = Date.now();
+  if (!force && now - lastUiRefresh < 3000) return;
+  lastUiRefresh = now;
+  try {
+    await ensureConn();
+    const net = cfg();
+    let html = "";
+
+    if (net.type === 'tron') {
+      for (const item of tronWallets) {
+        const bal = await getTrxBalance(item.address);
+        const usdtBal = await getTrc20Balance(item.address, net.usdt);
+        const trxFmt = (Number(bal) / 1e6).toFixed(6);
+        const usdtFmt = (Number(usdtBal) / 10**net.usdtDecimals).toFixed(6);
+        html += `<div class="saldo wallet-card">
+          <b>${item.address}</b><br>
+          USDT (TRC20) : <b class="${usdtBal > 0n ? 'ok' : 'dim'}">${usdtFmt}</b><br>
+          TRX : <b>${trxFmt} TRX</b><br>
+          <span class="dim">Fee TRC20 transfer ~ 15-30 TRX, TRX transfer ~ 0-1 TRX</span>
+        </div>`;
+      }
+    } else {
+      const { gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+      const { gasCost: gasCostUsdt } = await hitungGas(provider, GAS_LIMIT_USDT);
+      for (const item of wallets) {
+        const bal = await provider.getBalance(item.wallet.address);
+        const usdtBal = net.usdt ? await (async () => {
+          try { const c = new ethers.Contract(net.usdt, ERC20_ABI, provider); return await c.balanceOf(item.wallet.address); }
+          catch { return 0n; }
+        })() : 0n;
+        const usdtFmt = net.usdt ? ethers.formatUnits(usdtBal, net.usdtDecimals) : "-";
+        let maxNativeAfter = 0n;
+        if (usdtBal > 0n) {
+          const afterUsdt = bal - gasCostUsdt;
+          maxNativeAfter = afterUsdt > gasCost ? afterUsdt - gasCost : 0n;
+        } else {
+          maxNativeAfter = bal > gasCost ? bal - gasCost : 0n;
+        }
+        html += `<div class="saldo wallet-card">
+          <b>${item.wallet.address}</b><br>
+          USDT : <b class="${usdtBal > 0n ? 'ok' : 'dim'}">${usdtFmt}</b><br>
+          ${net.symbol} : <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>
+          Gas USDT: ${ethers.formatEther(gasCostUsdt)} | Gas ${net.symbol}: ${ethers.formatEther(gasCost)} ${net.symbol}<br>
+          MAX ${net.symbol} (setelah USDT): <b class="${maxNativeAfter > 0n ? 'ok' : 'err'}">${maxNativeAfter > 0n ? ethers.formatEther(maxNativeAfter) + ' ' + net.symbol : 'tidak cukup'}</b>
+        </div>`;
+      }
+    }
+    $('saldoBox').innerHTML = html || "Tidak ada wallet.";
+  } catch (e) { /* diamkan */ }
+}
+
+// ==================================================
+// ============== KIRIM TRON (USDT max → TRX) =======
+// ==================================================
+async function kirimSemuaTron(item, to, net) {
+  const addr = item.address;
+  let anySuccess = false;
+
+  // Setup TronWeb instance khusus wallet ini
+  const tw = new TronWeb({ fullHost: net.fullHost, privateKey: item.pk.replace(/^0x/, '') });
+
+  // --- 1) Kirim USDT TRC20 MAX ---
+  try {
+    const usdtBal = await getTrc20Balance(addr, net.usdt);
+    if (usdtBal > 0n) {
+      log(`→ [${addr.slice(0,8)}...] Kirim USDT ${(Number(usdtBal)/1e6).toFixed(6)} (TRC20)`, "info");
+      const contract = await tw.contract(TRC20_ABI, net.usdt);
+      const tx = await contract.transfer(to, usdtBal.toString()).send({
+        feeLimit: TRON_FEE_LIMIT,
+        callValue: 0
+      });
+      const txid = tx?.txid || tx;
+      log(`  ✓ USDT Tx: ${txid}`, "ok");
+      anySuccess = true;
+    }
+  } catch (e) {
+    log(`✗ [${addr.slice(0,8)}...] USDT TRC20: ${e.message || e}`, "err");
+  }
+
+  // --- 2) Kirim sisa TRX MAX ---
+  try {
+    const bal = await getTrxBalance(addr);
+    // simpan ~1.1 TRX untuk fee (TRX transfer butuh bandwidth/energy, ~0.27-1 TRX)
+    const FEE_SAFETY = 1_100_000n;   // 1.1 TRX dalam SUN
+    const value = bal - FEE_SAFETY;
+    if (value <= 0n) {
+      log(`⏳ [${addr.slice(0,8)}...] sisa TRX tidak cukup (min 1.1 TRX)`, "warn");
+      return anySuccess;
+    }
+    log(`→ [${addr.slice(0,8)}...] Kirim ${(Number(value)/1e6).toFixed(6)} TRX`, "info");
+    const tx = await tw.trx.sendTransaction(to, value.toString());
+    const txid = tx?.txid || tx?.transaction?.txID || JSON.stringify(tx).slice(0,80);
+    log(`  ✓ TRX Tx: ${txid}`, "ok");
+    anySuccess = true;
+  } catch (e) {
+    log(`✗ [${addr.slice(0,8)}...] TRX: ${e.message || e}`, "err");
+  }
+
+  return anySuccess;
+}
+
+// ==================================================
+// ============== KIRIM EVM (USDT max → native) =====
+// ==================================================
+async function kirimSemuaUntukWallet(item, to, net) {
+  const addr = item.wallet.address;
+  let anySuccess = false;
+
+  // --- 1) Kirim USDT MAX ---
+  if (net.usdt) {
+    try {
+      const c = new ethers.Contract(net.usdt, ERC20_ABI, provider);
+      const usdtBal = await c.balanceOf(addr);
+      if (usdtBal > 0n) {
+        const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_USDT);
+        const nativeBal = await provider.getBalance(addr);
+        if (nativeBal < gasCost) {
+          log(`⏳ [${addr.slice(0,8)}...] USDT ada tapi gas ${net.symbol} tidak cukup`, "warn");
+        } else {
+          log(`→ [${addr.slice(0,8)}...] Kirim USDT ${ethers.formatUnits(usdtBal, net.usdtDecimals)}`, "info");
+          const nonce = await provider.getTransactionCount(addr, "pending");
+          const tx = await c.connect(item.wallet).transfer(to, usdtBal, { gasLimit: GAS_LIMIT_USDT, gasPrice, nonce });
+          pendingNonces.set(addr, { nonce, hash: tx.hash });
+          log(`  ✓ USDT Tx: ${tx.hash} (nonce ${nonce})`, "ok");
+          tx.wait().then(r => { if (r) log(`  ✓ USDT confirm block ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok"); }).catch(() => {});
+          anySuccess = true;
+        }
+      }
+    } catch (e) {
+      log(`✗ [${addr.slice(0,8)}...] USDT gagal: ${e.message}`, "err");
+    }
+  }
+
+  // --- 2) Kirim sisa native MAX ---
+  try {
+    const bal = await provider.getBalance(addr);
+    const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+    const value = bal - gasCost;
+    if (value <= 0n) {
+      log(`⏳ [${addr.slice(0,8)}...] sisa ${net.symbol} tidak cukup`, "warn");
+      return anySuccess;
+    }
+    log(`→ [${addr.slice(0,8)}...] Kirim ${ethers.formatEther(value)} ${net.symbol}`, "info");
+    const nonce = await provider.getTransactionCount(addr, "pending");
+    const tx = await item.wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT_ETH, gasPrice, nonce });
+    pendingNonces.set(addr, { nonce, hash: tx.hash });
+    log(`  ✓ ${net.symbol} Tx: ${tx.hash} (nonce ${nonce})`, "ok");
+    tx.wait().then(r => { if (r) log(`  ✓ ${net.symbol} confirm block ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok"); }).catch(() => {});
+    anySuccess = true;
+  } catch (e) {
+    log(`✗ [${addr.slice(0,8)}...] ${net.symbol} gagal: ${e.message}`, "err");
+  }
+  return anySuccess;
+}
+
+// ==================================================
+// ============== KIRIM SEKALI =======================
+// ==================================================
+async function go(silent) {
+  const net = cfg();
+  const to = $('to').value.trim();
+  if (!to) { log("✗ Alamat tujuan kosong.", "err"); return { ok:false }; }
+
+  try {
+    await ensureConn();
+    const v = validateTo(to, net);
+    if (!v.ok) { log("✗ " + v.msg, "err"); return { ok:false }; }
+
+    if (!$('autoConfirm').checked && !silent) {
+      const count = net.type === 'tron' ? tronWallets.length : wallets.length;
+      if (!confirm(`Kirim USDT+${net.symbol} dari ${count} wallet ke ${to}?`)) { log("Dibatalkan.", "warn"); return { ok:false }; }
+    }
+
+    let anySuccess = false;
+    if (net.type === 'tron') {
+      for (const item of tronWallets) {
+        const ok = await kirimSemuaTron(item, to, net);
+        if (ok) anySuccess = true;
+      }
+    } else {
+      for (const item of wallets) {
+        const ok = await kirimSemuaUntukWallet(item, to, net);
+        if (ok) anySuccess = true;
+      }
+    }
+    return { ok: anySuccess };
+  } catch (e) {
+    log("✗ Error: " + e.message, "err");
+    return { ok:false, err:e.message };
+  }
+}
+
+// ==================================================
+// ============== BATALKAN PENDING (EVM only) =======
+// ==================================================
+async function cancelPending() {
+  const net = cfg();
+  if (net.type === 'tron') { log("Batalkan pending tidak didukung di Tron.", "warn"); return; }
+  try {
+    await ensureConn();
+    let any = false;
+    for (const item of wallets) {
+      const addr = item.wallet.address;
+      let info = pendingNonces.get(addr);
+      if (!info) {
+        try {
+          const cnt = await provider.getTransactionCount(addr, "latest");
+          const pnd = await provider.getTransactionCount(addr, "pending");
+          if (pnd > cnt) info = { nonce: cnt, hash: null };
+        } catch {}
+      }
+      if (!info) continue;
+      any = true;
+      const fee = await provider.getFeeData();
+      const base = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+      const cancelGas = (base * 3n) + ethers.parseUnits("5","gwei");
+      log(`✖ [${addr.slice(0,8)}...] Batalkan nonce ${info.nonce} gas ${ethers.formatUnits(cancelGas,"gwei")} gwei`, "warn");
+      try {
+        const tx = await item.wallet.sendTransaction({
+          to: addr, value: 0n, gasLimit: GAS_LIMIT_ETH, gasPrice: cancelGas, nonce: info.nonce
+        });
+        log(`  ✓ Cancel tx: ${tx.hash}`, "ok");
+        pendingNonces.delete(addr);
+      } catch (e) {
+        log(`  ✗ Gagal cancel: ${e.message}`, "err");
+      }
+    }
+    if (!any) log("Tidak ada pending tx.", "warn");
+  } catch (e) {
+    log("✗ Error cancel: " + e.message, "err");
+  }
+}
+
+// ==================================================
+// ============== LOOP UTAMA =========================
+// ==================================================
+let loopBusy = false;
+async function loopTick() {
+  if (!autoRunning || loopBusy) return;
+  loopBusy = true;
+  const net = cfg();
+  try {
+    await ensureConn();
+
+    // ---------- TRON ----------
+    if (net.type === 'tron') {
+      const to = $('to').value.trim();
+      const v = validateTo(to, net);
+      if (!v.ok) { setStatus("✗ " + v.msg, false); return; }
+
+      let anyReady = false;
+      const rows = [];
+      for (const item of tronWallets) {
+        const trx = await getTrxBalance(item.address);
+        const usdt = await getTrc20Balance(item.address, net.usdt);
+        const hasUsdt = usdt > 0n && trx >= 30_000_000n;         // ~30 TRX fee buffer
+        const hasTrx  = trx > 1_100_000n;                         // > 1.1 TRX
+        rows.push({ item, trx, usdt, hasUsdt, hasTrx });
+        if (hasUsdt || hasTrx) anyReady = true;
+      }
+      if (!anyReady) {
+        const key = "wait:" + rows.map(r => `${r.item.address.slice(0,6)}:USDT=${(Number(r.usdt)/1e6).toFixed(2)},TRX=${(Number(r.trx)/1e6).toFixed(2)}`).join("|");
+        if (key !== lastStatusKey) {
+          log(`⏳ Menunggu saldo Tron. [${rows.map(r => `${r.item.address.slice(0,6)}=${(Number(r.trx)/1e6).toFixed(2)}TRX`).join(", ")}]`, "warn");
+          lastStatusKey = key;
+        }
+        setStatus(`⏳ Menunggu saldo`, true);
+        return;
+      }
+      lastStatusKey = "";
+      setStatus(`⚙ Mengirim (Tron)...`, true);
+      for (const r of rows) {
+        await kirimSemuaTron(r.item, to, net);
+      }
+      await refreshSaldo(true);
+      return;
+    }
+
+    // ---------- EVM ----------
+    const to = $('to').value.trim();
+    const v = validateTo(to, net);
+    if (!v.ok) { setStatus("✗ " + v.msg, false); return; }
+
+    const { gasCost: gasCostEth } = await hitungGas(provider, GAS_LIMIT_ETH);
+    const { gasCost: gasCostUsdt } = await hitungGas(provider, GAS_LIMIT_USDT);
+
+    let anyReady = false;
+    const allBalances = [];
+    for (const item of wallets) {
+      try {
+        const bal = await provider.getBalance(item.wallet.address);
+        let usdtBal = 0n;
+        if (net.usdt) {
+          try {
+            const c = new ethers.Contract(net.usdt, ERC20_ABI, provider);
+            usdtBal = await c.balanceOf(item.wallet.address);
+          } catch {}
+        }
+        const hasUsdt = usdtBal > 0n && bal >= gasCostUsdt;
+        const hasNative = bal > gasCostEth;
+        allBalances.push({ item, bal, usdtBal, value: bal - gasCostEth });
+        if (hasUsdt || hasNative) anyReady = true;
+      } catch {}
+    }
+
+    if (!anyReady) {
+      const summary = allBalances.map(b => {
+        const u = net.usdt ? ethers.formatUnits(b.usdtBal, net.usdtDecimals) : "-";
+        return `${b.item.wallet.address.slice(0,6)}:USDT=${u},${net.symbol}=${ethers.formatEther(b.bal)}`;
+      }).join(" | ");
+      const key = "wait:" + summary;
+      if (key !== lastStatusKey) {
+        log(`⏳ Menunggu saldo. [${summary}]`, "warn");
+        lastStatusKey = key;
+      }
+      setStatus(`⏳ Menunggu saldo`, true);
+      return;
+    }
+
+    lastStatusKey = "";
+    setStatus(`⚙ Mengirim...`, true);
+
+    for (const { item, usdtBal, bal } of allBalances) {
+      const addr = item.wallet.address;
+
+      // skip kalau masih ada pending tx
+      if (pendingNonces.has(addr)) {
+        const cached = pendingNonces.get(addr);
+        const rc = await provider.getTransactionReceipt(cached.hash).catch(() => null);
+        if (!rc) continue;
+        pendingNonces.delete(addr);
+      }
+
+      // prioritas 1: USDT
+      if (net.usdt && usdtBal > 0n) {
+        try {
+          const { gasPrice } = await hitungGas(provider, GAS_LIMIT_USDT);
+          if (bal < GAS_LIMIT_USDT * gasPrice) {
+            log(`⏳ [${addr.slice(0,8)}...] USDT ada tapi gas tidak cukup`, "warn");
+          } else {
+            const nonce = await provider.getTransactionCount(addr, "pending");
+            const c = new ethers.Contract(net.usdt, ERC20_ABI, item.wallet);
+            const tx = await c.transfer(to, usdtBal, { gasLimit: GAS_LIMIT_USDT, gasPrice, nonce });
+            pendingNonces.set(addr, { nonce, hash: tx.hash });
+            log(`✓ [${addr.slice(0,8)}...] USDT ${ethers.formatUnits(usdtBal, net.usdtDecimals)} → ${tx.hash}`, "ok");
+            tx.wait().then(r => { if (r) pendingNonces.delete(addr); }).catch(() => {});
+            setStatus(`✓ USDT terkirim`, true);
+            continue;
+          }
+        } catch (e) {
+          log(`✗ [${addr.slice(0,8)}...] USDT: ${e.message}`, "err");
+        }
+      }
+
+      // prioritas 2: native
+      try {
+        const freshBal = await provider.getBalance(addr);
+        const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+        const value = freshBal - gasCost;
+        if (value <= 0n) continue;
+        const nonce = await provider.getTransactionCount(addr, "pending");
+        const tx = await item.wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT_ETH, gasPrice, nonce });
+        pendingNonces.set(addr, { nonce, hash: tx.hash });
+        log(`✓ [${addr.slice(0,8)}...] ${ethers.formatEther(value)} ${net.symbol} → ${tx.hash}`, "ok");
+        tx.wait().then(r => { if (r) pendingNonces.delete(addr); }).catch(() => {});
+        setStatus(`✓ ${net.symbol} terkirim`, true);
+      } catch (e) {
+        log(`✗ [${addr.slice(0,8)}...] ${net.symbol}: ${e.message}`, "err");
+      }
+    }
+    await refreshSaldo(true);
+  } catch (e) {
+    const key = "err:" + e.message;
+    if (key !== lastStatusKey) {
+      log("✗ Loop error: " + e.message, "err");
+      lastStatusKey = key;
+    }
+    setStatus(`✗ Error — tetap mencoba...`, true);
+    provider = null; wallets = [];
+    tronWeb = null; tronWallets = [];
+  } finally {
+    loopBusy = false;
+  }
+}
+
+function startAuto() {
+  if (autoRunning) return;
+  const pks = parsePKs();
+  const to = $('to').value.trim();
+  if (!pks.length) return log("✗ Isi minimal 1 private key.", "err");
+  if (!to) return log("✗ Isi alamat tujuan.", "err");
+  if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
+
+  autoRunning = true;
+  reset();
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('btnOnce').disabled = true;
+  const iv = getInterval();
+  log(`▶ AUTO START — ${pks.length} wallet di ${cfg().name}. Prioritas USDT max → ${cfg().symbol}. Interval ${iv}ms.`, "ok");
+  setStatus("▶ Berjalan...", true);
+  loopId = setInterval(loopTick, iv);
+  loopTick();
+}
+
+async function stopAuto() {
+  if (!autoRunning) return;
+  autoRunning = false;
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnOnce').disabled = false;
+
+  if ($('cancelOnStop').checked && cfg().type !== 'tron') {
+    log("■ AUTO STOP — membatalkan pending tx...", "warn");
+    setStatus("■ Membatalkan pending...", false);
+    await cancelPending();
+  } else {
+    log("■ AUTO STOP.", "warn");
+  }
+  setStatus("■ Berhenti", false);
+}
+
+// reset koneksi saat ganti network / PK
+$('net').addEventListener('change', () => {
+  provider = null; wallets = [];
+  tronWeb = null; tronWallets = [];
+  // update placeholder tujuan sesuai network
+  const net = cfg();
+  $('to').placeholder = net.type === 'tron' ? 'T...' : '0x...';
+  refreshSaldo(true);
+});
+$('pk').addEventListener('blur', () => {
+  provider = null; wallets = [];
+  tronWeb = null; tronWallets = [];
+  refreshSaldo(true);
+});
+
+setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 3000);
+
+// Set placeholder awal
+$('to').placeholder = cfg().type === 'tron' ? 'T...' : '0x...';
+</script>
+</body>
+</html>
