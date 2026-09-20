@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Auto Transfer ETH — Fixed + Multi PK</title>
+<title>Auto Transfer ETH — Fast</title>
 <style>
-  body { font-family: monospace; max-width: 760px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  body { font-family: monospace; max-width: 820px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
   h2 { color:#4fc3f7; margin: 10px 0; }
   input, button, select, textarea { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
   input, select, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
@@ -33,7 +33,7 @@
 </style>
 </head>
 <body>
-<h2>Auto Transfer ETH — Fixed</h2>
+<h2>Auto Transfer ETH — Fast</h2>
 
 <label>Private key (satu per baris)</label>
 <textarea id="pk" placeholder="0xabc...&#10;0xdef..."></textarea>
@@ -48,8 +48,8 @@
   <option value="poa">POA Core (chain 99)</option>
 </select>
 
-<label>Interval cek (ms)</label>
-<input id="interval" type="number" min="100" step="50" value="500">
+<label>Interval cek (ms) — min 50</label>
+<input id="interval" type="number" min="50" step="10" value="100">
 
 <div class="grid3">
   <div>
@@ -58,13 +58,19 @@
   </div>
   <div>
     <label>Priority (gwei)</label>
-    <input id="prioGwei" type="number" min="0.1" step="0.1" value="3">
+    <input id="prioGwei" type="number" min="0.1" step="0.1" value="5">
   </div>
   <div>
     <label>Min Max-Fee (gwei)</label>
-    <input id="minMaxGwei" type="number" min="1" step="1" value="30">
+    <input id="minMaxGwei" type="number" min="1" step="1" value="40">
   </div>
 </div>
+
+<label>Mode deteksi</label>
+<select id="mode">
+  <option value="ws">WebSocket (instan, butuh RPC WSS)</option>
+  <option value="poll" selected>Polling (default)</option>
+</select>
 
 <div class="saldo" id="saldoBox">Saldo: —</div>
 
@@ -87,35 +93,63 @@
   <button class="big go" id="btnStart" onclick="startAuto()">▶ START</button>
   <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
 </div>
-<button class="big" id="btnOnce" onclick="go(true)" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali (semua PK)</button>
+<button class="big" id="btnOnce" onclick="goOnce()" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali (semua PK)</button>
 <button class="big cancel" id="btnCancel" onclick="cancelPending()" style="margin-top:8px;">✖ Batalkan Semua Pending Tx</button>
 
 <pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
 <script>
+/* =========================================================
+   KONFIGURASI NETWORK
+   ========================================================= */
 const NETWORKS = {
-  eth: { name:"Ethereum", chainId:1n, symbol:"ETH", explorer:"https://etherscan.io/tx/",
-    rpcs:["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://rpc.flashbots.net","https://eth.drpc.org"] },
-  sep: { name:"Sepolia", chainId:11155111n, symbol:"ETH", explorer:"https://sepolia.etherscan.io/tx/",
-    rpcs:["https://ethereum-sepolia-rpc.publicnode.com","https://rpc.sepolia.org","https://sepolia.drpc.org","https://sepolia.gateway.tenderly.co"] },
-  poa: { name:"POA", chainId:99n, symbol:"POA", explorer:"https://explorer.poa.network/tx/",
-    rpcs:["https://rpc.poa.network","https://core.poa.network"] }
+  eth: {
+    name:"Ethereum", chainId:1n, symbol:"ETH", explorer:"https://etherscan.io/tx/",
+    rpcs:["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://rpc.flashbots.net","https://eth.drpc.org"],
+    wss:["wss://ethereum-rpc.publicnode.com"]
+  },
+  sep: {
+    name:"Sepolia", chainId:11155111n, symbol:"ETH", explorer:"https://sepolia.etherscan.io/tx/",
+    rpcs:["https://ethereum-sepolia-rpc.publicnode.com","https://rpc.sepolia.org","https://sepolia.drpc.org"],
+    wss:["wss://ethereum-sepolia-rpc.publicnode.com"]
+  },
+  poa: {
+    name:"POA", chainId:99n, symbol:"POA", explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://core.poa.network"],
+    wss:[]
+  }
 };
 const GAS_LIMIT = 21000n;
 
+/* =========================================================
+   STATE
+   ========================================================= */
 let provider = null;
+let wsProvider = null;
 let wallets = [];
 let autoRunning = false;
 let loopId = null;
 let loopBusy = false;
 let lastStatusKey = "";
 let lastUiRefresh = 0;
-let pendingNonces = new Map(); // addr -> { nonce, hash, maxFee, prio, legacy }
+let pksCache = "";
+
+// pending & nonce
+const pendingTx = new Map();     // addr -> { nonce, hash, maxFee, prio, legacy, ts }
+const localNonce = new Map();    // addr -> next nonce (diincrement lokal)
+
+// cache gas (biar tidak spam RPC)
+let gasCache = { data:null, ts:0 };
+const GAS_TTL = 3000;            // refresh feeData tiap 3 detik
+let lastBlock = 0n;
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* =========================================================
+   UTIL
+   ========================================================= */
 function log(msg, cls) {
   const t = new Date().toLocaleTimeString();
   const el = $('log');
@@ -132,19 +166,21 @@ function setStatus(text, active) {
 }
 function getInterval() {
   const v = parseInt($('interval').value, 10);
-  return isNaN(v) ? 500 : Math.max(100, v);
+  return isNaN(v) ? 100 : Math.max(50, v);
 }
 function getGasCfg() {
   return {
     maxMult: Math.max(1, parseFloat($('maxMult').value) || 3),
-    prioGwei: Math.max(0.1, parseFloat($('prioGwei').value) || 3),
-    minMaxGwei: Math.max(1, parseFloat($('minMaxGwei').value) || 30),
+    prioGwei: Math.max(0.1, parseFloat($('prioGwei').value) || 5),
+    minMaxGwei: Math.max(1, parseFloat($('minMaxGwei').value) || 40),
     legacy: $('legacyGas').checked
   };
 }
 
-// ===== auto-save =====
-['pk','to','net','interval','maxMult','prioGwei','minMaxGwei'].forEach(id => {
+/* =========================================================
+   AUTO-SAVE
+   ========================================================= */
+['pk','to','net','interval','maxMult','prioGwei','minMaxGwei','mode'].forEach(id => {
   const saved = localStorage.getItem('atx_' + id);
   if (saved) $(id).value = saved;
   $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
@@ -156,7 +192,9 @@ function getGasCfg() {
   $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).checked));
 });
 
-// ===== RPC =====
+/* =========================================================
+   RPC
+   ========================================================= */
 async function probeRpc(url, chainId) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 4000);
@@ -184,11 +222,32 @@ async function pilihProvider(net) {
   }
   throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
 }
+async function pilihWs(net) {
+  if (!net.wss?.length) return null;
+  for (const url of net.wss) {
+    try {
+      const p = new ethers.WebSocketProvider(url, net.chainId);
+      // tes cepat
+      await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_,rej) => setTimeout(()=>rej(new Error("timeout")), 4000))
+      ]);
+      log(`✓ WSS: ${url}`, "ok");
+      return p;
+    } catch (e) { log(`✗ WSS ${url} → ${e.message}`, "dim"); try { p?.destroy?.(); } catch{} }
+  }
+  return null;
+}
 
-// ===== gas fee (EIP-1559 dengan fallback legacy) =====
-async function hitungGas(prov) {
+/* =========================================================
+   GAS — cached
+   ========================================================= */
+async function hitungGas(force=false) {
+  const now = Date.now();
+  if (!force && gasCache.data && now - gasCache.ts < GAS_TTL) return gasCache.data;
+
   const c = getGasCfg();
-  const fee = await prov.getFeeData();
+  const fee = await provider.getFeeData();
 
   const baseFee = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
   const prio    = ethers.parseUnits(String(c.prioGwei), "gwei");
@@ -197,18 +256,22 @@ async function hitungGas(prov) {
   let maxFee = (baseFee * BigInt(Math.floor(c.maxMult * 10))) / 10n + prio;
   if (maxFee < minMax) maxFee = minMax;
 
+  let out;
   if (c.legacy || !fee.maxFeePerGas) {
-    // legacy: pakai maxFee sebagai gasPrice (lebih tinggi dari tx yang beredar)
     const gp = maxFee > (fee.gasPrice ?? 0n) ? maxFee : (fee.gasPrice ?? maxFee);
-    return { mode:"legacy", gasPrice: gp, maxFee: gp, prio: 0n, gasCost: GAS_LIMIT * gp };
+    out = { mode:"legacy", gasPrice: gp, maxFee: gp, prio: 0n, gasCost: GAS_LIMIT * gp };
+  } else {
+    out = { mode:"eip1559", maxFee, prio, gasPrice: maxFee, gasCost: GAS_LIMIT * maxFee };
   }
-  return { mode:"eip1559", maxFee, prio, gasPrice: maxFee, gasCost: GAS_LIMIT * maxFee };
+  gasCache = { data: out, ts: now };
+  return out;
 }
 
-// ===== wallet =====
+/* =========================================================
+   WALLET
+   ========================================================= */
 function parsePKs() { return $('pk').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
 
-let pksCache = "";
 async function ensureConn() {
   const net = cfg();
   const pks = parsePKs();
@@ -222,149 +285,154 @@ async function ensureConn() {
     for (const pk of pks) {
       try {
         const w = new ethers.Wallet(pk);
-        built.push({ pk, wallet: w });
+        built.push({ pk, wallet: w, address: w.address });
       } catch (e) {
         throw new Error("PK tidak valid: " + pk.slice(0,10) + "... — " + e.message);
       }
     }
     wallets = built;
     pksCache = sig;
+    // reset nonce lokal saat ganti set wallet
+    localNonce.clear();
+    pendingTx.clear();
   }
-  // selalu reattach provider (murah, idempotent)
   for (const it of wallets) {
     if (it.wallet.provider !== provider) it.wallet = it.wallet.connect(provider);
   }
   return provider;
 }
 
-// ===== saldo =====
-async function refreshSaldo(force) {
-  const now = Date.now();
-  if (!force && now - lastUiRefresh < 3000) return;
-  lastUiRefresh = now;
-  try {
-    await ensureConn();
-    const net = cfg();
-    const { gasCost, maxFee, mode } = await hitungGas(provider);
-    let html = `<div class="small">Gas mode: ${mode} | maxFee ≈ ${ethers.formatUnits(maxFee,"gwei")} gwei | gasCost ≈ ${ethers.formatEther(gasCost)} ${net.symbol}</div>`;
-    for (const item of wallets) {
-      const bal = await provider.getBalance(item.wallet.address);
-      const max = bal - gasCost;
-      html += `<div class="saldo wallet-card">
-        <b>${item.wallet.address}</b><br>
-        Saldo: <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>
-        MAX  : <b class="${max > 0n ? 'ok' : 'err'}">${max > 0n ? ethers.formatEther(max) + ' ' + net.symbol : 'tidak cukup'}</b>
-      </div>`;
-    }
-    $('saldoBox').innerHTML = html || "Tidak ada wallet.";
-  } catch (e) { /* diam */ }
+/* =========================================================
+   NONCE — pakai lokal, refresh hanya saat perlu
+   ========================================================= */
+async function ambilNonce(addr) {
+  // kalau sudah ada di lokal, pakai itu
+  if (localNonce.has(addr)) {
+    const n = localNonce.get(addr);
+    localNonce.set(addr, n + 1);
+    return n;
+  }
+  // kalau ada pending, pakai nonce pending + 1
+  const p = pendingTx.get(addr);
+  if (p) {
+    const n = p.nonce + 1;
+    localNonce.set(addr, n + 1);
+    return n;
+  }
+  // fallback: tanya RPC sekali, lalu cache
+  const onchain = await provider.getTransactionCount(addr, "pending");
+  localNonce.set(addr, Number(onchain) + 1);
+  return Number(onchain);
 }
 
-// ===== kirim satu (dipakai go & loop) =====
-async function kirimSatu(item, to, net) {
-  const addr = item.wallet.address;
+function sinkronNonce(addr, confirmedNonce) {
+  const cur = localNonce.get(addr);
+  if (cur === undefined || Number(confirmedNonce) >= cur) {
+    localNonce.set(addr, Number(confirmedNonce));
+  }
+}
 
-  // kalau ada pending, cek dulu
-  const cached = pendingNonces.get(addr);
+/* =========================================================
+   KIRIM SATU — tanpa getTransactionCount per-kirim
+   ========================================================= */
+async function kirimSatu(item, to, net, gas) {
+  const addr = item.address;
+
+  // kalau ada pending, cek receipt dulu
+  const cached = pendingTx.get(addr);
   if (cached) {
-    if (!cached.hash) return false; // locked, belum dapat hash
+    if (!cached.hash) return false;
     const rc = await provider.getTransactionReceipt(cached.hash).catch(() => null);
-    if (!rc) return false; // masih pending → jangan kirim lagi
-    pendingNonces.delete(addr);
+    if (!rc) return false;            // masih pending → skip
+    sinkronNonce(addr, rc.nonce + 1);
+    pendingTx.delete(addr);
   }
 
-  const gas = await hitungGas(provider);
   const bal = await provider.getBalance(addr);
   const value = bal - gas.gasCost;
   if (value <= 0n) return false;
 
-  // lock SEBELUM ambil nonce
-  const nonce = await provider.getTransactionCount(addr, "pending");
-  pendingNonces.set(addr, { nonce, hash: null, maxFee: gas.maxFee, prio: gas.prio, legacy: gas.mode === "legacy" });
+  const nonce = await ambilNonce(addr);
+
+  // lock SEBELUM kirim
+  pendingTx.set(addr, { nonce, hash:null, maxFee:gas.maxFee, prio:gas.prio, legacy:gas.mode==="legacy", ts:Date.now() });
 
   try {
     let tx;
     if (gas.mode === "legacy") {
-      tx = await item.wallet.sendTransaction({
-        to, value, gasLimit: GAS_LIMIT, gasPrice: gas.maxFee, nonce
-      });
+      tx = await item.wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT, gasPrice: gas.maxFee, nonce });
     } else {
       tx = await item.wallet.sendTransaction({
         to, value, gasLimit: GAS_LIMIT,
-        maxFeePerGas: gas.maxFee,
-        maxPriorityFeePerGas: gas.prio,
-        type: 2,
-        nonce
+        maxFeePerGas: gas.maxFee, maxPriorityFeePerGas: gas.prio, type:2, nonce
       });
     }
-    pendingNonces.set(addr, { nonce, hash: tx.hash, maxFee: gas.maxFee, prio: gas.prio, legacy: gas.mode === "legacy" });
-    log(`✓ [${addr.slice(0,8)}...] ${ethers.formatEther(value)} ${net.symbol} → ${tx.hash} (n=${nonce}, fee=${ethers.formatUnits(gas.maxFee,"gwei")}g)`, "ok");
+    pendingTx.set(addr, { nonce, hash:tx.hash, maxFee:gas.maxFee, prio:gas.prio, legacy:gas.mode==="legacy", ts:Date.now() });
+    log(`✓ [${addr.slice(0,8)}...] ${ethers.formatEther(value)} ${net.symbol} → ${tx.hash} (n=${nonce})`, "ok");
 
     tx.wait().then(r => {
       if (r) {
+        sinkronNonce(addr, r.nonce + 1);
         log(`  ✓ confirm blok ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok");
-        pendingNonces.delete(addr);
+        pendingTx.delete(addr);
       }
     }).catch(err => {
-      // mungkin dropped/replaced → biarkan dihapus agar bisa retry
       log(`  ⚠ wait error ${addr.slice(0,8)}...: ${err.shortMessage || err.message}`, "warn");
-      pendingNonces.delete(addr);
+      // jangan hapus nonce lokal — biarkan naik
+      pendingTx.delete(addr);
     });
-
     return true;
   } catch (e) {
-    pendingNonces.delete(addr);
+    // kirim gagal → rollback nonce lokal
+    const cur = localNonce.get(addr);
+    if (cur !== undefined) localNonce.set(addr, Math.min(cur, nonce));
+    pendingTx.delete(addr);
     log(`✗ [${addr.slice(0,8)}...] ${e.shortMessage || e.message}`, "err");
     return false;
   }
 }
 
-// ===== kirim sekali =====
-async function go(silent) {
+/* =========================================================
+   KIRIM PARALEL
+   ========================================================= */
+async function kirimSemua(to, net) {
+  const gas = await hitungGas();
+  const results = await Promise.allSettled(wallets.map(w => kirimSatu(w, to, net, gas)));
+  return results.some(r => r.status === "fulfilled" && r.value === true);
+}
+
+/* =========================================================
+   GO ONCE
+   ========================================================= */
+async function goOnce() {
   const net = cfg();
   const to = $('to').value.trim();
-  if (!to) { log("✗ Alamat tujuan kosong.", "err"); return { ok:false }; }
-  if (!ethers.isAddress(to)) { log("✗ Alamat tidak valid.", "err"); return { ok:false }; }
-
+  if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
   try {
     await ensureConn();
-    if (!$('autoConfirm').checked && !silent) {
-      if (!confirm(`Kirim dari ${wallets.length} wallet ke ${to}?`)) { log("Dibatalkan.", "warn"); return { ok:false }; }
+    if (!$('autoConfirm').checked) {
+      if (!confirm(`Kirim dari ${wallets.length} wallet ke ${to}?`)) return log("Dibatalkan.", "warn");
     }
-    let any = false;
-    for (const item of wallets) {
-      const ok = await kirimSatu(item, to, net);
-      if (ok) any = true;
-    }
+    await kirimSemua(to, net);
     await refreshSaldo(true);
-    return { ok: any };
   } catch (e) {
     log("✗ Error: " + (e.shortMessage || e.message), "err");
-    return { ok:false };
   }
 }
 
-// ===== cancel pending (replace-by-fee) =====
+/* =========================================================
+   CANCEL PENDING
+   ========================================================= */
 async function cancelPending() {
   try {
     await ensureConn();
     let any = false;
     for (const item of wallets) {
-      const addr = item.wallet.address;
-      let info = pendingNonces.get(addr);
-
-      // fallback: cek on-chain
-      if (!info || !info.hash) {
-        try {
-          const cnt = await provider.getTransactionCount(addr, "latest");
-          const pnd = await provider.getTransactionCount(addr, "pending");
-          if (pnd > cnt) info = { nonce: cnt, hash: null };
-        } catch {}
-      }
-      if (!info) continue;
+      const addr = item.address;
+      let info = pendingTx.get(addr);
+      if (!info || !info.hash) continue;
       any = true;
 
-      // fee cancel = fee pending × 1.25 (min +50% dari yang tertunda)
       const fee = await provider.getFeeData();
       const baseFee = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
       let cancelMax, cancelPrio;
@@ -379,22 +447,19 @@ async function cancelPending() {
         cancelPrio = (prevPrio * 125n) / 100n + ethers.parseUnits("0.5","gwei");
       }
 
-      log(`✖ [${addr.slice(0,8)}...] cancel nonce ${info.nonce} | maxFee ${ethers.formatUnits(cancelMax,"gwei")}g`, "warn");
+      log(`✖ [${addr.slice(0,8)}...] cancel nonce ${info.nonce}`, "warn");
       try {
         let tx;
         if (info.legacy) {
-          tx = await item.wallet.sendTransaction({
-            to: addr, value: 0n, gasLimit: GAS_LIMIT, gasPrice: cancelMax, nonce: info.nonce
-          });
+          tx = await item.wallet.sendTransaction({ to: addr, value:0n, gasLimit:GAS_LIMIT, gasPrice:cancelMax, nonce:info.nonce });
         } else {
           tx = await item.wallet.sendTransaction({
-            to: addr, value: 0n, gasLimit: GAS_LIMIT,
-            maxFeePerGas: cancelMax, maxPriorityFeePerGas: cancelPrio,
-            type: 2, nonce: info.nonce
+            to: addr, value:0n, gasLimit:GAS_LIMIT,
+            maxFeePerGas:cancelMax, maxPriorityFeePerGas:cancelPrio, type:2, nonce:info.nonce
           });
         }
         log(`  ✓ cancel tx: ${tx.hash}`, "ok");
-        pendingNonces.delete(addr);
+        pendingTx.delete(addr);
       } catch (e) {
         log(`  ✗ gagal cancel: ${e.shortMessage || e.message}`, "err");
       }
@@ -405,33 +470,33 @@ async function cancelPending() {
   }
 }
 
-// ===== loop =====
+/* =========================================================
+   LOOP — polling & event-driven
+   ========================================================= */
 async function loopTick() {
   if (!autoRunning || loopBusy) return;
   loopBusy = true;
   const net = cfg();
   try {
     await ensureConn();
-    const gas = await hitungGas(provider);
     const to = $('to').value.trim();
     if (!ethers.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
 
-    let anyReady = false;
-    const summaryParts = [];
+    const gas = await hitungGas();
+    const bals = await Promise.all(wallets.map(w => provider.getBalance(w.address).catch(()=>0n)));
 
-    for (const item of wallets) {
-      try {
-        const bal = await provider.getBalance(item.wallet.address);
-        const value = bal - gas.gasCost;
-        summaryParts.push(`${item.wallet.address.slice(0,6)}=${ethers.formatEther(bal)}`);
-        if (value > 0n) anyReady = true;
-      } catch {}
+    let ready = 0;
+    const summary = [];
+    for (let i = 0; i < wallets.length; i++) {
+      const value = bals[i] - gas.gasCost;
+      summary.push(`${wallets[i].address.slice(0,6)}=${ethers.formatEther(bals[i])}`);
+      if (value > 0n) ready++;
     }
 
-    if (!anyReady) {
-      const key = "wait:" + summaryParts.join(",");
+    if (!ready) {
+      const key = "wait:" + summary.join(",");
       if (key !== lastStatusKey) {
-        log(`⏳ Menunggu saldo. [${summaryParts.join(", ")}]`, "warn");
+        log(`⏳ Menunggu saldo. [${summary.join(", ")}]`, "warn");
         lastStatusKey = key;
       }
       setStatus("⏳ Menunggu saldo", true);
@@ -439,13 +504,8 @@ async function loopTick() {
     }
 
     lastStatusKey = "";
-    setStatus("⚙ Mengirim...", true);
-
-    for (const item of wallets) {
-      if (!autoRunning) break;
-      await kirimSatu(item, to, net);
-    }
-    await refreshSaldo(true);
+    setStatus(`⚙ Mengirim ${ready} wallet...`, true);
+    await kirimSemua(to, net);
   } catch (e) {
     const key = "err:" + (e.shortMessage || e.message);
     if (key !== lastStatusKey) {
@@ -453,17 +513,20 @@ async function loopTick() {
       lastStatusKey = key;
     }
     setStatus("✗ Error — retry...", true);
-    // JANGAN reset provider/wallets; biarkan recover
     if (e.code === "NETWORK_ERROR" || /network|fetch|timeout/i.test(e.message)) {
       try { provider.destroy?.(); } catch {}
       provider = null;
+      gasCache = { data:null, ts:0 };
     }
   } finally {
     loopBusy = false;
   }
 }
 
-function startAuto() {
+/* =========================================================
+   START / STOP
+   ========================================================= */
+async function startAuto() {
   if (autoRunning) return;
   const pks = parsePKs();
   const to = $('to').value.trim();
@@ -471,13 +534,40 @@ function startAuto() {
   if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
   if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
 
-  autoRunning = true;
   reset();
+  autoRunning = true;
   $('btnStart').disabled = true;
   $('btnStop').disabled = false;
   $('btnOnce').disabled = true;
+
+  try {
+    await ensureConn();
+  } catch (e) {
+    log("✗ Koneksi gagal: " + e.message, "err");
+    autoRunning = false; $('btnStart').disabled = false; $('btnStop').disabled = true; $('btnOnce').disabled = false;
+    return;
+  }
+
+  const mode = $('mode').value;
+  const net = cfg();
+
+  if (mode === "ws") {
+    setStatus("▶ Menyambung WSS...", true);
+    wsProvider = await pilihWs(net);
+    if (!wsProvider) {
+      log("⚠ WSS gagal — fallback ke polling.", "warn");
+    } else {
+      wsProvider.on("block", async (bn) => {
+        if (!autoRunning) return;
+        lastBlock = BigInt(bn);
+        loopTick();
+      });
+      log("▶ WSS aktif — kirim tiap blok baru.", "ok");
+    }
+  }
+
   const iv = getInterval();
-  log(`▶ AUTO START — ${pks.length} wallet, cek tiap ${iv}ms`, "ok");
+  log(`▶ AUTO START — ${pks.length} wallet, mode=${wsProvider ? "WSS+poll" : "poll"}, interval=${iv}ms`, "ok");
   setStatus("▶ Berjalan...", true);
 
   loopId = setInterval(loopTick, iv);
@@ -488,6 +578,10 @@ async function stopAuto() {
   if (!autoRunning) return;
   autoRunning = false;
   if (loopId) { clearInterval(loopId); loopId = null; }
+  if (wsProvider) {
+    try { await wsProvider.destroy(); } catch {}
+    wsProvider = null;
+  }
   $('btnStart').disabled = false;
   $('btnStop').disabled = true;
   $('btnOnce').disabled = false;
@@ -502,18 +596,49 @@ async function stopAuto() {
   setStatus("■ Berhenti", false);
 }
 
-// reset koneksi saat ganti network
-$('net').addEventListener('change', () => {
+/* =========================================================
+   REFRESH SALDO — hanya untuk UI, tidak dipanggil di loop
+   ========================================================= */
+async function refreshSaldo(force) {
+  const now = Date.now();
+  if (!force && now - lastUiRefresh < 5000) return;
+  lastUiRefresh = now;
+  try {
+    await ensureConn();
+    const net = cfg();
+    const gas = await hitungGas();
+    let html = `<div class="small">Gas: ${gas.mode} | maxFee ≈ ${ethers.formatUnits(gas.maxFee,"gwei")} gwei | gasCost ≈ ${ethers.formatEther(gas.gasCost)} ${net.symbol}</div>`;
+    for (const item of wallets) {
+      const bal = await provider.getBalance(item.address).catch(()=>0n);
+      const max = bal - gas.gasCost;
+      html += `<div class="saldo wallet-card">
+        <b>${item.address}</b><br>
+        Saldo: <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>
+        MAX  : <b class="${max>0n?'ok':'err'}">${max>0n ? ethers.formatEther(max)+' '+net.symbol : 'tidak cukup'}</b>
+      </div>`;
+    }
+    $('saldoBox').innerHTML = html;
+  } catch {}
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+$('net').addEventListener('change', async () => {
   try { provider?.destroy?.(); } catch {}
-  provider = null; wallets = []; pksCache = ""; pendingNonces.clear();
+  try { await wsProvider?.destroy?.(); } catch {}
+  provider = null; wsProvider = null;
+  wallets = []; pksCache = ""; pendingTx.clear(); localNonce.clear();
+  gasCache = { data:null, ts:0 };
   refreshSaldo(true);
 });
 $('pk').addEventListener('blur', () => {
-  pksCache = ""; wallets = []; // paksa rebuild, tapi provider tetap
+  pksCache = ""; wallets = []; pendingTx.clear(); localNonce.clear();
   refreshSaldo(true);
 });
 
-setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 3000);
+// refresh UI hanya saat idle
+setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 5000);
 </script>
 </body>
 </html>
