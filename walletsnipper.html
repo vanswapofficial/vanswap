@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ETH Sniper — Fixed</title>
+<title>ETH Sniper — Robust</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: monospace; max-width: 860px; margin: 12px auto; padding: 0 12px; background:#0d0d0d; color:#e0e0e0; font-size:13px; }
@@ -19,7 +19,7 @@
   button.gray { background:#555; color:#eee; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
   .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
-  pre { background:#000; padding:10px; border:1px solid #222; white-space:pre-wrap; word-break:break-all; max-height:300px; overflow:auto; font-size:11px; line-height:1.5; }
+  pre { background:#000; padding:10px; border:1px solid #222; white-space:pre-wrap; word-break:break-all; max-height:320px; overflow:auto; font-size:11px; line-height:1.5; }
   .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#555; }
   label { display:block; margin-top:8px; margin-bottom:2px; color:#999; font-size:11px; }
   .status { text-align:center; font-size:15px; font-weight:bold; color:#ffb74d; margin:8px 0; min-height:22px; }
@@ -33,10 +33,10 @@
 </style>
 </head>
 <body>
-<h2>⚡ ETH Sniper — Fixed</h2>
+<h2>⚡ ETH Sniper — Robust</h2>
 
 <div class="hint">
-  Semua jalan di browser. Butuh RPC WSS yang support <code>eth_subscribe</code>. Publicnode support tapi rate-limited.
+  Polling heartbeat selalu jalan. WSS untuk deteksi cepat. Semua di browser.
 </div>
 
 <h3>1. Wallet Target</h3>
@@ -62,8 +62,8 @@
     <input id="wssUrl" value="wss://ethereum-rpc.publicnode.com">
   </div>
 </div>
-<label>RPC HTTP (pisah koma)</label>
-<input id="httpRpcs" value="https://ethereum-rpc.publicnode.com,https://eth.llamarpc.com,https://eth.drpc.org">
+<label>RPC HTTP (pisah koma, urut dari tercepat)</label>
+<input id="httpRpcs" value="https://eth.llamarpc.com,https://ethereum-rpc.publicnode.com,https://eth.drpc.org">
 
 <h3>4. Gas</h3>
 <div class="grid3">
@@ -92,6 +92,11 @@
   </div>
 </div>
 
+<div class="grid2">
+  <div><label>Polling interval (ms)</label><input id="pollIv" type="number" value="500"></div>
+  <div><label>Watchdog WSS (detik)</label><input id="wdSec" type="number" value="30"></div>
+</div>
+
 <h3>6. Kontrol</h3>
 <div class="status" id="status">— idle —</div>
 <div class="grid2">
@@ -104,11 +109,12 @@
 <div class="box">
   <div class="kv"><span>Status WSS</span><span id="stWss">—</span></div>
   <div class="kv"><span>Pending diterima</span><span id="stRx">0</span></div>
-  <div class="kv"><span>Tx match (value>0)</span><span id="stMatch">0</span></div>
+  <div class="kv"><span>Tx match (value&gt;0)</span><span id="stMatch">0</span></div>
   <div class="kv"><span>Tx kuras terkirim</span><span id="stSent">0</span></div>
   <div class="kv"><span>Nonce</span><span id="stNonce">—</span></div>
   <div class="kv"><span>Saldo target</span><span id="stBal">—</span></div>
-  <div class="kv"><span>Latency</span><span id="stLat">—</span></div>
+  <div class="kv"><span>Latency sweep</span><span id="stLat">—</span></div>
+  <div class="kv"><span>Uptime</span><span id="stUp">0s</span></div>
 </div>
 
 <pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
@@ -122,12 +128,14 @@ const NET = {
 };
 
 let ws = null, wsId = 1;
-let targetWallet = null, targetAddr = null, toAddr = null;
+let targetWallet = null, targetAddr = null;
 let provider = null, running = false;
 let stats = { rx:0, match:0, sent:0 };
 let nonceCache = null;
 let pendingSweep = false, sweepStartTs = 0;
-let wsRetry = null, pollId = null;
+let wsRetry = null, pollId = null, watchdogId = null, uptimeId = null;
+let lastWssEvent = 0;
+let startTs = 0;
 const seenTx = new Set();
 
 function log(msg, cls) {
@@ -152,6 +160,8 @@ function setSt(k, v, cls) {
   el.textContent = v;
   el.style.color = cls === 'ok' ? '#81c784' : cls === 'err' ? '#ef5350' : '#4fc3f7';
 }
+function getPollIv() { const v = parseInt($('pollIv').value, 10); return isNaN(v) ? 500 : Math.max(200, v); }
+function getWdMs() { const v = parseInt($('wdSec').value, 10); return (isNaN(v) ? 30 : Math.max(10, v)) * 1000; }
 
 async function initWallet() {
   const pk = $('pkTarget').value.trim();
@@ -175,11 +185,34 @@ function withTimeout(promise, ms, label = "rpc") {
     new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timeout ${ms}ms`)), ms))
   ]);
 }
-async function getBalanceSafe(addr, ms = 4000) {
-  try { return await withTimeout(provider.getBalance(addr), ms, "getBalance"); }
-  catch (e) { log("⚠ " + e.message, "warn"); return null; }
+
+/* ===== getBalance: retry ke RPC lain kalau timeout ===== */
+async function getBalanceSafe(addr, ms = 3000) {
+  const rpcs = getHttpRpcs();
+  for (const url of rpcs) {
+    try {
+      const res = await withTimeout(
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc:"2.0", id:1, method:"eth_getBalance",
+            params:[addr, "latest"]
+          })
+        }).then(r => r.json()),
+        ms, "getBalance"
+      );
+      if (res && res.result) return BigInt(res.result);
+    } catch (e) {
+      // coba RPC berikutnya
+      continue;
+    }
+  }
+  log("⚠ semua RPC gagal getBalance", "warn");
+  return null;
 }
-async function getTxSafe(hash, ms = 3000) {
+
+async function getTxSafe(hash, ms = 2500) {
   try { return await withTimeout(provider.getTransaction(hash), ms, "getTx"); }
   catch { return null; }
 }
@@ -212,10 +245,10 @@ async function broadcastRaw(signedTx) {
 
 async function sweep(triggerInfo) {
   if (pendingSweep && Date.now() - sweepStartTs > 6000) {
-    log("⚠ Sweep nyangkut >6s, reset.", "warn");
+    log("⚠ sweep nyangkut >6s, reset.", "warn");
     pendingSweep = false;
   }
-  if (pendingSweep) { log("⚠ Sweep jalan, skip.", "dim"); return; }
+  if (pendingSweep) { log("⚠ sweep jalan, skip.", "dim"); return; }
   pendingSweep = true;
   sweepStartTs = Date.now();
   const t0 = performance.now();
@@ -225,16 +258,16 @@ async function sweep(triggerInfo) {
     const to = $('toAddr').value.trim();
     if (!ethers.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
 
-    const bal = await getBalanceSafe(targetAddr, 4000);
-    if (bal === null) return;
-    if (bal === 0n) { log("⏳ Saldo 0", "dim"); return; }
+    const bal = await getBalanceSafe(targetAddr, 3000);
+    if (bal === null) { log("⏳ getBalance gagal, skip.", "warn"); return; }
+    if (bal === 0n) { log("⏳ saldo 0", "dim"); return; }
 
     const gasLimit = BigInt($('gasLimit').value);
     const prio = ethers.parseUnits($('prioGwei').value, "gwei");
     const maxFee = ethers.parseUnits($('maxGwei').value, "gwei");
     const gasCost = gasLimit * maxFee;
     const value = bal - gasCost;
-    if (value <= 0n) { log(`⏳ Saldo ${ethers.formatEther(bal)} < gasCost`, "warn"); return; }
+    if (value <= 0n) { log(`⏳ saldo ${ethers.formatEther(bal)} < gasCost`, "warn"); return; }
 
     let nonce;
     if (nonceCache === null) {
@@ -264,11 +297,11 @@ async function sweep(triggerInfo) {
         if (r) { nonceCache = r.nonce + 1; log(`   ✓ confirm blok ${r.blockNumber}`, "ok"); refreshBalance(); }
       }).catch(() => {});
     } else {
-      log("✗ Semua broadcast gagal.", "err");
+      log("✗ semua broadcast gagal.", "err");
       if (nonceCache !== null) nonceCache = nonce;
     }
   } catch (e) {
-    log("✗ Sweep error: " + (e.shortMessage || e.message), "err");
+    log("✗ sweep error: " + (e.shortMessage || e.message), "err");
   } finally {
     pendingSweep = false;
   }
@@ -277,17 +310,19 @@ async function sweep(triggerInfo) {
 function connectWss() {
   const url = $('wssUrl').value.trim();
   setSt('stWss', 'connecting...');
-  ws = new WebSocket(url);
+  try { ws = new WebSocket(url); } catch (e) { log("✗ WSS gagal buat: " + e.message, "err"); return; }
   wsId = 1;
 
   ws.onopen = () => {
     setSt('stWss', 'connected', 'ok');
+    lastWssEvent = Date.now();
     log("✓ WSS connected", "ok");
     const mode = $('mode').value;
     if (mode === "pending") subscribe("newPendingTransactions");
     else if (mode === "block") subscribe("newHeads");
   };
   ws.onmessage = async (ev) => {
+    lastWssEvent = Date.now();
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
     if (msg.method === "eth_subscription" && msg.params) {
@@ -302,12 +337,17 @@ function connectWss() {
   ws.onclose = () => {
     setSt('stWss', 'closed', 'err');
     log("✗ WSS closed", "warn");
-    if (running) { wsRetry = setTimeout(() => { if (running) connectWss(); }, 2000); }
+    if (running) {
+      if (wsRetry) clearTimeout(wsRetry);
+      wsRetry = setTimeout(() => { if (running) connectWss(); }, 2000);
+    }
   };
 }
 function subscribe(kind) {
-  ws.send(JSON.stringify({ jsonrpc:"2.0", id: wsId++, method:"eth_subscribe", params:[kind] }));
-  log(`→ subscribe ${kind}`, "info");
+  try {
+    ws.send(JSON.stringify({ jsonrpc:"2.0", id: wsId++, method:"eth_subscribe", params:[kind] }));
+    log(`→ subscribe ${kind}`, "info");
+  } catch (e) { log("✗ subscribe gagal: " + e.message, "err"); }
 }
 
 async function handleEvent(sub, data) {
@@ -318,7 +358,7 @@ async function handleEvent(sub, data) {
     if (seenTx.has(data)) return;
     seenTx.add(data);
     if (seenTx.size > 8000) seenTx.clear();
-    const tx = await getTxSafe(data, 3000);
+    const tx = await getTxSafe(data, 2500);
     if (!tx) return;
     if (tx.to && tx.to.toLowerCase() === targetAddr.toLowerCase() && tx.value > 0n) {
       stats.match++; updStats();
@@ -329,7 +369,7 @@ async function handleEvent(sub, data) {
   }
   if (mode === "block") {
     const bn = parseInt(data.number, 16);
-    const bal = await getBalanceSafe(targetAddr, 4000);
+    const bal = await getBalanceSafe(targetAddr, 3000);
     if (bal !== null) {
       setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
       if (bal > 0n) sweep(`block ${bn}`);
@@ -337,20 +377,40 @@ async function handleEvent(sub, data) {
   }
 }
 
+/* ===== Polling heartbeat: SELALU jalan ===== */
 function startPolling() {
+  if (pollId) return;
+  const iv = getPollIv();
   pollId = setInterval(async () => {
     if (!running) return;
-    const bal = await getBalanceSafe(targetAddr, 3000);
+    const bal = await getBalanceSafe(targetAddr, 2500);
     if (bal !== null) {
       setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
-      if (bal > 0n) sweep("polling");
+      if (bal > 0n) {
+        log(`💰 saldo via polling: ${ethers.formatEther(bal)}`, "ok");
+        sweep("polling heartbeat");
+      }
     }
-  }, 300);
-  log("▶ Polling aktif (300ms)", "info");
+  }, iv);
+  log(`▶ polling heartbeat aktif (${iv}ms)`, "info");
+}
+
+/* ===== Watchdog WSS ===== */
+function startWatchdog() {
+  if (watchdogId) clearInterval(watchdogId);
+  watchdogId = setInterval(() => {
+    if (!running) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const idle = Date.now() - lastWssEvent;
+    if (idle > getWdMs()) {
+      log(`⚠ WSS diam ${(idle/1000).toFixed(0)}s, reconnect.`, "warn");
+      try { ws.close(); } catch {}
+    }
+  }, 10000);
 }
 
 async function refreshBalance() {
-  const bal = await getBalanceSafe(targetAddr, 4000);
+  const bal = await getBalanceSafe(targetAddr, 3000);
   if (bal !== null) setSt('stBal', ethers.formatEther(bal) + " " + NET[$('net').value].symbol);
   try {
     const nonce = await withTimeout(provider.getTransactionCount(targetAddr, "pending"), 4000, "nonce");
@@ -365,14 +425,15 @@ async function start() {
     await initWallet();
     initProvider();
     const to = $('toAddr').value.trim();
-    if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
-    toAddr = to;
+    if (!ethers.isAddress(to)) return log("✗ alamat tujuan tidak valid.", "err");
 
     running = true;
     stats = { rx:0, match:0, sent:0 };
     seenTx.clear();
     updStats();
     nonceCache = null;
+    startTs = Date.now();
+    lastWssEvent = Date.now();
 
     $('btnStart').disabled = true;
     $('btnStop').disabled = false;
@@ -382,12 +443,27 @@ async function start() {
     await refreshBalance();
 
     const mode = $('mode').value;
-    if (mode === "poll") startPolling();
-    else connectWss();
+    if (mode === "poll") {
+      startPolling();
+    } else {
+      connectWss();
+      startPolling();   // ✅ polling cadangan selalu jalan
+      startWatchdog();  // ✅ watchdog WSS
+    }
+
+    // uptime counter
+    if (uptimeId) clearInterval(uptimeId);
+    uptimeId = setInterval(() => {
+      if (!running) return;
+      const s = Math.floor((Date.now() - startTs) / 1000);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      $('stUp').textContent = h > 0 ? `${h}j ${m%60}m` : m > 0 ? `${m}m ${s%60}s` : `${s}s`;
+    }, 1000);
 
     log(`▶ START | mode=${mode} | target=${targetAddr}`, "ok");
   } catch (e) {
-    log("✗ Start: " + (e.message || e), "err");
+    log("✗ start: " + (e.message || e), "err");
     running = false;
     $('btnStart').disabled = false;
     $('btnStop').disabled = true;
@@ -400,6 +476,8 @@ async function stop() {
   running = false;
   if (wsRetry) { clearTimeout(wsRetry); wsRetry = null; }
   if (pollId) { clearInterval(pollId); pollId = null; }
+  if (watchdogId) { clearInterval(watchdogId); watchdogId = null; }
+  if (uptimeId) { clearInterval(uptimeId); uptimeId = null; }
   if (ws) { try { ws.close(); } catch {} ws = null; }
   setSt('stWss', 'stopped', 'err');
   $('btnStart').disabled = false;
@@ -440,7 +518,7 @@ async function testConn() {
   } catch (e) { log("✗ " + e.message, "err"); }
 }
 
-['pkTarget','toAddr','net','wssUrl','httpRpcs','prioGwei','maxGwei','gasLimit','mode','bcCount'].forEach(id => {
+['pkTarget','toAddr','net','wssUrl','httpRpcs','prioGwei','maxGwei','gasLimit','mode','bcCount','pollIv','wdSec'].forEach(id => {
   const s = localStorage.getItem('sn_' + id);
   if (s) $(id).value = s;
   $(id).addEventListener('input', () => localStorage.setItem('sn_' + id, $(id).value));
