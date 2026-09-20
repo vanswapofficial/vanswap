@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Transfer USDT+ETH+BNB — Loop Cepat + Multi PK</title>
+<style>
+  body { font-family: monospace; max-width: 760px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; margin: 10px 0; }
+  h3 { color:#81c784; margin: 14px 0 6px; font-size:14px; }
+  input, button, select, textarea { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  textarea { min-height: 78px; resize: vertical; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 20px; }
+  button:disabled { background:#555; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:16px; padding:14px 20px; width:100%; margin-top:6px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  button.cancel { background:#ffb74d; color:#000; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:360px; overflow:auto; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#666; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .saldo { background:#0a2a0a; padding:10px; border:1px solid #2a5a2a; border-radius:4px; margin:10px 0; font-size:13px; line-height:1.6; }
+  .saldo.wallet-card { background:#0a1a2a; border-color:#2a4a6a; margin:6px 0; padding:8px 10px; }
+  .chk { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa; }
+  .chk input { width:auto; margin:0; }
+  .status { text-align:center; font-size:18px; font-weight:bold; color:#ffb74d; margin:10px 0; min-height:26px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+<h2>Auto Transfer USDT (max) → ETH/BNB — Loop Cepat + Multi PK</h2>
+
+<label>Private key (satu per baris, bisa banyak — disimpan di localStorage)</label>
+<textarea id="pk" placeholder="0xabc...&#10;0xdef...&#10;0x123..."></textarea>
+
+<label>Alamat tujuan (disimpan)</label>
+<input id="to" placeholder="0x...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="bnb">BNB Smart Chain (BSC)</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<label>Interval cek (ms) — lebih kecil = lebih cepat</label>
+<input id="interval" type="number" min="50" step="50" value="300">
+
+<div class="saldo" id="saldoBox">Saldo: —</div>
+
+<div class="chk">
+  <input type="checkbox" id="autoConfirm" checked>
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="cancelOnStop">
+  <label for="cancelOnStop" style="margin:0;">Saat STOP: batalkan pending tx (replace-by-fee, kirim 0 ke diri sendiri)</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="fastGas" checked>
+  <label for="fastGas" style="margin:0;">Gunakan gas agresif (maxFee = base*2, priority = 2 gwei)</label>
+</div>
+
+<div class="status" id="status">— idle —</div>
+
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="startAuto()">▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
+</div>
+<button class="big" id="btnOnce" onclick="go(true)" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali (semua PK)</button>
+<button class="big cancel" id="btnCancel" onclick="cancelPending()" style="margin-top:8px;">✖ Batalkan Semua Pending Tx</button>
+
+<pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+// ===== Konfigurasi Network (MAINNET only) =====
+const NETWORKS = {
+  eth: {
+    name:"Ethereum", chainId:1n, symbol:"ETH",
+    explorer:"https://etherscan.io/tx/",
+    rpcs:[
+      "https://ethereum-rpc.publicnode.com",
+      "https://eth.llamarpc.com",
+      "https://rpc.ankr.com/eth",
+      "https://cloudflare-eth.com"
+    ],
+    // USDT ERC-20
+    usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    usdtDecimals: 6
+  },
+  bnb: {
+    name:"BNB Smart Chain", chainId:56n, symbol:"BNB",
+    explorer:"https://bscscan.com/tx/",
+    rpcs:[
+      "https://bsc-rpc.publicnode.com",
+      "https://bsc-dataseed.binance.org",
+      "https://bsc-dataseed1.defibit.io",
+      "https://rpc.ankr.com/bsc"
+    ],
+    // USDT BEP-20 (BSC-USD)
+    usdt: "0x55d398326f99059fF775485246999027B3197955",
+    usdtDecimals: 18
+  },
+  poa: {
+    name:"POA", chainId:99n, symbol:"POA",
+    explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://poa-rpc.today","https://core.poa.network"],
+    usdt: null,     // POA tidak dipakai untuk USDT
+    usdtDecimals: 0
+  }
+};
+
+const GAS_LIMIT_ETH   = 21000n;
+const GAS_LIMIT_USDT  = 100000n;      // transfer ERC20/BEP20
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)"
+];
+
+let provider = null;
+let wallets = [];              // [{ pk, wallet }]
+let autoRunning = false;
+let loopId = null;
+let lastStatusKey = "";
+let lastUiRefresh = 0;
+let pendingNonces = new Map(); // address -> { nonce, hash }
+
+const $ = id => document.getElementById(id);
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function reset() { $('log').textContent = ""; lastStatusKey = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+function setStatus(text, active) {
+  const el = $('status');
+  el.textContent = text;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+function getInterval() {
+  const v = parseInt($('interval').value, 10);
+  return isNaN(v) ? 300 : Math.max(50, v);
+}
+
+// ===== auto-save =====
+['pk','to','net','interval'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).value));
+});
+
+// ===== RPC =====
+async function probeRpc(url, chainId) {
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ jsonrpc:"2.0", method:"eth_chainId", params:[], id:1 }) });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  if (!j.result || BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chain mismatch");
+}
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try { await probeRpc(url, net.chainId); return new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true }); }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+
+// ===== gas fee =====
+async function hitungGas(prov, gasLimit = GAS_LIMIT_ETH) {
+  const fee = await prov.getFeeData();
+  let gasPrice;
+  if ($('fastGas').checked) {
+    const base = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+    const priority = ethers.parseUnits("2","gwei");
+    gasPrice = (base * 2n) + priority;
+  } else {
+    gasPrice = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+  }
+  return { gasPrice, gasCost: gasLimit * gasPrice };
+}
+
+// ===== parse PK =====
+function parsePKs() {
+  return $('pk').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+}
+async function ensureConn() {
+  const net = cfg();
+  const pks = parsePKs();
+  if (!pks.length) throw new Error("Private key kosong");
+  if (!provider) provider = await pilihProvider(net);
+
+  const needRebuild = wallets.length !== pks.length ||
+    pks.some((pk, i) => !wallets[i] || wallets[i].pk !== pk);
+  if (needRebuild) {
+    const built = [];
+    for (const pk of pks) {
+      try {
+        const w = new ethers.Wallet(pk, provider);
+        built.push({ pk, wallet: w });
+      } catch (e) {
+        throw new Error("PK tidak valid: " + pk.slice(0,10) + "... — " + e.message);
+      }
+    }
+    wallets = built;
+  } else {
+    wallets.forEach(item => { if (item.wallet.provider !== provider) item.wallet = item.wallet.connect(provider); });
+  }
+}
+
+// ===== helper: baca saldo USDT =====
+async function getUsdtBalance(addr, net) {
+  if (!net.usdt) return 0n;
+  try {
+    const c = new ethers.Contract(net.usdt, ERC20_ABI, provider);
+    return await c.balanceOf(addr);
+  } catch { return 0n; }
+}
+
+// ===== UI saldo =====
+async function refreshSaldo(force) {
+  const now = Date.now();
+  if (!force && now - lastUiRefresh < 3000) return;
+  lastUiRefresh = now;
+  try {
+    await ensureConn();
+    const net = cfg();
+    // gas cost untuk ETH/BNB native
+    const { gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+    // gas cost untuk USDT (lebih tinggi)
+    const { gasCost: gasCostUsdt } = await hitungGas(provider, GAS_LIMIT_USDT);
+
+    let html = "";
+    for (const item of wallets) {
+      const bal = await provider.getBalance(item.wallet.address);
+      const usdtBal = await getUsdtBalance(item.wallet.address, net);
+      const usdtFmt = net.usdt ? ethers.formatUnits(usdtBal, net.usdtDecimals) : "-";
+
+      // estimasi: kalau ada USDT, sisa ETH setelah kirim USDT
+      // sisa ETH = bal - gasCostUsdt (kalau USDT > 0), lalu dikurangi gasCost ETH
+      let maxNativeAfter = 0n;
+      if (usdtBal > 0n) {
+        const afterUsdt = bal - gasCostUsdt;
+        maxNativeAfter = afterUsdt > gasCost ? afterUsdt - gasCost : 0n;
+      } else {
+        maxNativeAfter = bal > gasCost ? bal - gasCost : 0n;
+      }
+
+      html += `<div class="saldo wallet-card">
+        <b>${item.wallet.address}</b><br>
+        USDT : <b class="${usdtBal > 0n ? 'ok' : 'dim'}">${usdtFmt}</b><br>
+        ${net.symbol} : <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>
+        Gas USDT: ${ethers.formatEther(gasCostUsdt)} ${net.symbol} | Gas ${net.symbol}: ${ethers.formatEther(gasCost)} ${net.symbol}<br>
+        MAX ${net.symbol} (setelah USDT): <b class="${maxNativeAfter > 0n ? 'ok' : 'err'}">${maxNativeAfter > 0n ? ethers.formatEther(maxNativeAfter) + ' ' + net.symbol : 'tidak cukup'}</b>
+      </div>`;
+    }
+    $('saldoBox').innerHTML = html || "Tidak ada wallet.";
+  } catch (e) { /* diamkan */ }
+}
+
+// ===== kirim USDT max, lalu ETH/BNB max =====
+async function kirimSemuaUntukWallet(item, to, net) {
+  const addr = item.wallet.address;
+  let anySuccess = false;
+
+  // --- 1) Kirim USDT MAX (kalau ada) ---
+  if (net.usdt) {
+    try {
+      const usdtBal = await getUsdtBalance(addr, net);
+      if (usdtBal > 0n) {
+        const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_USDT);
+        const nativeBal = await provider.getBalance(addr);
+        if (nativeBal < gasCost) {
+          log(`⏳ [${addr.slice(0,8)}...] USDT ada tapi gas ${net.symbol} tidak cukup`, "warn");
+        } else {
+          log(`→ [${addr.slice(0,8)}...] Kirim USDT ${ethers.formatUnits(usdtBal, net.usdtDecimals)}`, "info");
+          const nonce = await provider.getTransactionCount(addr, "pending");
+          const c = new ethers.Contract(net.usdt, ERC20_ABI, item.wallet);
+          const tx = await c.transfer(to, usdtBal, { gasLimit: GAS_LIMIT_USDT, gasPrice, nonce });
+          pendingNonces.set(addr, { nonce, hash: tx.hash });
+          log(`  ✓ USDT Tx: ${tx.hash} (nonce ${nonce})`, "ok");
+          tx.wait().then(r => {
+            if (r) log(`  ✓ USDT confirm block ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok");
+          }).catch(() => {});
+          anySuccess = true;
+        }
+      }
+    } catch (e) {
+      log(`✗ [${addr.slice(0,8)}...] USDT gagal: ${e.message}`, "err");
+    }
+  }
+
+  // --- 2) Kirim sisa ETH/BNB MAX ---
+  try {
+    const bal = await provider.getBalance(addr);
+    const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+    const value = bal - gasCost;
+    if (value <= 0n) {
+      log(`⏳ [${addr.slice(0,8)}...] sisa ${net.symbol} tidak cukup untuk transfer`, "warn");
+      return anySuccess;
+    }
+    log(`→ [${addr.slice(0,8)}...] Kirim ${ethers.formatEther(value)} ${net.symbol}`, "info");
+    const nonce = await provider.getTransactionCount(addr, "pending");
+    const tx = await item.wallet.sendTransaction({ to, value, gasLimit: GAS_LIMIT_ETH, gasPrice, nonce });
+    pendingNonces.set(addr, { nonce, hash: tx.hash });
+    log(`  ✓ ${net.symbol} Tx: ${tx.hash} (nonce ${nonce})`, "ok");
+    tx.wait().then(r => {
+      if (r) log(`  ✓ ${net.symbol} confirm block ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok");
+    }).catch(() => {});
+    anySuccess = true;
+  } catch (e) {
+    log(`✗ [${addr.slice(0,8)}...] ${net.symbol} gagal: ${e.message}`, "err");
+  }
+  return anySuccess;
+}
+
+// ===== kirim sekali (semua PK) =====
+async function go(silent) {
+  const net = cfg();
+  const to = $('to').value.trim();
+  if (!to) { log("✗ Alamat tujuan kosong.", "err"); return { ok:false }; }
+  if (!ethers.isAddress(to)) { log("✗ Alamat tidak valid.", "err"); return { ok:false }; }
+  if (ethers.getAddress(to) !== to) { log("✗ Checksum tidak cocok: " + ethers.getAddress(to), "err"); return { ok:false }; }
+
+  try {
+    await ensureConn();
+    if (!$('autoConfirm').checked && !silent) {
+      if (!confirm(`Kirim USDT+${net.symbol} dari ${wallets.length} wallet ke ${to}?`)) { log("Dibatalkan.", "warn"); return { ok:false }; }
+    }
+
+    let anySuccess = false;
+    for (const item of wallets) {
+      const ok = await kirimSemuaUntukWallet(item, to, net);
+      if (ok) anySuccess = true;
+    }
+    return { ok: anySuccess };
+  } catch (e) {
+    log("✗ Error: " + e.message, "err");
+    return { ok:false, err:e.message };
+  }
+}
+
+// ===== batalkan pending =====
+async function cancelPending() {
+  try {
+    await ensureConn();
+    const net = cfg();
+    let any = false;
+    for (const item of wallets) {
+      const addr = item.wallet.address;
+      let info = pendingNonces.get(addr);
+      if (!info) {
+        try {
+          const cnt = await provider.getTransactionCount(addr, "latest");
+          const pnd = await provider.getTransactionCount(addr, "pending");
+          if (pnd > cnt) info = { nonce: cnt, hash: null };
+        } catch {}
+      }
+      if (!info) continue;
+      any = true;
+
+      const fee = await provider.getFeeData();
+      const base = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+      const cancelGas = (base * 3n) + ethers.parseUnits("5","gwei");
+
+      log(`✖ [${addr.slice(0,8)}...] Batalkan nonce ${info.nonce} dengan gas ${ethers.formatUnits(cancelGas,"gwei")} gwei`, "warn");
+      try {
+        const tx = await item.wallet.sendTransaction({
+          to: addr, value: 0n, gasLimit: GAS_LIMIT_ETH, gasPrice: cancelGas, nonce: info.nonce
+        });
+        log(`  ✓ Cancel tx: ${tx.hash}`, "ok");
+        pendingNonces.delete(addr);
+      } catch (e) {
+        log(`  ✗ Gagal cancel: ${e.message}`, "err");
+      }
+    }
+    if (!any) log("Tidak ada pending tx untuk dibatalkan.", "warn");
+  } catch (e) {
+    log("✗ Error cancel: " + e.message, "err");
+  }
+}
+
+// ===== loop utama =====
+let loopBusy = false;
+async function loopTick() {
+  if (!autoRunning || loopBusy) return;
+  loopBusy = true;
+  const net = cfg();
+  try {
+    await ensureConn();
+
+    // cek apakah ada wallet yang punya USDT atau cukup gas
+    const { gasCost: gasCostEth } = await hitungGas(provider, GAS_LIMIT_ETH);
+    const { gasCost: gasCostUsdt } = await hitungGas(provider, GAS_LIMIT_USDT);
+
+    let anyReady = false;
+    let allBalances = [];
+
+    for (const item of wallets) {
+      try {
+        const bal = await provider.getBalance(item.wallet.address);
+        const usdtBal = await getUsdtBalance(item.wallet.address, net);
+        const hasUsdt = usdtBal > 0n && bal >= gasCostUsdt;
+        const hasNative = bal > gasCostEth;
+        allBalances.push({ item, bal, usdtBal, value: bal - gasCostEth });
+        if (hasUsdt || hasNative) anyReady = true;
+      } catch (e) {}
+    }
+
+    if (!anyReady) {
+      const summary = allBalances.map(b => {
+        const u = net.usdt ? ethers.formatUnits(b.usdtBal, net.usdtDecimals) : "-";
+        return `${b.item.wallet.address.slice(0,6)}:USDT=${u},${net.symbol}=${ethers.formatEther(b.bal)}`;
+      }).join(" | ");
+      const key = "wait:" + summary;
+      if (key !== lastStatusKey) {
+        log(`⏳ Menunggu saldo. [${summary}]`, "warn");
+        lastStatusKey = key;
+      }
+      setStatus(`⏳ Menunggu saldo`, true);
+      return;
+    }
+
+    lastStatusKey = "";
+    setStatus(`⚙ Mengirim...`, true);
+
+    for (const { item, usdtBal, bal } of allBalances) {
+      const addr = item.wallet.address;
+
+      // cek pending, skip kalau masih ada
+      if (pendingNonces.has(addr)) {
+        const cached = pendingNonces.get(addr);
+        const rc = await provider.getTransactionReceipt(cached.hash).catch(() => null);
+        if (!rc) continue;
+        pendingNonces.delete(addr);
+      }
+
+      // Prioritas: kirim USDT MAX dulu
+      if (net.usdt && usdtBal > 0n) {
+        try {
+          const { gasPrice } = await hitungGas(provider, GAS_LIMIT_USDT);
+          if (bal < GAS_LIMIT_USDT * gasPrice) {
+            log(`⏳ [${addr.slice(0,8)}...] USDT ada tapi gas tidak cukup`, "warn");
+          } else {
+            const nonce = await provider.getTransactionCount(addr, "pending");
+            const c = new ethers.Contract(net.usdt, ERC20_ABI, item.wallet);
+            const tx = await c.transfer($('to').value.trim(), usdtBal, {
+              gasLimit: GAS_LIMIT_USDT, gasPrice, nonce
+            });
+            pendingNonces.set(addr, { nonce, hash: tx.hash });
+            log(`✓ [${addr.slice(0,8)}...] USDT ${ethers.formatUnits(usdtBal, net.usdtDecimals)} → ${tx.hash}`, "ok");
+            tx.wait().then(r => { if (r) pendingNonces.delete(addr); }).catch(() => {});
+            setStatus(`✓ USDT terkirim — lanjut`, true);
+            continue;    // lanjut ke wallet berikut, tunggu loop berikutnya untuk ETH
+          }
+        } catch (e) {
+          log(`✗ [${addr.slice(0,8)}...] USDT: ${e.message}`, "err");
+        }
+      }
+
+      // Setelah USDT habis/terkirim, kirim sisa ETH/BNB
+      try {
+        const freshBal = await provider.getBalance(addr);
+        const { gasPrice, gasCost } = await hitungGas(provider, GAS_LIMIT_ETH);
+        const value = freshBal - gasCost;
+        if (value <= 0n) continue;
+
+        const nonce = await provider.getTransactionCount(addr, "pending");
+        const tx = await item.wallet.sendTransaction({
+          to: $('to').value.trim(), value,
+          gasLimit: GAS_LIMIT_ETH, gasPrice, nonce
+        });
+        pendingNonces.set(addr, { nonce, hash: tx.hash });
+        log(`✓ [${addr.slice(0,8)}...] ${ethers.formatEther(value)} ${net.symbol} → ${tx.hash}`, "ok");
+        tx.wait().then(r => { if (r) pendingNonces.delete(addr); }).catch(() => {});
+        setStatus(`✓ ${net.symbol} terkirim`, true);
+      } catch (e) {
+        log(`✗ [${addr.slice(0,8)}...] ${net.symbol}: ${e.message}`, "err");
+      }
+    }
+    await refreshSaldo(true);
+  } catch (e) {
+    const key = "err:" + e.message;
+    if (key !== lastStatusKey) {
+      log("✗ Loop error: " + e.message, "err");
+      lastStatusKey = key;
+    }
+    setStatus(`✗ Error — tetap mencoba...`, true);
+    provider = null; wallets = [];
+  } finally {
+    loopBusy = false;
+  }
+}
+
+function startAuto() {
+  if (autoRunning) return;
+  const pks = parsePKs();
+  const to = $('to').value.trim();
+  if (!pks.length) return log("✗ Isi minimal 1 private key.", "err");
+  if (!to) return log("✗ Isi alamat tujuan.", "err");
+  if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
+
+  autoRunning = true;
+  reset();
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('btnOnce').disabled = true;
+  const iv = getInterval();
+  log(`▶ AUTO START — ${pks.length} wallet, prioritas USDT max → ${cfg().symbol}. Cek tiap ${iv}ms.`, "ok");
+  setStatus("▶ Berjalan...", true);
+
+  loopId = setInterval(loopTick, iv);
+  loopTick();
+}
+
+async function stopAuto() {
+  if (!autoRunning) return;
+  autoRunning = false;
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnOnce').disabled = false;
+
+  if ($('cancelOnStop').checked) {
+    log("■ AUTO STOP — membatalkan pending tx...", "warn");
+    setStatus("■ Membatalkan pending...", false);
+    await cancelPending();
+  } else {
+    log("■ AUTO STOP (manual).", "warn");
+  }
+  setStatus("■ Berhenti", false);
+}
+
+$('net').addEventListener('change', () => { provider = null; wallets = []; refreshSaldo(true); });
+$('pk').addEventListener('blur', () => { provider = null; wallets = []; refreshSaldo(true); });
+
+setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 3000);
+</script>
+</body>
+</html>
