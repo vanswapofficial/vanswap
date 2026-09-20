@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Transfer ETH — Fixed + Multi PK</title>
+<style>
+  body { font-family: monospace; max-width: 760px; margin: 20px auto; padding: 0 14px; background:#111; color:#eee; }
+  h2 { color:#4fc3f7; margin: 10px 0; }
+  input, button, select, textarea { font-family: monospace; font-size: 14px; padding: 8px; background:#222; color:#eee; border:1px solid #444; border-radius:4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  textarea { min-height: 78px; resize: vertical; }
+  button { background:#4fc3f7; color:#000; font-weight:bold; cursor:pointer; border:none; padding:10px 20px; }
+  button:disabled { background:#555; cursor:not-allowed; opacity:.6; }
+  button.big { font-size:16px; padding:14px 20px; width:100%; margin-top:6px; }
+  button.go { background:#81c784; }
+  button.stop { background:#ef5350; color:#fff; }
+  button.cancel { background:#ffb74d; color:#000; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  pre { background:#000; padding:12px; border:1px solid #333; white-space:pre-wrap; word-break:break-all; max-height:360px; overflow:auto; }
+  .warn { color:#ffb74d; } .err { color:#ef5350; } .ok { color:#81c784; } .info { color:#4fc3f7; } .dim { color:#666; }
+  label { display:block; margin-top:12px; margin-bottom:4px; color:#aaa; font-size:12px; }
+  .saldo { background:#0a2a0a; padding:10px; border:1px solid #2a5a2a; border-radius:4px; margin:10px 0; font-size:13px; line-height:1.6; }
+  .saldo.wallet-card { background:#0a1a2a; border-color:#2a4a6a; margin:6px 0; padding:8px 10px; }
+  .chk { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:12px; color:#aaa; }
+  .chk input { width:auto; margin:0; }
+  .status { text-align:center; font-size:18px; font-weight:bold; color:#ffb74d; margin:10px 0; min-height:26px; }
+  .status.active { color:#81c784; }
+  .pulse { animation: p 1s infinite; }
+  @keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .small { font-size:11px; color:#888; }
+</style>
+</head>
+<body>
+<h2>Auto Transfer ETH — Fixed</h2>
+
+<label>Private key (satu per baris)</label>
+<textarea id="pk" placeholder="0xabc...&#10;0xdef..."></textarea>
+
+<label>Alamat tujuan</label>
+<input id="to" placeholder="0x...">
+
+<label>Network</label>
+<select id="net">
+  <option value="eth">Ethereum Mainnet</option>
+  <option value="sep">Sepolia Testnet</option>
+  <option value="poa">POA Core (chain 99)</option>
+</select>
+
+<label>Interval cek (ms)</label>
+<input id="interval" type="number" min="100" step="50" value="500">
+
+<div class="grid3">
+  <div>
+    <label>Max Fee Multiplier (×base)</label>
+    <input id="maxMult" type="number" min="1" step="0.5" value="3">
+  </div>
+  <div>
+    <label>Priority (gwei)</label>
+    <input id="prioGwei" type="number" min="0.1" step="0.1" value="3">
+  </div>
+  <div>
+    <label>Min Max-Fee (gwei)</label>
+    <input id="minMaxGwei" type="number" min="1" step="1" value="30">
+  </div>
+</div>
+
+<div class="saldo" id="saldoBox">Saldo: —</div>
+
+<div class="chk">
+  <input type="checkbox" id="autoConfirm" checked>
+  <label for="autoConfirm" style="margin:0;">Kirim tanpa konfirmasi</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="cancelOnStop">
+  <label for="cancelOnStop" style="margin:0;">Saat STOP: batalkan pending tx</label>
+</div>
+<div class="chk">
+  <input type="checkbox" id="legacyGas">
+  <label for="legacyGas" style="margin:0;">Pakai legacy gasPrice (untuk POA / chain lama)</label>
+</div>
+
+<div class="status" id="status">— idle —</div>
+
+<div class="grid2">
+  <button class="big go" id="btnStart" onclick="startAuto()">▶ START</button>
+  <button class="big stop" id="btnStop" onclick="stopAuto()" disabled>■ STOP</button>
+</div>
+<button class="big" id="btnOnce" onclick="go(true)" style="background:#4fc3f7; margin-top:8px;">↻ Kirim Sekali (semua PK)</button>
+<button class="big cancel" id="btnCancel" onclick="cancelPending()" style="margin-top:8px;">✖ Batalkan Semua Pending Tx</button>
+
+<pre id="log">Siap. Isi PK & tujuan, klik START.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const NETWORKS = {
+  eth: { name:"Ethereum", chainId:1n, symbol:"ETH", explorer:"https://etherscan.io/tx/",
+    rpcs:["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://rpc.flashbots.net","https://eth.drpc.org"] },
+  sep: { name:"Sepolia", chainId:11155111n, symbol:"ETH", explorer:"https://sepolia.etherscan.io/tx/",
+    rpcs:["https://ethereum-sepolia-rpc.publicnode.com","https://rpc.sepolia.org","https://sepolia.drpc.org","https://sepolia.gateway.tenderly.co"] },
+  poa: { name:"POA", chainId:99n, symbol:"POA", explorer:"https://explorer.poa.network/tx/",
+    rpcs:["https://rpc.poa.network","https://core.poa.network"] }
+};
+const GAS_LIMIT = 21000n;
+
+let provider = null;
+let wallets = [];
+let autoRunning = false;
+let loopId = null;
+let loopBusy = false;
+let lastStatusKey = "";
+let lastUiRefresh = 0;
+let pendingNonces = new Map(); // addr -> { nonce, hash, maxFee, prio, legacy }
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const el = $('log');
+  el.innerHTML += `<span class="dim">[${t}]</span> ` + (cls ? `<span class="${cls}">${msg}</span>` : msg) + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+function reset() { $('log').textContent = ""; lastStatusKey = ""; }
+function cfg() { return NETWORKS[$('net').value]; }
+function setStatus(text, active) {
+  const el = $('status');
+  el.textContent = text;
+  el.classList.toggle('active', !!active);
+  el.classList.toggle('pulse', !!active);
+}
+function getInterval() {
+  const v = parseInt($('interval').value, 10);
+  return isNaN(v) ? 500 : Math.max(100, v);
+}
+function getGasCfg() {
+  return {
+    maxMult: Math.max(1, parseFloat($('maxMult').value) || 3),
+    prioGwei: Math.max(0.1, parseFloat($('prioGwei').value) || 3),
+    minMaxGwei: Math.max(1, parseFloat($('minMaxGwei').value) || 30),
+    legacy: $('legacyGas').checked
+  };
+}
+
+// ===== auto-save =====
+['pk','to','net','interval','maxMult','prioGwei','minMaxGwei'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved) $(id).value = saved;
+  $(id).addEventListener('input', () => localStorage.setItem('atx_' + id, $(id).value));
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).value));
+});
+['autoConfirm','cancelOnStop','legacyGas'].forEach(id => {
+  const saved = localStorage.getItem('atx_' + id);
+  if (saved !== null) $(id).checked = saved === 'true';
+  $(id).addEventListener('change', () => localStorage.setItem('atx_' + id, $(id).checked));
+});
+
+// ===== RPC =====
+async function probeRpc(url, chainId) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const res = await fetch(url, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ jsonrpc:"2.0", method:"eth_chainId", params:[], id:1 }),
+      signal: ctrl.signal
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    if (!j.result || BigInt(parseInt(j.result, 16)) !== chainId) throw new Error("chain mismatch");
+  } finally { clearTimeout(t); }
+}
+async function pilihProvider(net) {
+  let lastErr;
+  for (const url of net.rpcs) {
+    try {
+      await probeRpc(url, net.chainId);
+      const p = new ethers.JsonRpcProvider(url, net.chainId, { staticNetwork: true });
+      log(`✓ RPC: ${url}`, "ok");
+      return p;
+    } catch (e) { lastErr = e; log(`✗ RPC ${url} → ${e.message}`, "dim"); }
+  }
+  throw new Error("Semua RPC " + net.name + " gagal: " + (lastErr?.message || "-"));
+}
+
+// ===== gas fee (EIP-1559 dengan fallback legacy) =====
+async function hitungGas(prov) {
+  const c = getGasCfg();
+  const fee = await prov.getFeeData();
+
+  const baseFee = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+  const prio    = ethers.parseUnits(String(c.prioGwei), "gwei");
+  const minMax  = ethers.parseUnits(String(c.minMaxGwei), "gwei");
+
+  let maxFee = (baseFee * BigInt(Math.floor(c.maxMult * 10))) / 10n + prio;
+  if (maxFee < minMax) maxFee = minMax;
+
+  if (c.legacy || !fee.maxFeePerGas) {
+    // legacy: pakai maxFee sebagai gasPrice (lebih tinggi dari tx yang beredar)
+    const gp = maxFee > (fee.gasPrice ?? 0n) ? maxFee : (fee.gasPrice ?? maxFee);
+    return { mode:"legacy", gasPrice: gp, maxFee: gp, prio: 0n, gasCost: GAS_LIMIT * gp };
+  }
+  return { mode:"eip1559", maxFee, prio, gasPrice: maxFee, gasCost: GAS_LIMIT * maxFee };
+}
+
+// ===== wallet =====
+function parsePKs() { return $('pk').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
+
+let pksCache = "";
+async function ensureConn() {
+  const net = cfg();
+  const pks = parsePKs();
+  if (!pks.length) throw new Error("Private key kosong");
+
+  if (!provider) provider = await pilihProvider(net);
+
+  const sig = pks.join("|");
+  if (sig !== pksCache) {
+    const built = [];
+    for (const pk of pks) {
+      try {
+        const w = new ethers.Wallet(pk);
+        built.push({ pk, wallet: w });
+      } catch (e) {
+        throw new Error("PK tidak valid: " + pk.slice(0,10) + "... — " + e.message);
+      }
+    }
+    wallets = built;
+    pksCache = sig;
+  }
+  // selalu reattach provider (murah, idempotent)
+  for (const it of wallets) {
+    if (it.wallet.provider !== provider) it.wallet = it.wallet.connect(provider);
+  }
+  return provider;
+}
+
+// ===== saldo =====
+async function refreshSaldo(force) {
+  const now = Date.now();
+  if (!force && now - lastUiRefresh < 3000) return;
+  lastUiRefresh = now;
+  try {
+    await ensureConn();
+    const net = cfg();
+    const { gasCost, maxFee, mode } = await hitungGas(provider);
+    let html = `<div class="small">Gas mode: ${mode} | maxFee ≈ ${ethers.formatUnits(maxFee,"gwei")} gwei | gasCost ≈ ${ethers.formatEther(gasCost)} ${net.symbol}</div>`;
+    for (const item of wallets) {
+      const bal = await provider.getBalance(item.wallet.address);
+      const max = bal - gasCost;
+      html += `<div class="saldo wallet-card">
+        <b>${item.wallet.address}</b><br>
+        Saldo: <b>${ethers.formatEther(bal)} ${net.symbol}</b><br>
+        MAX  : <b class="${max > 0n ? 'ok' : 'err'}">${max > 0n ? ethers.formatEther(max) + ' ' + net.symbol : 'tidak cukup'}</b>
+      </div>`;
+    }
+    $('saldoBox').innerHTML = html || "Tidak ada wallet.";
+  } catch (e) { /* diam */ }
+}
+
+// ===== kirim satu (dipakai go & loop) =====
+async function kirimSatu(item, to, net) {
+  const addr = item.wallet.address;
+
+  // kalau ada pending, cek dulu
+  const cached = pendingNonces.get(addr);
+  if (cached) {
+    if (!cached.hash) return false; // locked, belum dapat hash
+    const rc = await provider.getTransactionReceipt(cached.hash).catch(() => null);
+    if (!rc) return false; // masih pending → jangan kirim lagi
+    pendingNonces.delete(addr);
+  }
+
+  const gas = await hitungGas(provider);
+  const bal = await provider.getBalance(addr);
+  const value = bal - gas.gasCost;
+  if (value <= 0n) return false;
+
+  // lock SEBELUM ambil nonce
+  const nonce = await provider.getTransactionCount(addr, "pending");
+  pendingNonces.set(addr, { nonce, hash: null, maxFee: gas.maxFee, prio: gas.prio, legacy: gas.mode === "legacy" });
+
+  try {
+    let tx;
+    if (gas.mode === "legacy") {
+      tx = await item.wallet.sendTransaction({
+        to, value, gasLimit: GAS_LIMIT, gasPrice: gas.maxFee, nonce
+      });
+    } else {
+      tx = await item.wallet.sendTransaction({
+        to, value, gasLimit: GAS_LIMIT,
+        maxFeePerGas: gas.maxFee,
+        maxPriorityFeePerGas: gas.prio,
+        type: 2,
+        nonce
+      });
+    }
+    pendingNonces.set(addr, { nonce, hash: tx.hash, maxFee: gas.maxFee, prio: gas.prio, legacy: gas.mode === "legacy" });
+    log(`✓ [${addr.slice(0,8)}...] ${ethers.formatEther(value)} ${net.symbol} → ${tx.hash} (n=${nonce}, fee=${ethers.formatUnits(gas.maxFee,"gwei")}g)`, "ok");
+
+    tx.wait().then(r => {
+      if (r) {
+        log(`  ✓ confirm blok ${r.blockNumber} (${addr.slice(0,8)}...)`, "ok");
+        pendingNonces.delete(addr);
+      }
+    }).catch(err => {
+      // mungkin dropped/replaced → biarkan dihapus agar bisa retry
+      log(`  ⚠ wait error ${addr.slice(0,8)}...: ${err.shortMessage || err.message}`, "warn");
+      pendingNonces.delete(addr);
+    });
+
+    return true;
+  } catch (e) {
+    pendingNonces.delete(addr);
+    log(`✗ [${addr.slice(0,8)}...] ${e.shortMessage || e.message}`, "err");
+    return false;
+  }
+}
+
+// ===== kirim sekali =====
+async function go(silent) {
+  const net = cfg();
+  const to = $('to').value.trim();
+  if (!to) { log("✗ Alamat tujuan kosong.", "err"); return { ok:false }; }
+  if (!ethers.isAddress(to)) { log("✗ Alamat tidak valid.", "err"); return { ok:false }; }
+
+  try {
+    await ensureConn();
+    if (!$('autoConfirm').checked && !silent) {
+      if (!confirm(`Kirim dari ${wallets.length} wallet ke ${to}?`)) { log("Dibatalkan.", "warn"); return { ok:false }; }
+    }
+    let any = false;
+    for (const item of wallets) {
+      const ok = await kirimSatu(item, to, net);
+      if (ok) any = true;
+    }
+    await refreshSaldo(true);
+    return { ok: any };
+  } catch (e) {
+    log("✗ Error: " + (e.shortMessage || e.message), "err");
+    return { ok:false };
+  }
+}
+
+// ===== cancel pending (replace-by-fee) =====
+async function cancelPending() {
+  try {
+    await ensureConn();
+    let any = false;
+    for (const item of wallets) {
+      const addr = item.wallet.address;
+      let info = pendingNonces.get(addr);
+
+      // fallback: cek on-chain
+      if (!info || !info.hash) {
+        try {
+          const cnt = await provider.getTransactionCount(addr, "latest");
+          const pnd = await provider.getTransactionCount(addr, "pending");
+          if (pnd > cnt) info = { nonce: cnt, hash: null };
+        } catch {}
+      }
+      if (!info) continue;
+      any = true;
+
+      // fee cancel = fee pending × 1.25 (min +50% dari yang tertunda)
+      const fee = await provider.getFeeData();
+      const baseFee = fee.maxFeePerGas ?? fee.gasPrice ?? ethers.parseUnits("30","gwei");
+      let cancelMax, cancelPrio;
+      if (info.legacy) {
+        const prev = info.maxFee ?? baseFee;
+        cancelMax = (prev * 125n) / 100n + ethers.parseUnits("1","gwei");
+        cancelPrio = 0n;
+      } else {
+        const prevMax  = info.maxFee ?? baseFee;
+        const prevPrio = info.prio   ?? ethers.parseUnits("2","gwei");
+        cancelMax  = (prevMax  * 125n) / 100n + ethers.parseUnits("1","gwei");
+        cancelPrio = (prevPrio * 125n) / 100n + ethers.parseUnits("0.5","gwei");
+      }
+
+      log(`✖ [${addr.slice(0,8)}...] cancel nonce ${info.nonce} | maxFee ${ethers.formatUnits(cancelMax,"gwei")}g`, "warn");
+      try {
+        let tx;
+        if (info.legacy) {
+          tx = await item.wallet.sendTransaction({
+            to: addr, value: 0n, gasLimit: GAS_LIMIT, gasPrice: cancelMax, nonce: info.nonce
+          });
+        } else {
+          tx = await item.wallet.sendTransaction({
+            to: addr, value: 0n, gasLimit: GAS_LIMIT,
+            maxFeePerGas: cancelMax, maxPriorityFeePerGas: cancelPrio,
+            type: 2, nonce: info.nonce
+          });
+        }
+        log(`  ✓ cancel tx: ${tx.hash}`, "ok");
+        pendingNonces.delete(addr);
+      } catch (e) {
+        log(`  ✗ gagal cancel: ${e.shortMessage || e.message}`, "err");
+      }
+    }
+    if (!any) log("Tidak ada pending tx untuk dibatalkan.", "warn");
+  } catch (e) {
+    log("✗ Error cancel: " + (e.shortMessage || e.message), "err");
+  }
+}
+
+// ===== loop =====
+async function loopTick() {
+  if (!autoRunning || loopBusy) return;
+  loopBusy = true;
+  const net = cfg();
+  try {
+    await ensureConn();
+    const gas = await hitungGas(provider);
+    const to = $('to').value.trim();
+    if (!ethers.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
+
+    let anyReady = false;
+    const summaryParts = [];
+
+    for (const item of wallets) {
+      try {
+        const bal = await provider.getBalance(item.wallet.address);
+        const value = bal - gas.gasCost;
+        summaryParts.push(`${item.wallet.address.slice(0,6)}=${ethers.formatEther(bal)}`);
+        if (value > 0n) anyReady = true;
+      } catch {}
+    }
+
+    if (!anyReady) {
+      const key = "wait:" + summaryParts.join(",");
+      if (key !== lastStatusKey) {
+        log(`⏳ Menunggu saldo. [${summaryParts.join(", ")}]`, "warn");
+        lastStatusKey = key;
+      }
+      setStatus("⏳ Menunggu saldo", true);
+      return;
+    }
+
+    lastStatusKey = "";
+    setStatus("⚙ Mengirim...", true);
+
+    for (const item of wallets) {
+      if (!autoRunning) break;
+      await kirimSatu(item, to, net);
+    }
+    await refreshSaldo(true);
+  } catch (e) {
+    const key = "err:" + (e.shortMessage || e.message);
+    if (key !== lastStatusKey) {
+      log("✗ Loop error: " + (e.shortMessage || e.message), "err");
+      lastStatusKey = key;
+    }
+    setStatus("✗ Error — retry...", true);
+    // JANGAN reset provider/wallets; biarkan recover
+    if (e.code === "NETWORK_ERROR" || /network|fetch|timeout/i.test(e.message)) {
+      try { provider.destroy?.(); } catch {}
+      provider = null;
+    }
+  } finally {
+    loopBusy = false;
+  }
+}
+
+function startAuto() {
+  if (autoRunning) return;
+  const pks = parsePKs();
+  const to = $('to').value.trim();
+  if (!pks.length) return log("✗ Isi minimal 1 private key.", "err");
+  if (!ethers.isAddress(to)) return log("✗ Alamat tujuan tidak valid.", "err");
+  if (!$('autoConfirm').checked) return log("✗ Aktifkan 'Kirim tanpa konfirmasi'.", "err");
+
+  autoRunning = true;
+  reset();
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('btnOnce').disabled = true;
+  const iv = getInterval();
+  log(`▶ AUTO START — ${pks.length} wallet, cek tiap ${iv}ms`, "ok");
+  setStatus("▶ Berjalan...", true);
+
+  loopId = setInterval(loopTick, iv);
+  loopTick();
+}
+
+async function stopAuto() {
+  if (!autoRunning) return;
+  autoRunning = false;
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  $('btnStart').disabled = false;
+  $('btnStop').disabled = true;
+  $('btnOnce').disabled = false;
+
+  if ($('cancelOnStop').checked) {
+    log("■ AUTO STOP — membatalkan pending...", "warn");
+    setStatus("■ Membatalkan pending...", false);
+    await cancelPending();
+  } else {
+    log("■ AUTO STOP (manual).", "warn");
+  }
+  setStatus("■ Berhenti", false);
+}
+
+// reset koneksi saat ganti network
+$('net').addEventListener('change', () => {
+  try { provider?.destroy?.(); } catch {}
+  provider = null; wallets = []; pksCache = ""; pendingNonces.clear();
+  refreshSaldo(true);
+});
+$('pk').addEventListener('blur', () => {
+  pksCache = ""; wallets = []; // paksa rebuild, tapi provider tetap
+  refreshSaldo(true);
+});
+
+setInterval(() => { if (!autoRunning) refreshSaldo(false); }, 3000);
+</script>
+</body>
+</html>
