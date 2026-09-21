@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EVM Vanity HD Wallet</title>
+<title>EVM Vanity HD Wallet (BIP44)</title>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,11 +44,11 @@
 </head>
 <body>
 <div class="container">
-  <h1>🚀 EVM Vanity HD Wallet</h1>
-  <p class="subtitle">Mnemonic valid BIP39 + BIP44 · Ethereum/BSC/Polygon</p>
+  <h1>🚀 EVM Vanity HD Wallet (BIP44)</h1>
+  <p class="subtitle">Mnemonic BIP39 baru tiap iterasi · Address path utama m/44'/60'/0'/0/0</p>
 
   <div class="warning">
-    ✅ <strong>Address = mnemonic.</strong> Import mnemonic ke MetaMask → address yang muncul PERSIS sama dengan hasil di sini.
+    ✅ <strong>Tiap mnemonic baru = address baru.</strong> Path derive selalu <code>m/44'/60'/0'/0/0</code> (default MetaMask account #1). Import mnemonic → address PERSIS sama.
   </div>
 
   <div class="row">
@@ -58,7 +58,7 @@
     </div>
     <div class="field">
       <label>Suffix</label>
-      <input type="text" id="suffix" placeholder="" maxlength="6">
+      <input type="text" id="suffix" placeholder="123" maxlength="6">
     </div>
   </div>
 
@@ -114,9 +114,11 @@
 
 <script>
 // ============================================================
-//  HD MODE: mnemonic → BIP44 derive → address
-//  Address 100% match dengan mnemonic (valid BIP39/BIP44)
-//  Speed ~100-300/s per worker
+//  VANITY HD MODE (BIP44)
+//  - Setiap iterasi: generate mnemonic BARU (BIP39)
+//  - Derive address di path utama: m/44'/60'/0'/0/0
+//  - Karena mnemonic beda tiap iterasi, address pun beda
+//  - Hasil mnemonic bisa langsung di-import ke MetaMask
 // ============================================================
 
 const workerCode = `
@@ -127,16 +129,14 @@ const workerCode = `
   self.onmessage = function(e) {
     if (e.data === 'stop') { running = false; return; }
 
-    const { mnemonic, prefix, suffix, caseInsensitive, startIndex, indexStep } = e.data;
+    const { prefix, suffix, caseInsensitive, wordCount, derivePath } = e.data;
     running = true;
 
     const p = caseInsensitive ? prefix.toLowerCase() : prefix;
     const s = caseInsensitive ? suffix.toLowerCase() : suffix;
     const hasP = p.length > 0;
     const hasS = s.length > 0;
-
-    let index = startIndex;
-    const step = indexStep || 1;
+    const entropyBytes = wordCount === 12 ? 16 : 32;
 
     function loop() {
       if (!running) return;
@@ -147,8 +147,12 @@ const workerCode = `
 
       while (performance.now() < batchEnd) {
         try {
-          const path = "m/44'/60'/0'/0/" + index;
-          const wallet = ethers.HDNodeWallet.fromPhrase(mnemonic, "", path);
+          // 1) Mnemonic BARU tiap iterasi
+          const entropy = ethers.randomBytes(entropyBytes);
+          const mnemonic = ethers.Mnemonic.fromEntropy(entropy).phrase;
+
+          // 2) Derive address di path utama BIP44
+          const wallet = ethers.HDNodeWallet.fromPhrase(mnemonic, "", derivePath);
           const addr = wallet.address.slice(2);
           const chk = caseInsensitive ? addr.toLowerCase() : addr;
 
@@ -162,14 +166,12 @@ const workerCode = `
             hits.push({
               address: wallet.address,
               privateKey: wallet.privateKey,
-              path: path,
-              index: index
+              path: derivePath,
+              mnemonic: mnemonic
             });
           }
-
-          index += step;
         } catch (err) {
-          index += step;
+          // skip
         }
       }
 
@@ -197,7 +199,9 @@ let foundCount = 0;
 let targetCount = 1;
 let timerInterval = null;
 let isRunning = false;
-let masterMnemonic = null;
+
+// Path utama BIP44 untuk Ethereum/EVM
+const MAIN_PATH = "m/44'/60'/0'/0/0";
 
 function log(msg) { console.log(msg); $('log').textContent = msg; }
 
@@ -223,7 +227,7 @@ function copyText(text, btn) {
   }
 }
 
-function addResult(hit, mnemonic) {
+function addResult(hit) {
   const div = document.createElement('div');
   div.innerHTML = `
     <div class="field-result">
@@ -232,9 +236,9 @@ function addResult(hit, mnemonic) {
       <div class="field-value addr">${hit.address}</div>
     </div>
     <div class="field-result">
-      <button class="copy-btn" data-copy="${mnemonic}">Copy</button>
-      <div class="field-label">⭐ Mnemonic (import ini ke MetaMask)</div>
-      <div class="field-value mnemonic">${mnemonic}</div>
+      <button class="copy-btn" data-copy="${hit.mnemonic}">Copy</button>
+      <div class="field-label">⭐ Mnemonic (import ke MetaMask)</div>
+      <div class="field-value mnemonic">${hit.mnemonic}</div>
     </div>
     <div class="field-result">
       <button class="copy-btn" data-copy="${hit.privateKey}">Copy</button>
@@ -280,21 +284,9 @@ async function start() {
   $('startBtn').textContent = '⏳ Generating...';
   $('stopBtn').style.display = 'block';
 
-  // Generate master mnemonic
-  try {
-    let entropyBytes = wordCount === 12 ? ethers.randomBytes(16) : ethers.randomBytes(32);
-    masterMnemonic = ethers.Mnemonic.fromEntropy(entropyBytes).phrase;
-    log('Master mnemonic: ' + masterMnemonic);
-  } catch (err) {
-    alert('Gagal buat mnemonic: ' + err.message);
-    stop();
-    return;
-  }
+  $('status').textContent = `VANITY BIP44 · "${prefix}...${suffix}" · ${wordCount} kata · ${numWorkers} worker`;
 
-  $('status').textContent = `HD MODE · "${prefix}...${suffix}" · ${wordCount} kata · ${numWorkers} worker`;
-
-  // Spawn worker. Setiap worker handle index berbeda biar tidak overlap.
-  // Worker i: startIndex = i, step = numWorkers (round-robin)
+  // Spawn worker — tiap worker generate mnemonic sendiri-sendiri
   workers = [];
   for (let i = 0; i < numWorkers; i++) {
     try {
@@ -302,12 +294,11 @@ async function start() {
       w.onmessage = (e) => handleMessage(e.data);
       w.onerror = (err) => log('Worker error: ' + err.message);
       w.postMessage({
-        mnemonic: masterMnemonic,
         prefix,
         suffix,
         caseInsensitive,
-        startIndex: i,
-        indexStep: numWorkers
+        wordCount,
+        derivePath: MAIN_PATH
       });
       workers.push(w);
     } catch (err) {
@@ -321,7 +312,7 @@ async function start() {
     return;
   }
 
-  log(`✅ ${workers.length} worker HD aktif.`);
+  log(`✅ ${workers.length} worker aktif · path ${MAIN_PATH}`);
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(updateStats, 250);
@@ -335,7 +326,7 @@ function handleMessage(msg) {
     for (const hit of msg.hits) {
       if (foundCount >= targetCount) break;
       foundCount++;
-      addResult(hit, masterMnemonic);
+      addResult(hit);
       $('result').classList.add('show');
     }
     $('status').textContent = `✅ ${foundCount}/${targetCount} wallet ditemukan`;
